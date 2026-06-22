@@ -5,17 +5,19 @@ import * as schema from './schema.ts';
 const { Pool } = pg;
 
 export const createPool = () => {
-  if (process.env.DATABASE_URL) {
+  const connectionString = process.env.DB_URL || process.env.DATABASE_URL;
+  if (connectionString) {
     return new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: connectionString,
       connectionTimeoutMillis: 15000,
     });
   }
   return new Pool({
-    host: process.env.SQL_HOST,
-    user: process.env.SQL_USER,
-    password: process.env.SQL_PASSWORD,
-    database: process.env.SQL_DB_NAME,
+    host: process.env.PGHOST || process.env.DB_HOST,
+    user: process.env.PGUSER || process.env.DB_USERNAME,
+    password: process.env.PGPASSWORD || process.env.DB_PASSWORD,
+    database: process.env.PGDATABASE || process.env.DB_DATABASE,
+    port: process.env.PGPORT ? parseInt(process.env.PGPORT, 10) : 5432,
     connectionTimeoutMillis: 15000,
   });
 };

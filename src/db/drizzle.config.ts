@@ -3,20 +3,21 @@ import * as dotenv from "dotenv";
 
 dotenv.config();
 
-const connectionString = process.env.DATABASE_URL;
-const sqlHost = process.env.SQL_HOST;
-const sqlDbName = process.env.SQL_DB_NAME;
-const user = process.env.SQL_ADMIN_USER || process.env.SQL_USER;
-const password = process.env.SQL_ADMIN_PASSWORD || process.env.SQL_PASSWORD;
+const connectionString = process.env.DB_URL || process.env.DATABASE_URL;
+const sqlHost = process.env.PGHOST || process.env.DB_HOST;
+const sqlDbName = process.env.PGDATABASE || process.env.DB_DATABASE;
+const user = process.env.PGUSER || process.env.DB_USERNAME;
+const password = process.env.PGPASSWORD || process.env.DB_PASSWORD;
+const port = process.env.PGPORT ? parseInt(process.env.PGPORT, 10) : 5432;
 
 if (!connectionString && (!sqlHost || !sqlDbName || !user || !password)) {
-  throw new Error("Either DATABASE_URL or SQL_HOST, SQL_DB_NAME, SQL_ADMIN_USER, and SQL_ADMIN_PASSWORD must be set in environment variables.");
+  throw new Error("Either DB_URL/DATABASE_URL or proper PGHOST vars must be set.");
 }
 
 if (connectionString) {
-  console.log("Using DATABASE_URL connection string for migrations.");
+  console.log("Using Connection String for migrations.");
 } else {
-  console.log(`Using user: ${user} to connect to database for migrations.`);
+  console.log(`Using host ${sqlHost} and user ${user} for database migrations.`);
 }
 
 export default defineConfig({
@@ -31,6 +32,7 @@ export default defineConfig({
     user: user!,
     password: password!,
     database: sqlDbName!,
+    port: port,
     ssl: false,
   },
   verbose: true,
