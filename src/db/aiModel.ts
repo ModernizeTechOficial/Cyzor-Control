@@ -1,29 +1,25 @@
-import { GoogleGenAI, Type, FunctionDeclaration } from "@google/genai";
 import { db } from "./index.ts";
 import { projects, tasks, aiMemories, financeEntries, companies } from "./schema.ts";
 import { eq, desc, inArray } from "drizzle-orm";
+import { getAIProvider, AIMessage, AITool } from "../ai/AIProvider";
 
-const ai = new GoogleGenAI({ 
-  apiKey: process.env.GEMINI_API_KEY, 
-  httpOptions: { headers: { "User-Agent": "aistudio-build" } } 
-});
+const aiProvider = getAIProvider();
 
-const saveMemoryDeclaration: FunctionDeclaration = {
+const saveMemoryDeclaration: AITool = {
   name: "save_memory",
   description: "Salva uma nova memória no sistema para acesso futuro. Use isso sempre que o usuário fornecer informações importantes sobre ele, empresas, projetos ou decisões.",
   parameters: {
-    type: Type.OBJECT,
     properties: {
       category: {
-        type: Type.STRING,
+        type: "string",
         description: "Categoria da memória (ex: Perfil, Empresa, Projeto, Preferências, Decisões)"
       },
       content: {
-        type: Type.STRING,
+        type: "string",
         description: "O conteúdo a ser memorizado"
       },
       importance: {
-        type: Type.INTEGER,
+        type: "integer",
         description: "Importância de 1 a 10"
       }
     },
@@ -63,14 +59,9 @@ DADOS:
 `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.5-flash',
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json"
-      }
-    });
-
+    const response = await aiProvider.chat([
+      { role: "user", content: prompt }
+    ]);
     return JSON.parse(response.text || '{}');
   } catch (error) {
     console.error("Error generating insights:", error);
@@ -130,57 +121,22 @@ INSTRUÇÕES:
 - Use os dados fornecidos para gerar análises financeiras, analisar quais projetos estão mais atrasados, quais tarefas estão bloqueadas e sugerir reduções de custo ou priorizações quando perguntado.
 - Responda como "Olimpo AI". Resuma informações de forma clara, não cite todos os detalhes um-a-um de forma robótica. Use formatação limpa quando necessário.`;
 
-  // Clean, map and strictly enforce alternating user/model roles to prevent Gemini API 400 errors
-  const chatContents: any[] = [];
-  let lastRole: string | null = null;
-
+  const messages: AIMessage[] = [{ role: 'system', content: systemInstruction }];
+  
   for (const h of history) {
     if (h.role !== 'system' && h.text && h.text.trim()) {
-      const mappedRole = h.role === 'assistant' ? 'model' : h.role;
-      if (mappedRole === 'model' || mappedRole === 'user') {
-        if (mappedRole !== lastRole) {
-          chatContents.push({
-            role: mappedRole,
-            parts: [{ text: h.text }]
-          });
-          lastRole = mappedRole;
-        } else {
-          // Merge consecutive same-role text entries to maintain strict alternation
-          if (chatContents.length > 0) {
-            chatContents[chatContents.length - 1].parts[0].text += "\n" + h.text;
-          }
-        }
-      }
+      messages.push({ role: h.role === 'assistant' ? 'assistant' : 'user', content: h.text });
     }
   }
-
-  // Append current prompt, merging with last item if last role was user, or creating a new user entry
-  if (lastRole === 'user') {
-    if (chatContents.length > 0) {
-      chatContents[chatContents.length - 1].parts[0].text += "\n" + prompt;
-    }
-  } else {
-    chatContents.push({
-      role: 'user',
-      parts: [{ text: prompt }]
-    });
-  }
+  messages.push({ role: 'user', content: prompt });
 
   try {
-    let response = await ai.models.generateContent({
-      model: 'gemini-3.5-flash',
-      contents: chatContents,
-      config: {
-        systemInstruction,
-        tools: [{ functionDeclarations: [saveMemoryDeclaration] }]
-      }
-    });
+    let response = await aiProvider.chat(messages, [saveMemoryDeclaration]);
 
-    // Check if the model wants to call a function
-    if (response.functionCalls && response.functionCalls.length > 0) {
-      for (const call of response.functionCalls) {
+    if (response.toolCalls && response.toolCalls.length > 0) {
+      for (const call of response.toolCalls) {
         if (call.name === "save_memory") {
-          const { category, content, importance } = call.args as any;
+          const { category, content, importance } = call.arguments;
           await db.insert(aiMemories).values({
             workspaceId,
             category,
@@ -190,28 +146,14 @@ INSTRUÇÕES:
         }
       }
       
-      const functionResponseParts = response.functionCalls.map(call => ({
-        functionResponse: {
-            name: call.name,
-            response: { status: 'success' }
-        }
-      }));
-
-      // Need to send the function response back to the model
-      response = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
-        contents: [
-            ...chatContents, 
-            { role: 'model', parts: response.candidates?.[0]?.content?.parts || [] }, 
-            { role: 'user', parts: functionResponseParts }
-        ],
-        config: {
-            systemInstruction,
-            tools: [{ functionDeclarations: [saveMemoryDeclaration] }]
-        }
-      });
+      // Optional: Since our AI framework natively supports tool calls, we could push the tool result back and re-call chat. 
+      // For simplicity in the abstraction, if a memory is saved, we don't necessarily need a strict follow up, 
+      // but let's append a system note that it was saved and call again to get the final text.
+      messages.push({ role: 'assistant', content: "Memória salva com sucesso." });
+      messages.push({ role: 'user', content: "Continue." });
+      response = await aiProvider.chat(messages);
     }
-
+    
     return response.text;
   } catch(e) {
     console.error(e);

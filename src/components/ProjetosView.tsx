@@ -192,13 +192,6 @@ export default function ProjetosView() {
     }
   };
 
-  const handleProjectUpdateLive = (updated: any) => {
-    // 1. Update the projects list locally to immediately show calculated progress/metrics
-    setProjects(prev => prev.map(p => p.id === updated.id ? { ...p, ...updated } : p));
-    // 2. Keep the selected project reference updated so the details modal stays reactive
-    setSelectedProject(updated);
-  };
-
   const handleProjectSave = () => {
     syncPlatformData();
     setSelectedProject(null);
@@ -458,10 +451,7 @@ export default function ProjetosView() {
 
         <div className="flex items-center gap-2">
           <button 
-            onClick={() => {
-              setSelectedColumnId(undefined);
-              setIsModalOpen(true);
-            }}
+            onClick={() => setIsModalOpen(true)}
             className="px-4 py-2 bg-neutral-950 hover:bg-neutral-900 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm flex items-center gap-2"
           >
             <Plus size={14} />
@@ -1025,11 +1015,8 @@ export default function ProjetosView() {
         <ProjectDetailsModal 
           project={selectedProject} 
           isOpen={!!selectedProject} 
-          onClose={() => {
-            setSelectedProject(null);
-            syncPlatformData();
-          }} 
-          onSave={handleProjectUpdateLive} 
+          onClose={() => setSelectedProject(null)} 
+          onSave={handleProjectSave} 
         />
       )}
 
@@ -1039,14 +1026,9 @@ export default function ProjetosView() {
       {isModalOpen && (
         <NewProjectModal 
           isOpen={isModalOpen} 
-          initialStatus={selectedColumnId}
-          onClose={() => {
-            setIsModalOpen(false);
-            setSelectedColumnId(undefined);
-          }} 
+          onClose={() => setIsModalOpen(false)} 
           onSuccess={() => {
             setIsModalOpen(false);
-            setSelectedColumnId(undefined);
             syncPlatformData();
           }}
         />
