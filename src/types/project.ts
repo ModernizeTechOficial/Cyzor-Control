@@ -84,4 +84,5 @@ export interface ProjectExtended {
   comments?: Comment[];
   history?: Activity[];
   velocity?: Array<{ sprint: string; pts: number }>;
+  progress?: number;
 }

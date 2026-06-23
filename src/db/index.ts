@@ -1,7 +1,7 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
-import * as schema from './schema.ts';
-import { env } from '../config/env.ts';
+import * as schema from './schema';
+import { env } from '../config/env';
 
 const { Pool } = pg;
 
@@ -10,6 +10,7 @@ export const createPool = () => {
     return new Pool({
       connectionString: env.databaseUrl,
       connectionTimeoutMillis: 15000,
+      ssl: { rejectUnauthorized: false }
     });
   }
   

@@ -11,7 +11,7 @@ import { env } from '../config/env.ts';
 
 const router = express.Router();
 const JWT_SECRET = env.jwtSecret;
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '1047124317865-u3lntb1f6n8mvtgffkfl99ok91njv0in.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = env.googleClientId;
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 interface GenerateTokenParams {

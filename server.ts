@@ -8,11 +8,14 @@ import cookieParser from "cookie-parser";
 import { requireAuth, AuthRequest } from "./src/middleware/auth";
 import { getOrCreateUser, getUserSaaSState, updateUserActiveWorkspace, getUserWorkspaces } from "./src/db/queries";
 import apiRouter from "./src/db/api";
+import authRouter from "./src/api/auth";
+
+import { env } from "./src/config/env";
 
 async function startServer() {
   const app = express();
   app.set("trust proxy", 1);
-  const PORT = process.env.PORT || 3000;
+  const PORT = env.port;
 
   app.use(helmet({ contentSecurityPolicy: false })); // Disabled CSP for React DEV
   app.use(cors());
@@ -40,7 +43,6 @@ async function startServer() {
   });
 
   // Local JWT Auth Router
-  const authRouter = (await import("./src/api/auth")).default;
   app.use("/api/auth/v2", authRouter);
 
   // API Route: Synchronize signed-in user inside Postgres

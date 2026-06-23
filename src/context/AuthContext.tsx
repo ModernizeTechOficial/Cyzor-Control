@@ -48,6 +48,8 @@ const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/tasks.readonly',
 ].join(' ');
 
+const API_URL = import.meta.env.VITE_API_URL || '';
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -132,7 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     onSuccess: async (tokenResponse) => {
       setLoading(true);
       try {
-        const beRes = await fetch('/api/auth/v2/google', {
+        const beRes = await fetch(`${API_URL}/api/auth/v2/google`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ accessToken: tokenResponse.access_token })
@@ -164,7 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginWithEmail = async (email: string, pass: string) => {
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/v2/login', {
+      const res = await fetch(`${API_URL}/api/auth/v2/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password: pass })
@@ -182,7 +184,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const registerWithEmail = async (email: string, pass: string, name: string) => {
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/v2/register', {
+      const res = await fetch(`${API_URL}/api/auth/v2/register`, {
          method: 'POST',
          headers: { 'Content-Type': 'application/json' },
          body: JSON.stringify({ email, password: pass, name })
@@ -255,7 +257,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ...options.headers,
       'Authorization': `Bearer ${token}`
     };
-    return fetch(url, { ...options, headers });
+    return fetch(`${API_URL}${url}`, { ...options, headers });
   };
 
   const connectGoogleWorkspace = async () => {
