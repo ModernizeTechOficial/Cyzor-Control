@@ -6,11 +6,12 @@ import * as schema from './schema.ts';
 async function main() {
   console.log('Running migrations...');
   
+  const isSocket = process.env.SQL_HOST?.startsWith('/');
   const connection = await mysql.createConnection({
-    host: process.env.SQL_HOST,
+    [isSocket ? 'socketPath' : 'host']: process.env.SQL_HOST,
     user: process.env.SQL_USER,
     password: process.env.SQL_PASSWORD,
-    database: process.env.SQL_DATABASE,
+    database: process.env.SQL_DB_NAME || process.env.SQL_DATABASE,
     port: Number(process.env.SQL_PORT || 3306),
     multipleStatements: true,
   });

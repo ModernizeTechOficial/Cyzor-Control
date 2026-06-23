@@ -3,11 +3,12 @@ import mysql from 'mysql2/promise';
 import * as schema from './schema.ts';
 
 export const createPool = () => {
+  const isSocket = process.env.SQL_HOST?.startsWith('/');
   return mysql.createPool({
-    host: process.env.SQL_HOST,
+    [isSocket ? 'socketPath' : 'host']: process.env.SQL_HOST,
     user: process.env.SQL_USER,
     password: process.env.SQL_PASSWORD,
-    database: process.env.SQL_DB_NAME,
+    database: process.env.SQL_DB_NAME || process.env.SQL_DATABASE,
     port: Number(process.env.SQL_PORT || 3306),
     waitForConnections: true,
     connectionLimit: 10,
