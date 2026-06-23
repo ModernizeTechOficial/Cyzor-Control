@@ -43,7 +43,7 @@ export default function App() {
     );
   }
 
-  if (currentView === 'login') {
+  if (currentView === 'login' || !user) {
     return <LoginView onLogin={() => setCurrentView('dashboard')} />;
   }
 

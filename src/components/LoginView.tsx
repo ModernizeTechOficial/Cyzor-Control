@@ -40,15 +40,12 @@ export default function LoginView({ onLogin }: { onLogin: () => void }) {
 
   const handleGoogleSign = async () => {
     setErrorMsg('');
-    setLoading(true);
     try {
       await loginWithGoogle();
-      onLogin();
+      // AuthContext will update user state, which triggers navigation in App.tsx
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || 'Falha no login com Google.');
-    } finally {
-      setLoading(false);
     }
   };
 

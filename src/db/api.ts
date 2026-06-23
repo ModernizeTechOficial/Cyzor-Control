@@ -111,7 +111,7 @@ apiRouter.post("/companies", async (req: AuthRequest, res) => {
     if (!name) {
       return res.status(400).json({ error: "Company name is required" });
     }
-    const [insertResult] = await db.insert(companies).values({
+    const data = await db.insert(companies).values({
       workspaceId: req.workspaceId!,
       name,
       cnpj: cnpj || null,
@@ -119,9 +119,8 @@ apiRouter.post("/companies", async (req: AuthRequest, res) => {
       size: size || null,
       website: website || null,
       status: status || 'Ativo'
-    });
-    const [newCompany] = await db.select().from(companies).where(eq(companies.id, insertResult.insertId));
-    res.json(newCompany);
+    }).returning();
+    res.json(data[0]);
   } catch (error) {
     console.error("Error creating company:", error);
     res.status(500).json({ error: "Failed to create company" });
@@ -144,7 +143,7 @@ apiRouter.post("/projects", async (req: AuthRequest, res) => {
     }
 
     // Insert only validated fields
-    const [insertResult] = await db.insert(projects).values({ 
+    const data = await db.insert(projects).values({ 
       name,
       workspaceId: req.workspaceId!,
       priority: priority || 'Média',
@@ -152,10 +151,9 @@ apiRouter.post("/projects", async (req: AuthRequest, res) => {
       dueDate: dueDate ? new Date(dueDate) : null,
       companyId: companyId ? Number(companyId) : null,
       productId: productId ? Number(productId) : null
-    });
+    }).returning();
     
-    const [newProject] = await db.select().from(projects).where(eq(projects.id, insertResult.insertId));
-    res.json(newProject);
+    res.json(data[0]);
   } catch (error) {
     console.error("Error creating project:", error);
     res.status(500).json({ error: "Failed to create project" });
@@ -176,9 +174,8 @@ apiRouter.put("/projects/:id", async (req: AuthRequest, res) => {
   if (velocity !== undefined) updateValues.velocity = velocity;
   if (progress !== undefined) updateValues.progress = progress !== null ? Number(progress) : 0;
 
-  await db.update(projects).set(updateValues).where(and(eq(projects.id, Number(req.params.id)), eq(projects.workspaceId, req.workspaceId!)));
-  const [updatedProject] = await db.select().from(projects).where(eq(projects.id, Number(req.params.id)));
-  res.json(updatedProject);
+  const data = await db.update(projects).set(updateValues).where(and(eq(projects.id, Number(req.params.id)), eq(projects.workspaceId, req.workspaceId!))).returning();
+  res.json(data[0]);
 });
 
 // --- IDEAS ---
@@ -187,15 +184,13 @@ apiRouter.get("/ideas", async (req: AuthRequest, res) => {
   res.json(data);
 });
 apiRouter.post("/ideas", async (req: AuthRequest, res) => {
-  const [insertResult] = await db.insert(ideas).values({ ...req.body, workspaceId: req.workspaceId!, authorUid: req.user!.uid });
-  const [newIdea] = await db.select().from(ideas).where(eq(ideas.id, insertResult.insertId));
-  res.json(newIdea);
+  const data = await db.insert(ideas).values({ ...req.body, workspaceId: req.workspaceId!, authorUid: req.user!.uid }).returning();
+  res.json(data[0]);
 });
 
 apiRouter.put("/ideas/:id", async (req: AuthRequest, res) => {
-  await db.update(ideas).set(req.body).where(and(eq(ideas.id, Number(req.params.id)), eq(ideas.workspaceId, req.workspaceId!)));
-  const [updatedIdea] = await db.select().from(ideas).where(eq(ideas.id, Number(req.params.id)));
-  res.json(updatedIdea);
+  const data = await db.update(ideas).set(req.body).where(and(eq(ideas.id, Number(req.params.id)), eq(ideas.workspaceId, req.workspaceId!))).returning();
+  res.json(data[0]);
 });
 
 // --- PRODUCTS ---
@@ -204,14 +199,12 @@ apiRouter.get("/products", async (req: AuthRequest, res) => {
   res.json(data);
 });
 apiRouter.post("/products", async (req: AuthRequest, res) => {
-  const [insertResult] = await db.insert(products).values({ ...req.body, workspaceId: req.workspaceId! });
-  const [newProduct] = await db.select().from(products).where(eq(products.id, insertResult.insertId));
-  res.json(newProduct);
+  const data = await db.insert(products).values({ ...req.body, workspaceId: req.workspaceId! }).returning();
+  res.json(data[0]);
 });
 apiRouter.put("/products/:id", async (req: AuthRequest, res) => {
-  await db.update(products).set(req.body).where(and(eq(products.id, Number(req.params.id)), eq(products.workspaceId, req.workspaceId!)));
-  const [updatedProduct] = await db.select().from(products).where(eq(products.id, Number(req.params.id)));
-  res.json(updatedProduct);
+  const data = await db.update(products).set(req.body).where(and(eq(products.id, Number(req.params.id)), eq(products.workspaceId, req.workspaceId!))).returning();
+  res.json(data[0]);
 });
 
 // --- SPRINTS ---
@@ -243,16 +236,15 @@ apiRouter.post("/sprints", async (req: AuthRequest, res) => {
         return res.status(403).json({ error: "Project not found or not in workspace" });
       }
     
-      const [insertResult] = await db.insert(sprints).values({ 
+      const data = await db.insert(sprints).values({ 
           projectId: Number(projectId), 
           name, 
           goal,
           startDate: startDate ? new Date(startDate) : null,
           endDate: endDate ? new Date(endDate) : null,
           status: status || 'PLANNED'
-      });
-      const [newSprint] = await db.select().from(sprints).where(eq(sprints.id, insertResult.insertId));
-      res.json(newSprint);
+      }).returning();
+      res.json(data[0]);
   } catch (error) {
     console.error("Error creating sprint:", error);
     res.status(500).json({ error: "Failed to create sprint", details: error });
@@ -280,9 +272,8 @@ apiRouter.put("/sprints/:id", async (req: AuthRequest, res) => {
       if (startDate !== undefined) updateValues.startDate = startDate ? new Date(startDate) : null;
       if (endDate !== undefined) updateValues.endDate = endDate ? new Date(endDate) : null;
 
-      await db.update(sprints).set(updateValues).where(eq(sprints.id, sprintId));
-      const [updatedSprint] = await db.select().from(sprints).where(eq(sprints.id, sprintId));
-      res.json(updatedSprint);
+      const data = await db.update(sprints).set(updateValues).where(eq(sprints.id, sprintId)).returning();
+      res.json(data[0]);
   } catch (error) {
     console.error("Error updating sprint:", error);
     res.status(500).json({ error: "Failed to update sprint" });
@@ -368,9 +359,8 @@ apiRouter.post("/tasks", async (req: AuthRequest, res) => {
       if (subtasks) values.subtasks = subtasks;
       if (taskComments) values.taskComments = taskComments;
       
-      const [insertResult] = await db.insert(tasks).values(values);
-      const [newTask] = await db.select().from(tasks).where(eq(tasks.id, insertResult.insertId));
-      res.json(newTask);
+      const data = await db.insert(tasks).values(values).returning();
+      res.json(data[0]);
   } catch (error) {
       console.error("Error creating task:", error);
       res.status(500).json({ error: "Failed to create task", details: error });
@@ -422,9 +412,8 @@ apiRouter.put("/tasks/:id", async (req: AuthRequest, res) => {
   if (subtasks !== undefined) updateValues.subtasks = subtasks;
   if (taskComments !== undefined) updateValues.taskComments = taskComments;
 
-  await db.update(tasks).set(updateValues).where(eq(tasks.id, taskId));
-  const [updatedTask] = await db.select().from(tasks).where(eq(tasks.id, taskId));
-  res.json(updatedTask);
+  const data = await db.update(tasks).set(updateValues).where(eq(tasks.id, taskId)).returning();
+  res.json(data[0]);
 });
 
 apiRouter.delete("/tasks/:id", async (req: AuthRequest, res) => {
@@ -453,9 +442,8 @@ apiRouter.get("/finance", async (req: AuthRequest, res) => {
   res.json(data);
 });
 apiRouter.post("/finance", async (req: AuthRequest, res) => {
-  const [insertResult] = await db.insert(financeEntries).values({ ...req.body, workspaceId: req.workspaceId! });
-  const [newEntry] = await db.select().from(financeEntries).where(eq(financeEntries.id, insertResult.insertId));
-  res.json(newEntry);
+  const data = await db.insert(financeEntries).values({ ...req.body, workspaceId: req.workspaceId! }).returning();
+  res.json(data[0]);
 });
 
 // --- MILESTONES ---
@@ -485,15 +473,14 @@ apiRouter.post("/milestones", async (req: AuthRequest, res) => {
         return res.status(403).json({ error: "Project not found or not in workspace" });
       }
     
-      const [insertResult] = await db.insert(milestones).values({ 
+      const data = await db.insert(milestones).values({ 
           projectId: Number(projectId), 
           name, 
           date: date ? new Date(date) : null,
           status: status || 'PENDENTE',
           description
-      });
-      const [newMilestone] = await db.select().from(milestones).where(eq(milestones.id, insertResult.insertId));
-      res.json(newMilestone);
+      }).returning();
+      res.json(data[0]);
   } catch (error) {
     console.error("Error creating milestone:", error);
     res.status(500).json({ error: "Failed to create milestone" });
@@ -519,9 +506,8 @@ apiRouter.put("/milestones/:id", async (req: AuthRequest, res) => {
       if (description !== undefined) updateValues.description = description;
       if (date !== undefined) updateValues.date = date ? new Date(date) : null;
 
-      await db.update(milestones).set(updateValues).where(eq(milestones.id, milestoneId));
-      const [updatedMilestone] = await db.select().from(milestones).where(eq(milestones.id, milestoneId));
-      res.json(updatedMilestone);
+      const data = await db.update(milestones).set(updateValues).where(eq(milestones.id, milestoneId)).returning();
+      res.json(data[0]);
   } catch (error) {
     console.error("Error updating milestone:", error);
     res.status(500).json({ error: "Failed to update milestone" });
@@ -567,7 +553,7 @@ apiRouter.post("/documents", async (req: AuthRequest, res) => {
   }
 
   try {
-      const [insertResult] = await db.insert(documents).values({ 
+      const data = await db.insert(documents).values({ 
           workspaceId: req.workspaceId!,
           projectId: projectId ? Number(projectId) : null, 
           title, 
@@ -578,9 +564,8 @@ apiRouter.post("/documents", async (req: AuthRequest, res) => {
           size: size || '0 KB',
           authorUid: req.user?.uid,
           isFavorite: isFavorite || false
-      });
-      const [newDoc] = await db.select().from(documents).where(eq(documents.id, insertResult.insertId));
-      res.json(newDoc);
+      }).returning();
+      res.json(data[0]);
   } catch (error) {
     console.error("Error creating document:", error);
     res.status(500).json({ error: "Failed to create document" });
@@ -609,9 +594,8 @@ apiRouter.put("/documents/:id", async (req: AuthRequest, res) => {
       if (isFavorite !== undefined) updateValues.isFavorite = isFavorite;
       updateValues.updatedAt = new Date();
 
-      await db.update(documents).set(updateValues).where(eq(documents.id, docId));
-      const [updatedDoc] = await db.select().from(documents).where(eq(documents.id, docId));
-      res.json(updatedDoc);
+      const data = await db.update(documents).set(updateValues).where(eq(documents.id, docId)).returning();
+      res.json(data[0]);
   } catch (error) {
     console.error("Error updating document:", error);
     res.status(500).json({ error: "Failed to update document" });
@@ -650,13 +634,12 @@ apiRouter.get("/notifications", async (req: AuthRequest, res) => {
 apiRouter.post("/notifications", async (req: AuthRequest, res) => {
   try {
     const { title, description, type } = req.body;
-    const [insertResult] = await db.insert(notifications).values({
+    const [newNotif] = await db.insert(notifications).values({
       workspaceId: req.workspaceId!,
       title,
       description,
       type: type || 'info'
-    });
-    const [newNotif] = await db.select().from(notifications).where(eq(notifications.id, insertResult.insertId));
+    }).returning();
     res.json(newNotif);
   } catch (error) {
     console.error("Error creating notification:", error);
@@ -772,7 +755,7 @@ apiRouter.post("/agenda", async (req: AuthRequest, res) => {
       }
     }
 
-    const [insertResult] = await db.insert(agendaEvents).values({
+    const [inserted] = await db.insert(agendaEvents).values({
       workspaceId: req.workspaceId!,
       title: body.title,
       description: body.description || "",
@@ -798,11 +781,11 @@ apiRouter.post("/agenda", async (req: AuthRequest, res) => {
       reservedResources: body.reservedResources || [],
       isTimeBlock: !!body.isTimeBlock,
       timeBlockType: body.timeBlockType || 'none',
-    });
+    }).returning();
     
     res.json({
       ...body,
-      id: String(insertResult.insertId)
+      id: String(inserted.id)
     });
   } catch (error) {
     console.error("Error creating agenda event:", error);
@@ -886,12 +869,11 @@ apiRouter.delete("/agenda/:id", async (req: AuthRequest, res) => {
 apiRouter.put("/companies/:id", async (req: AuthRequest, res) => {
   try {
     const compId = Number(req.params.id);
-    await db.update(companies).set({
+    const data = await db.update(companies).set({
       ...req.body,
       updatedAt: new Date()
-    }).where(and(eq(companies.id, compId), eq(companies.workspaceId, req.workspaceId!)));
-    const [updatedCompany] = await db.select().from(companies).where(eq(companies.id, compId));
-    res.json(updatedCompany);
+    }).where(and(eq(companies.id, compId), eq(companies.workspaceId, req.workspaceId!))).returning();
+    res.json(data[0]);
   } catch (error) {
     console.error("Error updating company:", error);
     res.status(500).json({ error: "Failed to update company" });
@@ -976,15 +958,14 @@ apiRouter.get("/user-settings", async (req: AuthRequest, res) => {
 apiRouter.put("/user-settings", async (req: AuthRequest, res) => {
   try {
     const body = req.body;
-    await db.update(users).set({
+    const [updated] = await db.update(users).set({
       displayName: body.displayName,
       phone: body.phone,
       role: body.role,
       settings: body.settings || {},
       updatedAt: new Date()
-    }).where(eq(users.uid, req.user!.uid));
-    const [updatedUser] = await db.select().from(users).where(eq(users.uid, req.user!.uid));
-    res.json(updatedUser);
+    }).where(eq(users.uid, req.user!.uid)).returning();
+    res.json(updated);
   } catch (error) {
     console.error("Error updating user settings:", error);
     res.status(500).json({ error: "Failed to update user settings" });
@@ -999,10 +980,10 @@ apiRouter.get("/workspace-settings", async (req: AuthRequest, res) => {
       return res.status(404).json({ error: "Workspace record not found" });
     }
 
-    const [companiesCount] = await db.select({ count: sql<number>`count(*)` }).from(companies).where(eq(companies.workspaceId, req.workspaceId!));
-    const [projectsCount] = await db.select({ count: sql<number>`count(*)` }).from(projects).where(eq(projects.workspaceId, req.workspaceId!));
-    const [productsCount] = await db.select({ count: sql<number>`count(*)` }).from(products).where(eq(products.workspaceId, req.workspaceId!));
-    const [membersCount] = await db.select({ count: sql<number>`count(*)` }).from(workspaceMembers).where(eq(workspaceMembers.workspaceId, req.workspaceId!));
+    const [companiesCount] = await db.select({ count: sql<number>`count(*)::int` }).from(companies).where(eq(companies.workspaceId, req.workspaceId!));
+    const [projectsCount] = await db.select({ count: sql<number>`count(*)::int` }).from(projects).where(eq(projects.workspaceId, req.workspaceId!));
+    const [productsCount] = await db.select({ count: sql<number>`count(*)::int` }).from(products).where(eq(products.workspaceId, req.workspaceId!));
+    const [membersCount] = await db.select({ count: sql<number>`count(*)::int` }).from(workspaceMembers).where(eq(workspaceMembers.workspaceId, req.workspaceId!));
 
     res.json({
       workspace: workspaceRecord,
@@ -1022,13 +1003,12 @@ apiRouter.get("/workspace-settings", async (req: AuthRequest, res) => {
 apiRouter.put("/workspace-settings", async (req: AuthRequest, res) => {
   try {
     const body = req.body;
-    await db.update(workspaces).set({
+    const [updated] = await db.update(workspaces).set({
       name: body.name,
       settings: body.settings || {},
       updatedAt: new Date()
-    }).where(eq(workspaces.id, req.workspaceId!));
-    const [updatedWs] = await db.select().from(workspaces).where(eq(workspaces.id, req.workspaceId!));
-    res.json(updatedWs);
+    }).where(eq(workspaces.id, req.workspaceId!)).returning();
+    res.json(updated);
   } catch (error) {
     console.error("Error updating workspace settings:", error);
     res.status(500).json({ error: "Failed to update workspace settings" });
@@ -1051,9 +1031,9 @@ apiRouter.get("/workspaces-detailed", async (req: AuthRequest, res) => {
 
     const detailedList = [];
     for (const ws of list) {
-    const [companiesCount] = await db.select({ count: sql<number>`count(*)` }).from(companies).where(eq(companies.workspaceId, ws.id));
-    const [projectsCount] = await db.select({ count: sql<number>`count(*)` }).from(projects).where(eq(projects.workspaceId, ws.id));
-    const [productsCount] = await db.select({ count: sql<number>`count(*)` }).from(products).where(eq(products.workspaceId, ws.id));
+      const [companiesCount] = await db.select({ count: sql<number>`count(*)::int` }).from(companies).where(eq(companies.workspaceId, ws.id));
+      const [projectsCount] = await db.select({ count: sql<number>`count(*)::int` }).from(projects).where(eq(projects.workspaceId, ws.id));
+      const [productsCount] = await db.select({ count: sql<number>`count(*)::int` }).from(products).where(eq(products.workspaceId, ws.id));
 
       detailedList.push({
         ...ws,
@@ -1078,21 +1058,20 @@ apiRouter.post("/workspaces", async (req: AuthRequest, res) => {
     if (!name) {
       return res.status(400).json({ error: "Workspace name is required" });
     }
-    const [insertResult] = await db.insert(workspaces).values({
+    const [newWorkspace] = await db.insert(workspaces).values({
       name,
       ownerUid: req.user!.uid,
       plan: "Pro",
       settings: {}
-    });
+    }).returning();
 
     await db.insert(workspaceMembers).values({
-      workspaceId: insertResult.insertId,
+      workspaceId: newWorkspace.id,
       userUid: req.user!.uid,
       role: "OWNER"
     });
 
-    const [newWs] = await db.select().from(workspaces).where(eq(workspaces.id, insertResult.insertId));
-    res.json(newWs);
+    res.json(newWorkspace);
   } catch (error) {
     console.error("Error creating workspace:", error);
     res.status(500).json({ error: "Failed to create workspace" });
@@ -1106,21 +1085,20 @@ apiRouter.post("/workspaces/:id/duplicate", async (req: AuthRequest, res) => {
     if (!source) {
       return res.status(404).json({ error: "Workspace not found" });
     }
-    const [insertResult] = await db.insert(workspaces).values({
+    const [newWorkspace] = await db.insert(workspaces).values({
       name: `${source.name} (Cópia)`,
       ownerUid: req.user!.uid,
       plan: source.plan,
       settings: source.settings || {}
-    });
+    }).returning();
 
     await db.insert(workspaceMembers).values({
-      workspaceId: insertResult.insertId,
+      workspaceId: newWorkspace.id,
       userUid: req.user!.uid,
       role: "OWNER"
     });
 
-    const [newWs] = await db.select().from(workspaces).where(eq(workspaces.id, insertResult.insertId));
-    res.json(newWs);
+    res.json(newWorkspace);
   } catch (error) {
     console.error("Error duplicating workspace:", error);
     res.status(500).json({ error: "Failed to duplicate workspace" });

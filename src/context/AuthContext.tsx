@@ -1,15 +1,13 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { 
-  User, 
-  signInWithPopup, 
-  signOut, 
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  updateProfile,
-  GoogleAuthProvider
-} from 'firebase/auth';
-import { auth, googleAuthProvider } from '../lib/firebase.ts';
+import { useGoogleLogin } from '@react-oauth/google';
+
+export interface User {
+  uid: string;
+  email: string;
+  displayName?: string;
+  photoURL?: string;
+  currentPlan?: string;
+}
 
 interface AuthContextType {
   user: User | null;
@@ -40,6 +38,18 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+const GOOGLE_SCOPES = [
+  'https://www.googleapis.com/auth/calendar',
+  'https://www.googleapis.com/auth/calendar.events',
+  'https://www.googleapis.com/auth/drive',
+  'https://www.googleapis.com/auth/drive.file',
+  'https://www.googleapis.com/auth/drive.metadata.readonly',
+  'https://www.googleapis.com/auth/tasks',
+  'https://www.googleapis.com/auth/tasks.readonly',
+].join(' ');
+
+const API_URL = import.meta.env.VITE_API_URL || '';
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,50 +62,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [googleTasksToken, setGoogleTasksToken] = useState<string | null>(null);
   const [googleKeepToken, setGoogleKeepToken] = useState<string | null>(null);
 
-  // Sync profile details to Cloud SQL
-  const syncWithCloudSQL = async (currentUser: User) => {
+  // Replaces syncWithCloudSQL
+  const loadWorkspaceState = async (idToken: string) => {
     try {
-      const idToken = await currentUser.getIdToken(true);
-      setToken(idToken);
-
-      const res = await fetch('/api/auth/sync', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
-        },
-        body: JSON.stringify({
-          uid: currentUser.uid,
-          email: currentUser.email,
-          name: currentUser.displayName,
-          picture: currentUser.photoURL
-        })
-      });
-      
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`Backend synchronization failed: ${errText}`);
-      }
-
-      // Fetch user SaaS profile state from Postgres
       const stateRes = await fetch('/api/auth/state', {
-        headers: {
-          'Authorization': `Bearer ${idToken}`
-        }
+        headers: { 'Authorization': `Bearer ${idToken}` }
       });
 
       if (stateRes.ok) {
         const data = await stateRes.json();
         if (data && data.state) {
-          const { user, activeWorkspace } = data.state;
-          setActiveWorkspace(activeWorkspace);
-          if (user?.currentPlan) {
-            localStorage.setItem('saas_current_plan', user.currentPlan);
-          }
+           const { user: backendUser, activeWorkspace: actWs } = data.state;
+           setActiveWorkspace(actWs);
+           if (backendUser?.currentPlan) {
+             localStorage.setItem('saas_current_plan', backendUser.currentPlan);
+           }
         }
       }
 
-      // Fetch all workspaces
       const workRes = await fetch('/api/workspaces', {
         headers: { 'Authorization': `Bearer ${idToken}` }
       });
@@ -104,53 +88,146 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setWorkspaces(wdata.workspaces || []);
       }
       
-      // Notify listeners in UI
       window.dispatchEvent(new Event('workspaceChanged'));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    const storedToken = localStorage.getItem('access_token');
+    const storedUser = localStorage.getItem('user_profile');
+    if (storedToken && storedUser) {
+      setToken(storedToken);
+      setUser(JSON.parse(storedUser));
+      loadWorkspaceState(storedToken).finally(() => setLoading(false));
+    } else {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleAuthPayload = async (data: any) => {
+    if (data.status === 'success') {
+      const { user: userRecord, accessToken } = data;
+      const newUser: User = {
+        uid: userRecord.uid,
+        email: userRecord.email,
+        displayName: userRecord.displayName,
+        photoURL: userRecord.photoUrl,
+      };
       
-    } catch (err) {
-      console.error('Error syncing user details with Cloud SQL backend:', err);
+      setUser(newUser);
+      setToken(accessToken);
+      
+      localStorage.setItem('access_token', accessToken);
+      if (data.refreshToken) localStorage.setItem('refresh_token', data.refreshToken);
+      localStorage.setItem('user_profile', JSON.stringify(newUser));
+      
+      await loadWorkspaceState(accessToken);
+    } else {
+      throw new Error(data.error || 'Authentication failed');
+    }
+  };
+
+  const internalGoogleLogin = useGoogleLogin({
+    scope: GOOGLE_SCOPES,
+    onSuccess: async (tokenResponse) => {
+      setLoading(true);
+      try {
+        const beRes = await fetch(`${API_URL}/api/auth/v2/google`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accessToken: tokenResponse.access_token })
+        });
+        const data = await beRes.json();
+        await handleAuthPayload(data);
+        
+        // Save the token for Workspace APIs
+        setGoogleCalendarToken(tokenResponse.access_token);
+        setGoogleDriveToken(tokenResponse.access_token);
+        setGoogleTasksToken(tokenResponse.access_token);
+        setGoogleKeepToken(tokenResponse.access_token);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    },
+    onError: () => {
+      setLoading(false);
+      console.error('Google Login Failed');
+    }
+  });
+
+  const loginWithGoogle = async () => {
+    internalGoogleLogin();
+  };
+
+  const loginWithEmail = async (email: string, pass: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/auth/v2/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: pass })
+      });
+      const data = await res.json();
+      await handleAuthPayload(data);
+    } catch (e: any) {
+      setLoading(false);
+      throw e;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const registerWithEmail = async (email: string, pass: string, name: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/auth/v2/register`, {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ email, password: pass, name })
+      });
+      const data = await res.json();
+      await handleAuthPayload(data);
+    } catch (e: any) {
+      setLoading(false);
+      throw e;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    setLoading(true);
+    try {
+      setUser(null);
+      setToken(null);
+      setGoogleCalendarToken(null);
+      setGoogleDriveToken(null);
+      setGoogleTasksToken(null);
+      setGoogleKeepToken(null);
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user_profile');
+      localStorage.removeItem('active_workspace');
+      localStorage.removeItem('saas_current_plan');
+      window.dispatchEvent(new Event('workspaceChanged'));
+    } catch (error) {
+      console.error('Sign-Out failed:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const syncSaaSState = async () => {
-    if (!user) return;
-    await syncWithCloudSQL(user);
-  };
-  
-  const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
-    let idToken = token;
-    
-    // If we don't have a token, try to get one
-    if (!idToken && user) {
-        idToken = await user.getIdToken();
-        setToken(idToken);
-    }
-
-    const headers = {
-      ...options.headers,
-      'Authorization': `Bearer ${idToken}`
-    };
-
-    let response = await fetch(url, { ...options, headers });
-
-    // If unauthorized, token might be expired. Refresh and retry once.
-    if (response.status === 401 && user) {
-      console.log("Token expired. Refreshing...");
-      const newToken = await user.getIdToken(true);
-      setToken(newToken);
-      
-      const retryHeaders = {
-        ...options.headers,
-        'Authorization': `Bearer ${newToken}`
-      };
-      response = await fetch(url, { ...options, headers: retryHeaders });
-    }
-
-    return response;
+    if (!token) return;
+    await loadWorkspaceState(token);
   };
 
   const updateSaaSBackend = async (plan?: string, workspaceId?: number) => {
-    if (!user) return;
+    if (!token) return;
     try {
       const res = await fetchWithAuth('/api/auth/state', {
         method: 'PUT',
@@ -175,182 +252,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        await syncWithCloudSQL(currentUser);
-      } else {
-        setToken(null);
-      }
-      setLoading(false);
+  const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
+    const headers = {
+      ...options.headers,
+      'Authorization': `Bearer ${token}`
+    };
+    return fetch(`${API_URL}${url}`, { ...options, headers });
+  };
+
+  const connectGoogleWorkspace = async () => {
+    return new Promise<string | null>((resolve) => {
+      // Actually because useGoogleLogin is a hook we can't await it synchronously like signInWithPopup. 
+      // But we mapped connectGoogleCalendar to just call internalGoogleLogin. 
+      internalGoogleLogin();
+      resolve(null);
     });
-
-    return unsubscribe;
-  }, []);
-
-  // Periodic token refresh (every 30 minutes)
-  useEffect(() => {
-    if (!user) return;
-    const interval = setInterval(async () => {
-      try {
-        const newToken = await user.getIdToken(true);
-        setToken(newToken);
-        console.log("IdToken refreshed periodically");
-      } catch (e) {
-        console.error("Periodic token refresh failed:", e);
-      }
-    }, 30 * 60 * 1000); 
-
-    return () => clearInterval(interval);
-  }, [user]);
-
-  const loginWithGoogle = async () => {
-    setLoading(true);
-    try {
-      const result = await signInWithPopup(auth, googleAuthProvider);
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (credential?.accessToken) {
-        setGoogleCalendarToken(credential.accessToken);
-        setGoogleDriveToken(credential.accessToken);
-        setGoogleTasksToken(credential.accessToken);
-        setGoogleKeepToken(credential.accessToken);
-      }
-    } catch (error) {
-      console.error('Google Sign-In failed:', error);
-      setLoading(false);
-      throw error;
-    }
   };
 
-  const connectGoogleCalendar = async () => {
-    try {
-      const result = await signInWithPopup(auth, googleAuthProvider);
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (credential?.accessToken) {
-        setGoogleCalendarToken(credential.accessToken);
-        setGoogleDriveToken(credential.accessToken); // Share token since scopes are unified
-        setGoogleTasksToken(credential.accessToken);  // Share token since scopes are unified
-        setGoogleKeepToken(credential.accessToken);   // Share token since scopes are unified
-        return credential.accessToken;
-      }
-      return null;
-    } catch (error) {
-      console.error('Error connecting Google Calendar:', error);
-      throw error;
-    }
-  };
+  const connectGoogleCalendar = connectGoogleWorkspace;
+  const connectGoogleDrive = connectGoogleWorkspace;
+  const connectGoogleTasks = connectGoogleWorkspace;
+  const connectGoogleKeep = connectGoogleWorkspace;
 
-  const connectGoogleDrive = async () => {
-    try {
-      const result = await signInWithPopup(auth, googleAuthProvider);
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (credential?.accessToken) {
-        setGoogleDriveToken(credential.accessToken);
-        setGoogleCalendarToken(credential.accessToken); // Share token since scopes are unified
-        setGoogleTasksToken(credential.accessToken);   // Share token since scopes are unified
-        setGoogleKeepToken(credential.accessToken);    // Share token since scopes are unified
-        return credential.accessToken;
-      }
-      return null;
-    } catch (error) {
-      console.error('Error connecting Google Drive:', error);
-      throw error;
-    }
-  };
-
-  const connectGoogleTasks = async () => {
-    try {
-      const result = await signInWithPopup(auth, googleAuthProvider);
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (credential?.accessToken) {
-        setGoogleTasksToken(credential.accessToken);
-        setGoogleCalendarToken(credential.accessToken); // Share
-        setGoogleDriveToken(credential.accessToken);    // Share
-        setGoogleKeepToken(credential.accessToken);     // Share
-        return credential.accessToken;
-      }
-      return null;
-    } catch (error) {
-      console.error('Error connecting Google Tasks:', error);
-      throw error;
-    }
-  };
-
-  const connectGoogleKeep = async () => {
-    try {
-      const result = await signInWithPopup(auth, googleAuthProvider);
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (credential?.accessToken) {
-        setGoogleKeepToken(credential.accessToken);
-        setGoogleCalendarToken(credential.accessToken); // Share
-        setGoogleDriveToken(credential.accessToken);    // Share
-        setGoogleTasksToken(credential.accessToken);    // Share
-        return credential.accessToken;
-      }
-      return null;
-    } catch (error) {
-      console.error('Error connecting Google Keep:', error);
-      throw error;
-    }
-  };
-
-  const loginWithEmail = async (email: string, pass: string) => {
-    setLoading(true);
-    try {
-      await signInWithEmailAndPassword(auth, email, pass);
-    } catch (error) {
-      console.error('Email Sign-In failed:', error);
-      setLoading(false);
-      throw error;
-    }
-  };
-
-  const registerWithEmail = async (email: string, pass: string, name: string) => {
-    setLoading(true);
-    try {
-      const result = await createUserWithEmailAndPassword(auth, email, pass);
-      await updateProfile(result.user, { displayName: name });
-    } catch (error) {
-      console.error('Registration failed:', error);
-      setLoading(false);
-      throw error;
-    }
-  };
-
-  const logout = async () => {
-    setLoading(true);
-    try {
-      await signOut(auth);
-      setGoogleCalendarToken(null);
-      setGoogleDriveToken(null);
-      setGoogleTasksToken(null);
-      setGoogleKeepToken(null);
-      localStorage.removeItem('active_workspace');
-      localStorage.removeItem('saas_current_plan');
-      window.dispatchEvent(new Event('workspaceChanged'));
-    } catch (error) {
-      console.error('Sign-Out failed:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const disconnectGoogleCalendar = () => {
-    setGoogleCalendarToken(null);
-  };
-
-  const disconnectGoogleDrive = () => {
-    setGoogleDriveToken(null);
-  };
-
-  const disconnectGoogleTasks = () => {
-    setGoogleTasksToken(null);
-  };
-
-  const disconnectGoogleKeep = () => {
-    setGoogleKeepToken(null);
-  };
+  const disconnectGoogleCalendar = () => setGoogleCalendarToken(null);
+  const disconnectGoogleDrive = () => setGoogleDriveToken(null);
+  const disconnectGoogleTasks = () => setGoogleTasksToken(null);
+  const disconnectGoogleKeep = () => setGoogleKeepToken(null);
 
   return (
     <AuthContext.Provider value={{

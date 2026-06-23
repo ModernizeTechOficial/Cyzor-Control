@@ -71,7 +71,6 @@ export interface ProjectExtended {
   deadline: string;
   column: string;
   description?: string;
-  progress?: number;
   criteria?: Array<{ id: number; text: string; completed: boolean }>;
   
   // Extended fields
@@ -85,4 +84,5 @@ export interface ProjectExtended {
   comments?: Comment[];
   history?: Activity[];
   velocity?: Array<{ sprint: string; pts: number }>;
+  progress?: number;
 }
