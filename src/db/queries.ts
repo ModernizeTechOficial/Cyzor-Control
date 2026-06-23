@@ -17,23 +17,28 @@ export async function getOrCreateUser(
 
     if (!user) {
       // Create user
-      const insertedUsers = await db.insert(users).values({
+      const [insertResult] = await db.insert(users).values({
         uid,
         email,
         displayName: displayName || null,
         photoUrl: photoUrl || null,
         currentPlan: 'Pro',
-      }).returning();
-      user = insertedUsers[0];
+      });
+      
+      const userResult = await db.select().from(users).where(eq(users.uid, uid));
+      user = userResult[0];
 
       // Automatically create a default workspace
       const defaultWorkspaceName = displayName ? `Workspace de ${displayName}` : 'Meu Workspace';
-      const insertedWorkspaces = await db.insert(workspaces).values({
+      const [wsInsertResult] = await db.insert(workspaces).values({
         name: defaultWorkspaceName,
         ownerUid: uid,
         plan: 'Pro',
-      }).returning();
-      const workspace = insertedWorkspaces[0];
+      });
+      
+      const workspaceId = wsInsertResult.insertId;
+      const workspaceResult = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId));
+      const workspace = workspaceResult[0];
 
       // Make user a member
       await db.insert(workspaceMembers).values({
@@ -47,12 +52,14 @@ export async function getOrCreateUser(
       user.activeWorkspaceId = workspace.id;
     } else {
       // Update basic info
-      const updatedUsers = await db.update(users).set({
+      await db.update(users).set({
         displayName: displayName || user.displayName,
         photoUrl: photoUrl || user.photoUrl,
         updatedAt: new Date(),
-      }).where(eq(users.uid, uid)).returning();
-      user = updatedUsers[0];
+      }).where(eq(users.uid, uid));
+      
+      const updatedUserResult = await db.select().from(users).where(eq(users.uid, uid));
+      user = updatedUserResult[0];
     }
 
     return user;

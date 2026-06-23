@@ -1,189 +1,188 @@
-import { pgTable, serial, text, timestamp, boolean, integer, decimal, jsonb } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { mysqlTable, int, text, timestamp, boolean, decimal, json, varchar } from 'drizzle-orm/mysql-core';
+import { relations, sql } from 'drizzle-orm';
 
 // USERS
-export const users = pgTable('users', {
-  id: serial('id').primaryKey(),
-  uid: text('uid').notNull().unique(), // Universal ID
-  email: text('email').notNull(),
-  passwordHash: text('password_hash'), // For manual auth
+export const users = mysqlTable('users', {
+  id: int('id').primaryKey().autoincrement(),
+  uid: varchar('uid', { length: 255 }).notNull().unique(), // Firebase Auth UID
+  email: varchar('email', { length: 255 }).notNull(),
   displayName: text('display_name'),
   photoUrl: text('photo_url'),
-  currentPlan: text('current_plan').default('Pro'),
-  activeWorkspaceId: integer('active_workspace_id'), // Will foreign key down below
+  currentPlan: text('current_plan'),
+  activeWorkspaceId: int('active_workspace_id'), // Will foreign key down below
   phone: text('phone'),
   role: text('role'),
-  settings: jsonb('settings').default({}),
+  settings: json('settings'),
   createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 });
 
 // WORKSPACES
-export const workspaces = pgTable('workspaces', {
-  id: serial('id').primaryKey(),
+export const workspaces = mysqlTable('workspaces', {
+  id: int('id').primaryKey().autoincrement(),
   name: text('name').notNull(),
-  ownerUid: text('owner_uid').notNull().references(() => users.uid, { onDelete: 'cascade' }),
-  plan: text('plan').default('Pro'),
-  settings: jsonb('settings').default({}),
+  ownerUid: varchar('owner_uid', { length: 255 }).notNull().references(() => users.uid, { onDelete: 'cascade' }),
+  plan: text('plan'),
+  settings: json('settings'),
   createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 });
 
 // WORKSPACE MEMBERS
-export const workspaceMembers = pgTable('workspace_members', {
-  id: serial('id').primaryKey(),
-  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
-  userUid: text('user_uid').notNull().references(() => users.uid, { onDelete: 'cascade' }),
-  role: text('role').notNull().default('MEMBER'), // OWNER, ADMIN, MEMBER
+export const workspaceMembers = mysqlTable('workspace_members', {
+  id: int('id').primaryKey().autoincrement(),
+  workspaceId: int('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  userUid: varchar('user_uid', { length: 255 }).notNull().references(() => users.uid, { onDelete: 'cascade' }),
+  role: text('role').notNull(), // OWNER, ADMIN, MEMBER
   createdAt: timestamp('created_at').defaultNow(),
 });
 
 // COMPANIES (Empresas)
-export const companies = pgTable('companies', {
-  id: serial('id').primaryKey(),
-  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+export const companies = mysqlTable('companies', {
+  id: int('id').primaryKey().autoincrement(),
+  workspaceId: int('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   cnpj: text('cnpj'),
   industry: text('industry'),
   size: text('size'),
   website: text('website'),
-  status: text('status').default('Ativo'), // Ativo, Inativo
+  status: text('status'), // Ativo, Inativo
   createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 });
 
 // PRODUCTS
-export const products = pgTable('products', {
-  id: serial('id').primaryKey(),
-  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
-  companyId: integer('company_id').references(() => companies.id, { onDelete: 'set null' }),
+export const products = mysqlTable('products', {
+  id: int('id').primaryKey().autoincrement(),
+  workspaceId: int('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  companyId: int('company_id').references(() => companies.id, { onDelete: 'set null' }),
   name: text('name').notNull(),
   description: text('description'),
-  status: text('status').default('Em Desenvolvimento'),
+  status: text('status'),
   launchDate: timestamp('launch_date'),
   createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 });
 
 // PROJECTS
-export const projects = pgTable('projects', {
-  id: serial('id').primaryKey(),
-  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
-  companyId: integer('company_id').references(() => companies.id, { onDelete: 'set null' }),
-  productId: integer('product_id').references(() => products.id, { onDelete: 'set null' }),
+export const projects = mysqlTable('projects', {
+  id: int('id').primaryKey().autoincrement(),
+  workspaceId: int('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  companyId: int('company_id').references(() => companies.id, { onDelete: 'set null' }),
+  productId: int('product_id').references(() => products.id, { onDelete: 'set null' }),
   name: text('name').notNull(),
   description: text('description'),
-  status: text('status').default('Em Andamento'), // Planejamento, Em Andamento, Pausado, Concluído
-  priority: text('priority').default('Média'), // Baixa, Média, Alta, Crítica
-  progress: integer('progress').default(0),
+  status: text('status'), // Planejamento, Em Andamento, Pausado, Concluído
+  priority: text('priority'), // Baixa, Média, Alta, Crítica
+  progress: int('progress').default(0),
   startDate: timestamp('start_date'),
   dueDate: timestamp('due_date'),
-  team: jsonb('team').default([]),
-  history: jsonb('history').default([]),
-  comments: jsonb('comments').default([]),
-  criteria: jsonb('criteria').default([]),
-  velocity: jsonb('velocity').default([]),
+  team: json('team'),
+  history: json('history'),
+  comments: json('comments'),
+  criteria: json('criteria'),
+  velocity: json('velocity'),
   createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 });
 
 // SPRINTS
-export const sprints = pgTable('sprints', {
-  id: serial('id').primaryKey(),
-  projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+export const sprints = mysqlTable('sprints', {
+  id: int('id').primaryKey().autoincrement(),
+  projectId: int('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   goal: text('goal'), // Added goal column
   startDate: timestamp('start_date'),
   endDate: timestamp('end_date'),
-  status: text('status').default('PLANNED'), // PLANNED, ACTIVE, COMPLETED
+  status: text('status'), // PLANNED, ACTIVE, COMPLETED
   createdAt: timestamp('created_at').defaultNow(),
 });
 
 // TASKS (Kanban)
-export const tasks = pgTable('tasks', {
-  id: serial('id').primaryKey(),
+export const tasks = mysqlTable('tasks', {
+  id: int('id').primaryKey().autoincrement(),
   // Existing fields
-  projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
-  sprintId: integer('sprint_id').references(() => sprints.id, { onDelete: 'set null' }),
+  projectId: int('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  sprintId: int('sprint_id').references(() => sprints.id, { onDelete: 'set null' }),
   title: text('title').notNull(),
   description: text('description'),
-  status: text('status').default('BACKLOG'), // BACKLOG, TODO, IN_PROGRESS, REVIEW, DONE
-  priority: text('priority').default('Média'),
-  assigneeUid: text('assignee_uid').references(() => users.uid, { onDelete: 'set null' }),
+  status: text('status'), // BACKLOG, TODO, IN_PROGRESS, REVIEW, DONE
+  priority: text('priority'),
+  assigneeUid: varchar('assignee_uid', { length: 255 }).references(() => users.uid, { onDelete: 'set null' }),
   dueDate: timestamp('due_date'),
-  order: integer('order').default(0), // Position in Kanban column
-  tags: jsonb('tags').default([]), // New field
-  subtasks: jsonb('subtasks').default([]), // New field
-  taskComments: jsonb('task_comments').default([]), // New field
-  dependencies: jsonb('dependencies').default([]), // New field
+  order: int('order').default(0), // Position in Kanban column
+  tags: json('tags'), // New field
+  subtasks: json('subtasks'), // New field
+  taskComments: json('task_comments'), // New field
+  dependencies: json('dependencies'), // New field
   createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 });
 
 // IDEAS
-export const ideas = pgTable('ideas', {
-  id: serial('id').primaryKey(),
-  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+export const ideas = mysqlTable('ideas', {
+  id: int('id').primaryKey().autoincrement(),
+  workspaceId: int('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   description: text('description'),
-  status: text('status').default('Nova'), // Nova, Em Análise, Aprovada, Rejeitada, Convertida
-  priority: text('priority').default('Média'),
-  tags: jsonb('tags').default([]), // array of strings
-  authorUid: text('author_uid').references(() => users.uid, { onDelete: 'set null' }),
-  convertedToProjectId: integer('converted_to_project_id').references(() => projects.id, { onDelete: 'set null' }),
+  status: text('status'), // Nova, Em Análise, Aprovada, Rejeitada, Convertida
+  priority: text('priority'),
+  tags: json('tags'), // array of strings
+  authorUid: varchar('author_uid', { length: 255 }).references(() => users.uid, { onDelete: 'set null' }),
+  convertedToProjectId: int('converted_to_project_id').references(() => projects.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 });
 
 // DOCUMENTS
-export const documents = pgTable('documents', {
-  id: serial('id').primaryKey(),
-  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+export const documents = mysqlTable('documents', {
+  id: int('id').primaryKey().autoincrement(),
+  workspaceId: int('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   content: text('content'), // Markdown or HTML
   folder: text('folder'), // Used as Category in UI
-  type: text('type').default('FILE'), // FILE, URL
+  type: text('type'), // FILE, URL
   url: text('url'),
   size: text('size'),
-  tags: jsonb('tags').default([]),
-  authorUid: text('author_uid').references(() => users.uid, { onDelete: 'set null' }),
-  projectId: integer('project_id').references(() => projects.id, { onDelete: 'set null' }),
+  tags: json('tags'),
+  authorUid: varchar('author_uid', { length: 255 }).references(() => users.uid, { onDelete: 'set null' }),
+  projectId: int('project_id').references(() => projects.id, { onDelete: 'set null' }),
   isFavorite: boolean('is_favorite').default(false),
   createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 });
 
-export const aiMemories = pgTable('ai_memories', {
-  id: serial('id').primaryKey(),
-  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+export const aiMemories = mysqlTable('ai_memories', {
+  id: int('id').primaryKey().autoincrement(),
+  workspaceId: int('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
   category: text('category').notNull(), // Perfil, Empresa, Projetos, etc.
   content: text('content').notNull(),
-  importance: integer('importance').default(5), // 1-10
+  importance: int('importance').default(5), // 1-10
   createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow()
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow()
 });
 
 // FINANCE ENTRIES
-export const financeEntries = pgTable('finance_entries', {
-  id: serial('id').primaryKey(),
-  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+export const financeEntries = mysqlTable('finance_entries', {
+  id: int('id').primaryKey().autoincrement(),
+  workspaceId: int('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
   type: text('type').notNull(), // RECEITA, DESPESA
   amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
   description: text('description').notNull(),
   category: text('category'),
   date: timestamp('date').notNull(),
-  status: text('status').default('PENDENTE'), // PAGO, PENDENTE, ATRASADO
-  companyId: integer('company_id').references(() => companies.id, { onDelete: 'set null' }),
-  projectId: integer('project_id').references(() => projects.id, { onDelete: 'set null' }),
+  status: text('status'), // PAGO, PENDENTE, ATRASADO
+  companyId: int('company_id').references(() => companies.id, { onDelete: 'set null' }),
+  projectId: int('project_id').references(() => projects.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 });
 
 // AI HISTORY
-export const aiHistory = pgTable('ai_history', {
-  id: serial('id').primaryKey(),
-  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
-  userUid: text('user_uid').notNull().references(() => users.uid, { onDelete: 'cascade' }),
+export const aiHistory = mysqlTable('ai_history', {
+  id: int('id').primaryKey().autoincrement(),
+  workspaceId: int('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  userUid: varchar('user_uid', { length: 255 }).notNull().references(() => users.uid, { onDelete: 'cascade' }),
   prompt: text('prompt').notNull(),
   response: text('response').notNull(),
   contextType: text('context_type'), // e.g. 'general', 'project_12', 'document_10'
@@ -191,46 +190,46 @@ export const aiHistory = pgTable('ai_history', {
 });
 
 // NOTIFICATIONS
-export const notifications = pgTable('notifications', {
-  id: serial('id').primaryKey(),
-  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+export const notifications = mysqlTable('notifications', {
+  id: int('id').primaryKey().autoincrement(),
+  workspaceId: int('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   description: text('description').notNull(),
-  type: text('type').default('info'), // info, success, warning, error
+  type: text('type'), // info, success, warning, error
   isRead: boolean('is_read').default(false),
   createdAt: timestamp('created_at').defaultNow(),
 });
 
 // AGENDA EVENTS
-export const agendaEvents = pgTable('agenda_events', {
-  id: serial('id').primaryKey(),
-  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+export const agendaEvents = mysqlTable('agenda_events', {
+  id: int('id').primaryKey().autoincrement(),
+  workspaceId: int('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
-  description: text('description').default(''),
+  description: text('description'),
   date: text('date').notNull(), // YYYY-MM-DD
   startTime: text('start_time').notNull(), // HH:MM
   endTime: text('end_time').notNull(), // HH:MM
   owner: text('owner').notNull(),
-  participants: jsonb('participants').default([]),
-  location: text('location').default(''),
-  type: text('type').default('compromisso'),
-  category: text('category').default('Administrativo'),
-  status: text('status').default('Agendado'),
-  reminder: text('reminder').default('none'),
-  recurrence: text('recurrence').default('none'),
-  recurrenceDescription: text('recurrence_description').default(''),
-  linkedProjectId: integer('linked_project_id').references(() => projects.id, { onDelete: 'set null' }),
-  linkedCompanyId: integer('linked_company_id').references(() => companies.id, { onDelete: 'set null' }),
-  linkedTaskId: integer('linked_task_id').references(() => tasks.id, { onDelete: 'set null' }),
-  comments: jsonb('comments').default([]),
-  attachments: jsonb('attachments').default([]),
-  checklist: jsonb('checklist').default([]),
-  history: jsonb('history').default([]),
-  reservedResources: jsonb('reserved_resources').default([]),
+  participants: json('participants'),
+  location: text('location'),
+  type: text('type'),
+  category: text('category'),
+  status: text('status'),
+  reminder: text('reminder'),
+  recurrence: text('recurrence'),
+  recurrenceDescription: text('recurrence_description'),
+  linkedProjectId: int('linked_project_id').references(() => projects.id, { onDelete: 'set null' }),
+  linkedCompanyId: int('linked_company_id').references(() => companies.id, { onDelete: 'set null' }),
+  linkedTaskId: int('linked_task_id').references(() => tasks.id, { onDelete: 'set null' }),
+  comments: json('comments'),
+  attachments: json('attachments'),
+  checklist: json('checklist'),
+  history: json('history'),
+  reservedResources: json('reserved_resources'),
   isTimeBlock: boolean('is_time_block').default(false),
-  timeBlockType: text('time_block_type').default('none'),
+  timeBlockType: text('time_block_type'),
   createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 });
 
 // --- RELATIONS ---
@@ -288,12 +287,12 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
 }));
 
 // MILESTONES (Marcos do Projeto)
-export const milestones = pgTable('milestones', {
-  id: serial('id').primaryKey(),
-  projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+export const milestones = mysqlTable('milestones', {
+  id: int('id').primaryKey().autoincrement(),
+  projectId: int('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   date: timestamp('date'),
-  status: text('status').default('PENDENTE'), // PENDENTE, CONCLUIDO
+  status: text('status'), // PENDENTE, CONCLUIDO
   description: text('description'),
   createdAt: timestamp('created_at').defaultNow(),
 });

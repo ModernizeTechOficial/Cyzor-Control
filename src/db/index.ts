@@ -1,32 +1,20 @@
-import { drizzle } from 'drizzle-orm/node-postgres';
-import pg from 'pg';
-import * as schema from './schema';
-import { env } from '../config/env';
-
-const { Pool } = pg;
+import { drizzle } from 'drizzle-orm/mysql2';
+import mysql from 'mysql2/promise';
+import * as schema from './schema.ts';
 
 export const createPool = () => {
-  if (env.databaseUrl) {
-    return new Pool({
-      connectionString: env.databaseUrl,
-      connectionTimeoutMillis: 15000,
-      ssl: { rejectUnauthorized: false }
-    });
-  }
-  
-  return new Pool({
+  return mysql.createPool({
     host: process.env.SQL_HOST,
     user: process.env.SQL_USER,
     password: process.env.SQL_PASSWORD,
     database: process.env.SQL_DB_NAME,
-    connectionTimeoutMillis: 15000,
+    port: Number(process.env.SQL_PORT || 3306),
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
   });
 };
 
 const pool = createPool();
 
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle SQL pool client:', err);
-});
-
-export const db = drizzle(pool, { schema });
+export const db = drizzle(pool, { schema, mode: 'default' });
