@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { env } from '../config/env.ts';
 
 export interface AuthUser {
   uid: string;
@@ -26,7 +27,7 @@ export const requireAuth = async (
 
   const token = authHeader.split('Bearer ')[1];
   try {
-    const JWT_SECRET = process.env.JWT_SECRET || 'cyzor_fallback_secret_123';
+    const JWT_SECRET = env.jwtSecret;
     const decodedToken = jwt.verify(token, JWT_SECRET) as AuthUser;
     req.user = decodedToken;
     next();

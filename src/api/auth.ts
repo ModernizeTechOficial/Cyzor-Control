@@ -7,9 +7,10 @@ import { users } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { getOrCreateUser } from '../db/queries';
+import { env } from '../config/env.ts';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'cyzor_fallback_secret_123';
+const JWT_SECRET = env.jwtSecret;
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '1047124317865-u3lntb1f6n8mvtgffkfl99ok91njv0in.apps.googleusercontent.com';
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 

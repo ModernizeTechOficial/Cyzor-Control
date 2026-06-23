@@ -11,7 +11,8 @@ import apiRouter from "./src/db/api";
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  app.set("trust proxy", 1);
+  const PORT = process.env.PORT || 3000;
 
   app.use(helmet({ contentSecurityPolicy: false })); // Disabled CSP for React DEV
   app.use(cors());
@@ -23,6 +24,11 @@ async function startServer() {
     message: "Too many requests, please try again later."
   });
   app.use("/api/", limiter);
+
+  // API Route: Required Healthcheck for Cyzor PaaS
+  app.get("/health", (req, res) => {
+    res.json({ status: "ok" });
+  });
 
   // Middleware to parse JSON bodies
   app.use(express.json({ limit: "50mb" }));

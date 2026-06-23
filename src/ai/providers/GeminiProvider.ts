@@ -1,12 +1,13 @@
 import { GoogleGenAI, Type, FunctionDeclaration } from '@google/genai';
 import { IAIProvider, AIMessage, AITool, AIResponse } from '../AIProvider';
+import { env } from '../../config/env.ts';
 
 export class GeminiProvider implements IAIProvider {
   private ai: GoogleGenAI;
 
   constructor() {
     this.ai = new GoogleGenAI({ 
-      apiKey: process.env.GEMINI_API_KEY, 
+      apiKey: env.geminiApiKey, 
       httpOptions: { headers: { "User-Agent": "aistudio-build" } } 
     });
   }

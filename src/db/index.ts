@@ -1,10 +1,18 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
 import * as schema from './schema.ts';
+import { env } from '../config/env.ts';
 
 const { Pool } = pg;
 
 export const createPool = () => {
+  if (env.databaseUrl) {
+    return new Pool({
+      connectionString: env.databaseUrl,
+      connectionTimeoutMillis: 15000,
+    });
+  }
+  
   return new Pool({
     host: process.env.SQL_HOST,
     user: process.env.SQL_USER,
