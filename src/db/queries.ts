@@ -1,5 +1,5 @@
 import { db } from './index.ts';
-import { users, workspaces, workspaceMembers, companies, products, projects, tasks, ideas, documents, financeEntries, aiHistory } from './schema.ts';
+import { users, workspaces, workspaceMembers, companies, products, projects, tasks, ideas, documents, financeEntries, aiHistory, flows } from './schema.ts';
 import { eq, and, desc, asc } from 'drizzle-orm';
 
 // --- USERS & WORKSPACES ---
@@ -56,9 +56,9 @@ export async function getOrCreateUser(
     }
 
     return user;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in getOrCreateUser:', error);
-    throw new Error('Failed to get or create user in database.', { cause: error });
+    throw new Error('Failed to get or create user in database: ' + (error.message || String(error)));
   }
 }
 
@@ -116,4 +116,13 @@ export async function getFinanceEntries(workspaceId: number) {
 
 export async function getDocuments(workspaceId: number) {
   return db.select().from(documents).where(eq(documents.workspaceId, workspaceId));
+}
+
+export async function getFlows(workspaceId: number) {
+  return db.select().from(flows).where(eq(flows.workspaceId, workspaceId));
+}
+
+export async function getFlowById(workspaceId: number, flowId: number) {
+  const result = await db.select().from(flows).where(and(eq(flows.workspaceId, workspaceId), eq(flows.id, flowId)));
+  return result[0];
 }

@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { View } from '../types';
 
 export default function AIAssistant({ setCurrentView }: { setCurrentView?: (view: View) => void }) {
-  const { token, activeWorkspace } = useAuth();
+  const { fetchWithAuth, activeWorkspace } = useAuth();
   const [insight, setInsight] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -39,9 +39,7 @@ export default function AIAssistant({ setCurrentView }: { setCurrentView?: (view
       }
 
       try {
-        const response = await fetch('/api/ai/insights', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const response = await fetchWithAuth('/api/ai/insights');
         if (response.ok) {
           const data = await response.json();
           setInsight(data);
@@ -57,7 +55,7 @@ export default function AIAssistant({ setCurrentView }: { setCurrentView?: (view
       }
     };
     fetchInsight();
-  }, [token, activeWorkspace]);
+  }, [fetchWithAuth, activeWorkspace]);
 
   const handleAction = () => {
     if (setCurrentView) {

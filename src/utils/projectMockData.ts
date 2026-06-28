@@ -64,18 +64,18 @@ export const getProjectPrepopulated = (p: any): ProjectExtended => {
       { id: 205, name: 'Performance Stress Tests usando K6', assignee: 'Alex B.', priority: 'Alta', column: 'todo', sprintId: 3, tags: ['DevOps', 'stress'], dueDate: '02 Jul', dependencies: [203] },
     ];
     defaultMilestones = [
-      { id: 201, title: 'Schema de Banco Homologado', desc: 'Migrações PostgreSQL revisadas por DBA', date: '06 Jun', status: 'Concluído' },
+      { id: 201, title: 'Schema de Banco Homologado', desc: 'Migrações SQLite revisadas por DBA', date: '06 Jun', status: 'Concluído' },
       { id: 202, title: 'Assinatura dos Endpoints (Swagger)', desc: 'Validado pelos integradores externos', date: '12 Jun', status: 'Concluído' },
       { id: 203, title: 'Staging Integration complete', desc: 'Serviços conectados e prontos para teste de carga', date: '25 Jun', status: 'Em Andamento' },
       { id: 204, title: 'Lançamento e Chaveamento V3', desc: 'Deploy final e desativação do gateway V2', date: '15 Jul', status: 'Pendente' },
     ];
     defaultTeam = [
       { name: 'Mike R.', role: 'Senior Backend Engineer', allocation: 100, avatar: 'MR' },
-      { name: 'Alex B.', role: 'DevOps / Postgres DBA', allocation: 60, avatar: 'AB' },
+      { name: 'Alex B.', role: 'DevOps / SQLite DBA', allocation: 60, avatar: 'AB' },
       { name: 'Carlos T.', role: 'QA Engine Specialist', allocation: 50, avatar: 'CT' },
     ];
     defaultDocs = [
-      { id: 201, title: 'Plano de Modelagem e Migração PostgreSQL', category: 'Técnicos', size: '1.2 MB', uploadedBy: 'Alex B.', date: '04 Jun 2026' },
+      { id: 201, title: 'Plano de Modelagem e Migração SQLite', category: 'Técnicos', size: '1.2 MB', uploadedBy: 'Alex B.', date: '04 Jun 2026' },
       { id: 202, title: 'Guia de Integração e Chaves OAuth2', category: 'Técnicos', size: '3.1 MB', uploadedBy: 'Mike R.', date: '11 Jun 2026' },
     ];
     defaultComments = [

@@ -1,18 +1,20 @@
 import { useState, useEffect } from 'react';
-import { X, GitBranch, Building2, User, Flag, Calendar, Sparkles } from 'lucide-react';
+import { X, GitBranch, Building2, User, Flag, Calendar, Sparkles, DollarSign } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { safeToISOString } from '../lib/dateUtils';
 import { showSuccess, showError } from '../lib/alerts';
 
 export default function NewProjectModal({ isOpen, onClose, onSuccess, initialStatus }: { isOpen: boolean, onClose: () => void, onSuccess?: () => void, initialStatus?: string }) {
   const [currentPlan, setCurrentPlan] = useState('Pro');
-  const { fetchWithAuth } = useAuth();
+  const { fetchWithAuth, user } = useAuth();
   
   const [formData, setFormData] = useState({
     name: '',
     companyId: '',
     priority: 'Média',
     dueDate: '',
+    budget: '',
+    owner: user?.displayName || user?.email || 'Sem dono'
   });
   const [companies, setCompanies] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -61,6 +63,8 @@ export default function NewProjectModal({ isOpen, onClose, onSuccess, initialSta
           name: formData.name,
           priority: formData.priority,
           dueDate: safeToISOString(formData.dueDate),
+          budget: formData.budget || '0',
+          owner: formData.owner,
           companyId: formData.companyId ? Number(formData.companyId) : null,
           status: initialStatus ? getStatusName(initialStatus) : 'Planejamento'
         })
@@ -68,7 +72,7 @@ export default function NewProjectModal({ isOpen, onClose, onSuccess, initialSta
       if (res.ok) {
         onSuccess?.();
         onClose();
-        setFormData({ name: '', companyId: '', priority: 'Média', dueDate: '' });
+        setFormData({ name: '', companyId: '', priority: 'Média', dueDate: '', budget: '', owner: user?.displayName || user?.email || 'Sem dono' });
         showSuccess('Projeto criado com sucesso!');
       } else {
         showError('Erro ao criar projeto.');
@@ -161,6 +165,21 @@ export default function NewProjectModal({ isOpen, onClose, onSuccess, initialSta
               type="date" 
               value={formData.dueDate}
               onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
+            />
+            <InputField 
+              label="FATURAMENTO PRETENDIDO (R$)" 
+              Icon={DollarSign} 
+              placeholder="Ex: 5000.00" 
+              type="number" 
+              value={formData.budget}
+              onChange={(e) => setFormData({...formData, budget: e.target.value})}
+            />
+            <InputField 
+              label="COORDENADOR / OWNER" 
+              Icon={User} 
+              placeholder="Nome do responsável..." 
+              value={formData.owner}
+              onChange={(e) => setFormData({...formData, owner: e.target.value})}
             />
           </div>
         </div>

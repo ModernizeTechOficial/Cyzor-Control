@@ -74,7 +74,7 @@ export default function SecPerfilGeral({ section }: { section: string }) {
         `[SYSTEM] ${now} 01:00:22 - Cron jobs executed successfully.`,
         `[BACKUP] ${now} 02:00:00 - Starting automated daily snapshot...`,
         `[BACKUP] ${now} 02:02:15 - Snapshot verified, compression factor 4x.`,
-        `[INFO]   ${now} 08:01:05 - PostgreSQL database connections pool recycled safely.`,
+        `[INFO]   ${now} 08:01:05 - SQLite database connections pool recycled safely.`,
         `[IA]     ${now} 08:15:00 - Vector Search index refreshed. All elements safe.`,
         `[CORE]   ${now} 10:11:42 - Client interface handshake completed successfully.`
       ]);
@@ -524,7 +524,7 @@ export default function SecPerfilGeral({ section }: { section: string }) {
             <MiniCard label="Estado do Banco" value="Seguro" icon={CheckCircle2} highlight />
             <MiniCard label="Última Cópia" value="Hoje, 02h" icon={Clock} />
             <MiniCard label="Próxima Sincronização" value="Amanhã, 02h" icon={Clock} />
-            <MiniCard label="Tamanho PostgreSQL" value="1.48 GB" icon={Database} />
+            <MiniCard label="Tamanho SQLite" value="1.48 GB" icon={Database} />
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 p-6 bg-[#FFFFFF] border border-[#0F172A0F] rounded-[24px]">
@@ -570,12 +570,12 @@ export default function SecPerfilGeral({ section }: { section: string }) {
         <div className="flex flex-col gap-10 animate-in fade-in slide-in-from-bottom-3 duration-300">
           <div className="flex flex-col gap-2">
             <h2 className="text-2xl font-display font-bold text-[#111111]">Informações de Sistema</h2>
-            <p className="text-sm text-[#64748B] leading-relaxed">Ferramentas de diagnóstico, monitoramento PostgreSQL e logs ao vivo do Core Cyzor.</p>
+            <p className="text-sm text-[#64748B] leading-relaxed">Ferramentas de diagnóstico, monitoramento SQLite e logs ao vivo do Core Cyzor.</p>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <MiniCard label="Versão do Engine" value="v4.2.1-stable" icon={Server} />
-            <MiniCard label="Engine Database" value="PostgreSQL 15" icon={Database} />
+            <MiniCard label="Engine Database" value="SQLite 15" icon={Database} />
             <MiniCard label="Conexões SQL" value="Ativas (2)" icon={Activity} />
             <MiniCard label="Status Container" value="Online" icon={CheckCircle2} highlight />
           </div>

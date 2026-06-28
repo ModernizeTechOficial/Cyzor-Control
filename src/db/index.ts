@@ -1,32 +1,47 @@
-import { drizzle } from 'drizzle-orm/node-postgres';
-import pg from 'pg';
-import * as schema from './schema';
-import { env } from '../config/env';
+import 'dotenv/config';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
+import Database from 'better-sqlite3';
+import * as schema from './schema.ts';
+import fs from 'fs';
+import path from 'path';
 
-const { Pool } = pg;
+const dbPath = process.env.DATABASE_PATH || 'database/database.sqlite';
+const dbDir = path.dirname(dbPath);
 
-export const createPool = () => {
-  if (env.databaseUrl) {
-    return new Pool({
-      connectionString: env.databaseUrl,
-      connectionTimeoutMillis: 15000,
-      ssl: { rejectUnauthorized: false }
-    });
+try {
+  if (!fs.existsSync(dbDir)) {
+    console.log(`[Database] Criando diretório do banco em: ${dbDir}`);
+    fs.mkdirSync(dbDir, { recursive: true });
   }
-  
-  return new Pool({
-    host: process.env.SQL_HOST,
-    user: process.env.SQL_USER,
-    password: process.env.SQL_PASSWORD,
-    database: process.env.SQL_DB_NAME,
-    connectionTimeoutMillis: 15000,
-  });
-};
+} catch (error) {
+  console.error('[Database Error] Falha ao criar o diretório do banco de dados:', error);
+  process.exit(1);
+}
 
-const pool = createPool();
+console.log(`[Database] Inicializando banco SQLite local em: ${dbPath}`);
 
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle SQL pool client:', err);
-});
+let sqlite: Database.Database;
+try {
+  sqlite = new Database(dbPath, { fileMustExist: false });
+  // WAL mode for performance
+  sqlite.pragma('journal_mode = WAL');
+  sqlite.pragma('foreign_keys = ON');
+  sqlite.pragma('synchronous = NORMAL');
+} catch (error: any) {
+  console.error('[Database Error] Arquivo do banco de dados inexistente, corrompido ou sem permissão de leitura/escrita:', error.message);
+  process.exit(1);
+}
 
-export const db = drizzle(pool, { schema });
+export const db = drizzle(sqlite, { schema });
+
+try {
+  console.log('[Database] Verificando e aplicando migrações (tabelas e índices)...');
+  migrate(db, { migrationsFolder: 'drizzle' });
+  console.log('[Database] Migrações concluídas com sucesso. O banco está pronto!');
+} catch (error: any) {
+  console.error('[Database Error] Falha ao realizar migração automática. Pode haver tabela inexistente ou esquema inconsistente:', error.message);
+}
+
+
+

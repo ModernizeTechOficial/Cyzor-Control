@@ -51,14 +51,14 @@ export default function ConfiguracoesView() {
     localStorage.setItem('active_workspace', name);
     setActiveWorkspace(name);
     window.dispatchEvent(new Event('workspaceChanged'));
-    updateSaaSBackend(undefined, id).catch(console.error); // full live workspace update in postgres backend
+    updateSaaSBackend(undefined, id).catch(console.error); // full live workspace update in sqlite backend
   };
 
   const handleUpgradePlan = (plan: string) => {
     localStorage.setItem('saas_current_plan', plan);
     setCurrentPlan(plan);
     window.dispatchEvent(new Event('workspaceChanged'));
-    updateSaaSBackend(plan, undefined).catch(console.error); // fully persists plan change in postgres backend
+    updateSaaSBackend(plan, undefined).catch(console.error); // fully persists plan change in sqlite backend
   };
 
   // Grouped routing layout for settings sections

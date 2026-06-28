@@ -6,9 +6,10 @@ interface AbaVisaoGeralProps {
   project: ProjectExtended;
   isEditing: boolean;
   onChange: (updated: any) => void;
+  companies?: any[];
 }
 
-export default function AbaVisaoGeral({ project, isEditing, onChange }: AbaVisaoGeralProps) {
+export default function AbaVisaoGeral({ project, isEditing, onChange, companies = [] }: AbaVisaoGeralProps) {
   const [formData, setFormData] = useState(project);
 
   useEffect(() => {
@@ -30,7 +31,7 @@ export default function AbaVisaoGeral({ project, isEditing, onChange }: AbaVisao
   const progressPercent = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
 
   return (
-    <div className="p-8 flex flex-col gap-10 max-w-5xl mx-auto animate-in fade-in duration-200">
+    <div className="p-8 flex flex-col gap-10 w-full animate-in fade-in duration-200">
       
       {/* 4 Indicators */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -114,7 +115,7 @@ export default function AbaVisaoGeral({ project, isEditing, onChange }: AbaVisao
             </h3>
 
             {isEditing ? (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-6">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-[#64748B]">Descrição do Projeto</label>
                   <textarea 
@@ -122,6 +123,70 @@ export default function AbaVisaoGeral({ project, isEditing, onChange }: AbaVisao
                     onChange={(e) => handleChange('description', e.target.value)}
                     className="w-full text-sm text-[#475569] leading-relaxed bg-[#FAFAFA] border border-[#0F172A0F] rounded-[16px] p-4 outline-none focus:border-[#111111]/30 transition-colors h-40 resize-none shadow-sm"
                   />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase text-[#64748B] tracking-wide">Cliente / Empresa</label>
+                    <select
+                      value={formData.companyId || ''}
+                      onChange={(e) => {
+                        const cid = Number(e.target.value);
+                        const cname = companies.find(c => c.id === cid)?.name || 'Empresa não vinculada';
+                        const updated = { ...formData, companyId: cid, company: cname };
+                        setFormData(updated);
+                        onChange(updated);
+                      }}
+                      className="w-full text-sm font-semibold text-[#111111] bg-[#FAFAFA] border border-[#0F172A0F] rounded-[12px] p-3 outline-none focus:border-[#111111]/30"
+                    >
+                      <option value="">Selecionar Empresa</option>
+                      {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase text-[#64748B] tracking-wide">Prioridade</label>
+                    <select
+                      value={formData.priority}
+                      onChange={(e) => handleChange('priority', e.target.value)}
+                      className="w-full text-sm font-semibold text-[#111111] bg-[#FAFAFA] border border-[#0F172A0F] rounded-[12px] p-3 outline-none focus:border-[#111111]/30"
+                    >
+                      <option value="Baixa">Baixa</option>
+                      <option value="Média">Média</option>
+                      <option value="Alta">Alta</option>
+                      <option value="Crítica">Crítica</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase text-[#64748B] tracking-wide">Prazo Final</label>
+                    <input
+                      type="date"
+                      value={formData.dueDate ? formData.dueDate.substring(0, 10) : ''}
+                      onChange={(e) => handleChange('dueDate', e.target.value)}
+                      className="w-full text-sm font-semibold text-[#111111] bg-[#FAFAFA] border border-[#0F172A0F] rounded-[12px] p-3 outline-none focus:border-[#111111]/30"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase text-[#64748B] tracking-wide">Faturamento (R$)</label>
+                    <input
+                      type="number"
+                      value={formData.budget || '0'}
+                      onChange={(e) => handleChange('budget', e.target.value)}
+                      className="w-full text-sm font-semibold text-[#111111] bg-[#FAFAFA] border border-[#0F172A0F] rounded-[12px] p-3 outline-none focus:border-[#111111]/30"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase text-[#64748B] tracking-wide">Coordenador / Owner</label>
+                    <input
+                      type="text"
+                      value={formData.owner || ''}
+                      onChange={(e) => handleChange('owner', e.target.value)}
+                      className="w-full text-sm font-semibold text-[#111111] bg-[#FAFAFA] border border-[#0F172A0F] rounded-[12px] p-3 outline-none focus:border-[#111111]/30"
+                    />
+                  </div>
                 </div>
               </div>
             ) : (
@@ -157,7 +222,16 @@ export default function AbaVisaoGeral({ project, isEditing, onChange }: AbaVisao
                       <Calendar size={12} /> Prazo Final
                     </span>
                     <span className={`text-sm font-semibold ${project.deadline === 'Atrasado' ? 'text-red-600 font-bold' : 'text-[#111111]'}`}>
-                      {project.deadline}
+                      {project.dueDate ? new Date(project.dueDate).toLocaleDateString('pt-BR') : project.deadline}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] font-bold uppercase text-[#64748B] tracking-wide flex items-center gap-1.5">
+                      <Activity size={12} /> Faturamento Previsto
+                    </span>
+                    <span className="text-sm font-semibold text-[#111111]">
+                      R$ {Number(project.budget || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                 </div>

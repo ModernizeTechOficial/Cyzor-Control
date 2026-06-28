@@ -1,11 +1,16 @@
 import { Router } from "express";
 import { requireAuth, AuthRequest } from "../middleware/auth.ts";
 import { db } from "./index.ts";
-import { companies, products, projects, tasks, ideas, documents, financeEntries, sprints, milestones, aiMemories, notifications, agendaEvents, users, workspaceMembers, workspaces } from "./schema.ts";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { companies, products, projects, tasks, ideas, documents, financeEntries, sprints, milestones, aiMemories, notifications, agendaEvents, users, workspaceMembers, workspaces, flows, notes } from "./schema.ts";
+import { eq, and, desc, sql, or } from "drizzle-orm";
 import { getUserSaaSState } from "./queries.ts";
 
 const apiRouter = Router();
+
+apiRouter.use((req, res, next) => {
+  console.log(`[apiRouter Request] ${req.method} ${req.url}`);
+  next();
+});
 
 // Helper to get active workspace ID
 async function getActiveWorkspaceId(uid: string) {
@@ -29,7 +34,7 @@ apiRouter.use(async (req: AuthRequest, res, next) => {
   }
 });
 
-import { processAIChat, generateProactiveInsights } from './aiModel.ts';
+import { processAIChat, generateProactiveInsights, getAIInstance } from './aiModel.ts';
 
 // --- AI CHAT ---
 apiRouter.post("/ai/chat", async (req: AuthRequest, res) => {
@@ -95,6 +100,30 @@ apiRouter.get("/ai/memories", async (req: AuthRequest, res) => {
   }
 });
 
+// --- GEMINI DIRECT ---
+apiRouter.post("/gemini", async (req: AuthRequest, res) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt) {
+      return res.status(400).json({ error: "Prompt is required" });
+    }
+
+    const ai = await getAIInstance(req.workspaceId!);
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+    });
+    res.json({ text: response.text });
+  } catch (error: any) {
+    console.error("Error in /api/gemini route:", error);
+    if (error.message && error.message.includes("503")) {
+      res.status(503).json({ error: "O serviço de IA está sobrecarregado no momento. Tente novamente em alguns segundos." });
+    } else {
+      res.status(500).json({ error: error.message || "Erro interno ao processar pela IA" });
+    }
+  }
+});
+
 // --- COMPANIES ---
 apiRouter.get("/companies", async (req: AuthRequest, res) => {
   try {
@@ -129,13 +158,43 @@ apiRouter.post("/companies", async (req: AuthRequest, res) => {
 
 // --- PROJECTS ---
 apiRouter.get("/projects", async (req: AuthRequest, res) => {
-  const data = await db.select().from(projects).where(eq(projects.workspaceId, req.workspaceId!));
-  res.json(data);
+  try {
+    const data = await db
+      .select({
+        id: projects.id,
+        workspaceId: projects.workspaceId,
+        name: projects.name,
+        description: projects.description,
+        status: projects.status,
+        priority: projects.priority,
+        owner: projects.owner,
+        budget: projects.budget,
+        dueDate: projects.dueDate,
+        team: projects.team,
+        history: projects.history,
+        comments: projects.comments,
+        criteria: projects.criteria,
+        velocity: projects.velocity,
+        progress: projects.progress,
+        companyId: projects.companyId,
+        productId: projects.productId,
+        createdAt: projects.createdAt,
+        updatedAt: projects.updatedAt,
+        companyName: companies.name
+      })
+      .from(projects)
+      .leftJoin(companies, eq(projects.companyId, companies.id))
+      .where(eq(projects.workspaceId, req.workspaceId!));
+    res.json(data);
+  } catch (error) {
+    console.error("Error fetching projects:", error);
+    res.status(500).json({ error: "Failed to fetch projects" });
+  }
 });
 apiRouter.post("/projects", async (req: AuthRequest, res) => {
   console.log("POST /api/projects called with body:", req.body);
   try {
-    const { name, priority, dueDate, companyId, productId, status } = req.body;
+    const { name, priority, dueDate, companyId, productId, status, budget, owner } = req.body;
     
     // Basic validation
     if (!name) {
@@ -150,7 +209,9 @@ apiRouter.post("/projects", async (req: AuthRequest, res) => {
       status: status || 'planejamento',
       dueDate: dueDate ? new Date(dueDate) : null,
       companyId: companyId ? Number(companyId) : null,
-      productId: productId ? Number(productId) : null
+      productId: productId ? Number(productId) : null,
+      budget: budget || '0',
+      owner: owner || 'Sem dono'
     }).returning();
     
     res.json(data[0]);
@@ -160,7 +221,7 @@ apiRouter.post("/projects", async (req: AuthRequest, res) => {
   }
 });
 apiRouter.put("/projects/:id", async (req: AuthRequest, res) => {
-  const { name, description, status, priority, dueDate, team, history, comments, criteria, velocity, progress } = req.body;
+  const { name, description, status, priority, dueDate, team, history, comments, criteria, velocity, progress, budget, companyId, owner } = req.body;
   const updateValues: any = {};
   if (name !== undefined) updateValues.name = name;
   if (description !== undefined) updateValues.description = description;
@@ -173,6 +234,9 @@ apiRouter.put("/projects/:id", async (req: AuthRequest, res) => {
   if (criteria !== undefined) updateValues.criteria = criteria;
   if (velocity !== undefined) updateValues.velocity = velocity;
   if (progress !== undefined) updateValues.progress = progress !== null ? Number(progress) : 0;
+  if (budget !== undefined) updateValues.budget = budget;
+  if (companyId !== undefined) updateValues.companyId = companyId ? Number(companyId) : null;
+  if (owner !== undefined) updateValues.owner = owner;
 
   const data = await db.update(projects).set(updateValues).where(and(eq(projects.id, Number(req.params.id)), eq(projects.workspaceId, req.workspaceId!))).returning();
   res.json(data[0]);
@@ -347,7 +411,10 @@ apiRouter.post("/tasks", async (req: AuthRequest, res) => {
       };
       
       if (assigneeUid && assigneeUid !== 'Não atribuído') {
-          values.assigneeUid = assigneeUid;
+          const usersFound = await db.select().from(users).where(or(eq(users.uid, assigneeUid), eq(users.displayName, assigneeUid)));
+          if (usersFound.length > 0) {
+              values.assigneeUid = usersFound[0].uid;
+          }
       }
 
       if (dueDate) {
@@ -442,8 +509,59 @@ apiRouter.get("/finance", async (req: AuthRequest, res) => {
   res.json(data);
 });
 apiRouter.post("/finance", async (req: AuthRequest, res) => {
-  const data = await db.insert(financeEntries).values({ ...req.body, workspaceId: req.workspaceId! }).returning();
-  res.json(data[0]);
+  try {
+    const { description, amount, type, category, date, companyId, projectId, status, isRecurrent, dueDate } = req.body;
+    const data = await db.insert(financeEntries).values({ 
+        workspaceId: req.workspaceId!,
+        description,
+        amount: amount.toString(),
+        type,
+        category,
+        date: new Date(date),
+        companyId: companyId ? Number(companyId) : null,
+        projectId: projectId ? Number(projectId) : null,
+        status,
+        isRecurrent: !!isRecurrent,
+        dueDate: dueDate ? new Date(dueDate) : null
+    }).returning();
+    res.json(data[0]);
+  } catch (error) {
+    console.error("Error in POST /finance:", error);
+    res.status(500).json({ error: "Failed to create finance entry" });
+  }
+});
+
+apiRouter.put("/finance/:id", async (req: AuthRequest, res) => {
+  const entryId = Number(req.params.id);
+  const { description, amount, type, category, date, companyId, projectId, status, isRecurrent, dueDate } = req.body;
+  try {
+      const existing = await db.select().from(financeEntries)
+        .where(and(eq(financeEntries.id, entryId), eq(financeEntries.workspaceId, req.workspaceId!)));
+      
+      if (existing.length === 0) {
+        return res.status(403).json({ error: "Finance entry not found or not in workspace" });
+      }
+
+      const updateValues: any = {
+          description,
+          amount: amount.toString(),
+          type,
+          category,
+          date: date ? new Date(date) : null,
+          companyId: companyId ? Number(companyId) : null,
+          projectId: projectId ? Number(projectId) : null,
+          status,
+          isRecurrent: !!isRecurrent,
+          dueDate: dueDate ? new Date(dueDate) : null,
+          updatedAt: new Date()
+      };
+
+      const data = await db.update(financeEntries).set(updateValues).where(eq(financeEntries.id, entryId)).returning();
+      res.json(data[0]);
+  } catch (error) {
+      console.error("Error updating finance entry:", error);
+      res.status(500).json({ error: "Failed to update finance entry" });
+  }
 });
 
 // --- MILESTONES ---
@@ -553,6 +671,7 @@ apiRouter.post("/documents", async (req: AuthRequest, res) => {
   }
 
   try {
+      console.log("Creating document with body:", req.body);
       const data = await db.insert(documents).values({ 
           workspaceId: req.workspaceId!,
           projectId: projectId ? Number(projectId) : null, 
@@ -568,7 +687,7 @@ apiRouter.post("/documents", async (req: AuthRequest, res) => {
       res.json(data[0]);
   } catch (error) {
     console.error("Error creating document:", error);
-    res.status(500).json({ error: "Failed to create document" });
+    res.status(500).json({ error: "Failed to create document", details: error });
   }
 });
 
@@ -598,7 +717,7 @@ apiRouter.put("/documents/:id", async (req: AuthRequest, res) => {
       res.json(data[0]);
   } catch (error) {
     console.error("Error updating document:", error);
-    res.status(500).json({ error: "Failed to update document" });
+    res.status(500).json({ error: "Failed to update document", details: error });
   }
 });
 
@@ -618,6 +737,158 @@ apiRouter.delete("/documents/:id", async (req: AuthRequest, res) => {
         console.error("Error deleting document:", error);
         res.status(500).json({ error: "Failed to delete document" });
     }
+});
+
+// --- NOTES ---
+apiRouter.get("/notes", async (req: AuthRequest, res) => {
+  try {
+    const data = await db.select().from(notes).where(eq(notes.workspaceId, req.workspaceId!)).orderBy(desc(notes.updatedAt));
+    res.json(data);
+  } catch (error) {
+    console.error("Error fetching notes:", error);
+    res.status(500).json({ error: "Failed to fetch notes" });
+  }
+});
+
+apiRouter.post("/notes", async (req: AuthRequest, res) => {
+  try {
+    const { title, content, color, isPinned, tags } = req.body;
+    const [inserted] = await db.insert(notes).values({
+      workspaceId: req.workspaceId!,
+      authorUid: req.user!.uid,
+      title: title || "",
+      content: content || "",
+      color: color || "bg-white",
+      isPinned: isPinned || false,
+      tags: tags || [],
+    }).returning();
+    res.json(inserted);
+  } catch (error) {
+    console.error("Error creating note:", error);
+    res.status(500).json({ error: "Failed to create note" });
+  }
+});
+
+apiRouter.put("/notes/:id", async (req: AuthRequest, res) => {
+  try {
+    const noteId = Number(req.params.id);
+    const { title, content, color, isPinned, tags } = req.body;
+    
+    const [updated] = await db.update(notes).set({
+      title,
+      content,
+      color,
+      isPinned,
+      tags,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(notes.id, noteId), eq(notes.workspaceId, req.workspaceId!)))
+    .returning();
+    
+    if (!updated) return res.status(404).json({ error: "Note not found" });
+    res.json(updated);
+  } catch (error) {
+    console.error("Error updating note:", error);
+    res.status(500).json({ error: "Failed to update note" });
+  }
+});
+
+apiRouter.delete("/notes/:id", async (req: AuthRequest, res) => {
+  try {
+    const noteId = Number(req.params.id);
+    await db.delete(notes).where(and(eq(notes.id, noteId), eq(notes.workspaceId, req.workspaceId!)));
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting note:", error);
+    res.status(500).json({ error: "Failed to delete note" });
+  }
+});
+
+// --- FLOW BUILDER ---
+apiRouter.get("/flow-builder", async (req: AuthRequest, res) => {
+  try {
+    const data = await db.select().from(flows).where(eq(flows.workspaceId, req.workspaceId!));
+    res.json(data);
+  } catch (error) {
+    console.error("Error fetching flows:", error);
+    res.status(500).json({ error: "Failed to fetch flows" });
+  }
+});
+
+apiRouter.get("/flow-builder/:id", async (req: AuthRequest, res) => {
+  try {
+    const [data] = await db.select().from(flows).where(and(eq(flows.id, Number(req.params.id)), eq(flows.workspaceId, req.workspaceId!)));
+    if (!data) return res.status(404).json({ error: "Flow not found" });
+    res.json(data);
+  } catch (error) {
+    console.error("Error fetching flow:", error);
+    res.status(500).json({ error: "Failed to fetch flow" });
+  }
+});
+
+import { generateNodeDefinition } from "../lib/gemini";
+
+apiRouter.post("/flow-builder/generate-node", async (req: AuthRequest, res) => {
+  try {
+    const { prompt, context } = req.body;
+    if (!prompt) return res.status(400).json({ error: "Prompt is required" });
+    
+    const nodeDef = await generateNodeDefinition(prompt, context);
+    res.json(nodeDef);
+  } catch (error) {
+    console.error("Error generating node:", error);
+    res.status(500).json({ error: "Failed to generate node definition" });
+  }
+});
+
+apiRouter.post("/flow-builder", async (req: AuthRequest, res) => {
+  try {
+    const { name, type, flowJson } = req.body;
+    if (!name) return res.status(400).json({ error: "Name is required" });
+    
+    const [newFlow] = await db.insert(flows).values({
+      workspaceId: req.workspaceId!,
+      userUid: req.user!.uid,
+      name,
+      type: type || 'flow',
+      flowJson: flowJson || { nodes: [], edges: [] }
+    }).returning();
+    res.json(newFlow);
+  } catch (error) {
+    console.error("Error creating flow:", error);
+    res.status(500).json({ error: "Failed to create flow" });
+  }
+});
+
+apiRouter.put("/flow-builder/:id", async (req: AuthRequest, res) => {
+  try {
+    const { name, type, flowJson } = req.body;
+    const updateValues: any = { updatedAt: new Date() };
+    if (name !== undefined) updateValues.name = name;
+    if (type !== undefined) updateValues.type = type;
+    if (flowJson !== undefined) updateValues.flowJson = flowJson;
+
+    const [updated] = await db.update(flows)
+      .set(updateValues)
+      .where(and(eq(flows.id, Number(req.params.id)), eq(flows.workspaceId, req.workspaceId!)))
+      .returning();
+    
+    if (!updated) return res.status(404).json({ error: "Flow not found" });
+    res.json(updated);
+  } catch (error) {
+    console.error("Error updating flow:", error);
+    res.status(500).json({ error: "Failed to update flow" });
+  }
+});
+
+apiRouter.delete("/flow-builder/:id", async (req: AuthRequest, res) => {
+  try {
+    await db.delete(flows).where(and(eq(flows.id, Number(req.params.id)), eq(flows.workspaceId, req.workspaceId!)));
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting flow:", error);
+    res.status(500).json({ error: "Failed to delete flow" });
+  }
 });
 
 // --- NOTIFICATIONS ---
@@ -980,10 +1251,10 @@ apiRouter.get("/workspace-settings", async (req: AuthRequest, res) => {
       return res.status(404).json({ error: "Workspace record not found" });
     }
 
-    const [companiesCount] = await db.select({ count: sql<number>`count(*)::int` }).from(companies).where(eq(companies.workspaceId, req.workspaceId!));
-    const [projectsCount] = await db.select({ count: sql<number>`count(*)::int` }).from(projects).where(eq(projects.workspaceId, req.workspaceId!));
-    const [productsCount] = await db.select({ count: sql<number>`count(*)::int` }).from(products).where(eq(products.workspaceId, req.workspaceId!));
-    const [membersCount] = await db.select({ count: sql<number>`count(*)::int` }).from(workspaceMembers).where(eq(workspaceMembers.workspaceId, req.workspaceId!));
+    const [companiesCount] = await db.select({ count: sql<number>`CAST(count(*) AS INTEGER)` }).from(companies).where(eq(companies.workspaceId, req.workspaceId!));
+    const [projectsCount] = await db.select({ count: sql<number>`CAST(count(*) AS INTEGER)` }).from(projects).where(eq(projects.workspaceId, req.workspaceId!));
+    const [productsCount] = await db.select({ count: sql<number>`CAST(count(*) AS INTEGER)` }).from(products).where(eq(products.workspaceId, req.workspaceId!));
+    const [membersCount] = await db.select({ count: sql<number>`CAST(count(*) AS INTEGER)` }).from(workspaceMembers).where(eq(workspaceMembers.workspaceId, req.workspaceId!));
 
     res.json({
       workspace: workspaceRecord,
@@ -1031,9 +1302,9 @@ apiRouter.get("/workspaces-detailed", async (req: AuthRequest, res) => {
 
     const detailedList = [];
     for (const ws of list) {
-      const [companiesCount] = await db.select({ count: sql<number>`count(*)::int` }).from(companies).where(eq(companies.workspaceId, ws.id));
-      const [projectsCount] = await db.select({ count: sql<number>`count(*)::int` }).from(projects).where(eq(projects.workspaceId, ws.id));
-      const [productsCount] = await db.select({ count: sql<number>`count(*)::int` }).from(products).where(eq(products.workspaceId, ws.id));
+      const [companiesCount] = await db.select({ count: sql<number>`CAST(count(*) AS INTEGER)` }).from(companies).where(eq(companies.workspaceId, ws.id));
+      const [projectsCount] = await db.select({ count: sql<number>`CAST(count(*) AS INTEGER)` }).from(projects).where(eq(projects.workspaceId, ws.id));
+      const [productsCount] = await db.select({ count: sql<number>`CAST(count(*) AS INTEGER)` }).from(products).where(eq(products.workspaceId, ws.id));
 
       detailedList.push({
         ...ws,
@@ -1127,6 +1398,12 @@ apiRouter.use((err: any, req: any, res: any, next: any) => {
     error: err.message || "Internal Server Error",
     details: process.env.NODE_ENV === "development" ? err.stack : undefined,
   });
+});
+
+// Final catch-all for apiRouter
+apiRouter.use((req, res) => {
+  console.log(`[apiRouter 404] ${req.method} ${req.url}`);
+  res.status(404).json({ error: `Route ${req.method} ${req.url} not found in apiRouter` });
 });
 
 export default apiRouter;

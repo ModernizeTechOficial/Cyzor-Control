@@ -41,7 +41,8 @@ import {
   ClipboardCheck,
   Settings,
   Palette,
-  Users
+  Users,
+  Image as ImageIcon
 } from 'lucide-react';
 import DocEditorModal from './DocEditorModal';
 import DriveFileViewerModal from './DriveFileViewerModal';
@@ -51,6 +52,8 @@ import SpreadsheetProfessional from './SpreadsheetProfessional';
 import PresentationProfessional from './PresentationProfessional';
 import PdfViewerProfessional from './PdfViewerProfessional';
 import CodeEditorProfessional from './CodeEditorProfessional';
+import LocalPdfViewerModal from './LocalPdfViewerModal';
+import LocalImageViewerModal from './LocalImageViewerModal';
 import { useAuth } from '../context/AuthContext';
 import { 
   fetchGoogleDriveFiles, 
@@ -72,14 +75,14 @@ const resolveIcon = (icon: any) => {
 export default function DocumentacaoView() {
   const [documents, setDocuments] = useState<any[]>([]);
   const [projectsList, setProjectsList] = useState<any[]>([]);
-  const { token, activeWorkspace, googleDriveToken, connectGoogleDrive } = useAuth();
+  const { fetchWithAuth, activeWorkspace, googleDriveToken, connectGoogleDrive } = useAuth();
 
   const fetchDocuments = async () => {
-    if (!token || !activeWorkspace) return;
+    if (!activeWorkspace) return;
     try {
       const [docsRes, projRes] = await Promise.all([
-        fetch('/api/documents', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/projects', { headers: { 'Authorization': `Bearer ${token}` } })
+        fetchWithAuth('/api/documents'),
+        fetchWithAuth('/api/projects')
       ]);
       
       if (docsRes.ok) {
@@ -97,7 +100,7 @@ export default function DocumentacaoView() {
 
   useEffect(() => {
     fetchDocuments();
-  }, [token, activeWorkspace]);
+  }, [fetchWithAuth, activeWorkspace]);
 
   const [categories, setCategories] = useState<Array<{ id: string; label: string; icon: any }>>([
     { id: 'Planejamento', label: 'Planejamento', icon: FileText },
@@ -110,6 +113,33 @@ export default function DocumentacaoView() {
     { id: 'Projetos', label: 'Projetos', icon: GitBranch },
   ]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const handleDeleteDoc = async (e: React.MouseEvent, docId: number) => {
+    e.stopPropagation();
+    
+    const { confirmAction } = await import('../lib/alerts');
+    const confirmed = await confirmAction('Excluir Documento', 'Tem certeza que deseja excluir este documento? Esta ação não pode ser desfeita.');
+    
+    if (!confirmed) return;
+
+    try {
+      const res = await fetchWithAuth(`/api/documents/${docId}`, {
+        method: 'DELETE'
+      });
+
+      if (res.ok) {
+        const { showSuccess } = await import('../lib/alerts');
+        showSuccess('Documento excluído com sucesso');
+        fetchDocuments();
+      } else {
+        const { showError } = await import('../lib/alerts');
+        showError('Erro ao excluir documento');
+      }
+    } catch (err) {
+      console.error(err);
+      const { showError } = await import('../lib/alerts');
+      showError('Erro de conexão ao excluir documento');
+    }
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDoc, setSelectedDoc] = useState<any>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -140,6 +170,8 @@ export default function DocumentacaoView() {
   const [copiedFileId, setCopiedFileId] = useState<string | null>(null);
   const [fileDeletingId, setFileDeletingId] = useState<string | null>(null);
   const [isDeletingActive, setIsDeletingActive] = useState(false);
+  const [isUploadingLocal, setIsUploadingLocal] = useState(false);
+  const localFileInputRef = useRef<HTMLInputElement>(null);
 
   // Google Drive File Viewer Integration Modal States
   const [selectedDriveFile, setSelectedDriveFile] = useState<GoogleDriveFile | null>(null);
@@ -223,6 +255,63 @@ export default function DocumentacaoView() {
       loadGdriveFiles(driveSearch);
     }
   }, [activeTab, googleDriveToken, driveSearch]);
+
+  const handleLocalFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0 || !activeWorkspace) return;
+    
+    const file = e.target.files[0];
+    const sizeMB = (file.size / (1024 * 1024)).toFixed(1) + " MB";
+    
+    if (file.size > 10 * 1024 * 1024) {
+      const { showError } = await import('../lib/alerts');
+      showError(`O arquivo ${file.name} é muito grande. O limite máximo é 10MB.`);
+      return;
+    }
+
+    setIsUploadingLocal(true);
+    
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = async () => {
+        const base64Data = reader.result as string;
+        
+        try {
+          const response = await fetchWithAuth("/api/documents", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              title: file.name,
+              folder: activeCategory || "Geral",
+              url: base64Data,
+              size: sizeMB,
+            }),
+          });
+
+          if (response.ok) {
+            const { showSuccess } = await import('../lib/alerts');
+            showSuccess(`Arquivo ${file.name} enviado com sucesso!`);
+            fetchDocuments();
+          } else {
+             const { showError } = await import('../lib/alerts');
+             showError("Falha ao enviar arquivo.");
+          }
+        } catch (error) {
+          console.error(error);
+          const { showError } = await import('../lib/alerts');
+          showError("Erro de conexão ao enviar arquivo.");
+        } finally {
+          setIsUploadingLocal(false);
+          if (localFileInputRef.current) localFileInputRef.current.value = '';
+        }
+      };
+    } catch (err) {
+      console.error(err);
+      setIsUploadingLocal(false);
+    }
+  };
 
   const handleConnectGDrive = async () => {
     setDriveError(null);
@@ -360,29 +449,29 @@ export default function DocumentacaoView() {
 
   const getDocSpecialistType = (docObj: any): 'image' | 'spreadsheet' | 'presentation' | 'pdf' | 'code' | 'rich-text' => {
     if (!docObj) return 'rich-text';
-    const name = (docObj.title || '').toLowerCase();
+    const name = (docObj.title || '').toLowerCase().trim();
     const folder = (docObj.folder || '').toLowerCase();
+    const type = docObj.type || '';
     
-    if (name.match(/\.(png|jpg|jpeg|webp|svg|gif|bmp|tiff)$/) || folder === 'design') {
+    if (name.match(/\.(png|jpg|jpeg|webp|svg|gif|bmp|tiff)$/) || type === 'image') {
       return 'image';
     }
-    if (name.match(/\.(xlsx|xls|csv|ods)$/) || folder === 'comercial') {
+    if (name.match(/\.(xlsx|xls|csv|ods)$/) || type === 'spreadsheet') {
       return 'spreadsheet';
     }
-    if (name.match(/\.(pptx|ppt|odp)$/) || folder === 'planejamento') {
+    if (name.match(/\.(pptx|ppt|odp)$/) || type === 'presentation') {
       return 'presentation';
     }
-    if (name.match(/\.pdf$/) || folder === 'contratos') {
+    if (name.match(/\.pdf$/) || type === 'pdf' || folder === 'contratos') {
       return 'pdf';
     }
-    if (name.match(/\.(json|xml|yaml|sql|log|ts|js|css|html)$/) || folder === 'código' || folder === 'técnicos' || folder === 'processos' || folder === 'codigo') {
+    if (name.match(/\.(json|xml|yaml|sql|log|ts|js|tsx|jsx|css|html|py|rb|go|php)$/) || type === 'code' || folder === 'codigo' || folder === 'código') {
       return 'code';
     }
     return 'rich-text';
   };
 
   const handleSaveCustomDoc = async (updatedDoc: any) => {
-    if (!token) return;
     try {
       const dbPayload = {
         title: updatedDoc.title,
@@ -395,15 +484,15 @@ export default function DocumentacaoView() {
 
       let res;
       if (updatedDoc.id) {
-        res = await fetch(`/api/documents/${updatedDoc.id}`, {
+        res = await fetchWithAuth(`/api/documents/${updatedDoc.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(dbPayload)
         });
       } else {
-        res = await fetch('/api/documents', {
+        res = await fetchWithAuth('/api/documents', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(dbPayload)
         });
       }
@@ -555,17 +644,17 @@ export default function DocumentacaoView() {
     <div className="flex flex-col gap-8 h-full">
       {/* Header, Switcher Tabs and Primary Actions */}
       <section className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-[#DEE2E6]/60 pb-6">
-        <div>
-          <h1 className="text-4xl font-display font-bold text-[#111111] mb-2 tracking-tight">Documentação</h1>
-          <p className="text-[#64748B] text-base font-medium">Central de conhecimento híbrido: Workspace SaaS e Google Drive Cloud.</p>
+        <div className="text-left">
+          <h1 className="text-3xl sm:text-4xl font-display font-bold text-[#111111] mb-2 tracking-tight">Documentação</h1>
+          <p className="text-[#64748B] text-sm sm:text-base font-medium">Central de conhecimento híbrido: Workspace SaaS e Google Drive Cloud.</p>
         </div>
 
         {/* Tab Switcher - Match System Visual Theme */}
-        <div className="flex bg-[#F1F3F5] p-1 rounded-2xl border border-[#DEE2E6]/50 shrink-0 self-start">
+        <div className="flex bg-[#F1F3F5] p-1 rounded-2xl border border-[#DEE2E6]/50 shrink-0 self-start w-full sm:w-auto">
           <button
             type="button"
             onClick={() => setActiveTab('local')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all ${
+            className={`flex-1 sm:flex-none px-4 sm:px-5 py-2.5 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
               activeTab === 'local' 
                 ? 'bg-white text-neutral-900 shadow-sm' 
                 : 'text-neutral-500 hover:text-neutral-900'
@@ -578,7 +667,7 @@ export default function DocumentacaoView() {
           <button
             type="button"
             onClick={() => setActiveTab('gdrive')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all ${
+            className={`flex-1 sm:flex-none px-4 sm:px-5 py-2.5 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
               activeTab === 'gdrive' 
                 ? 'bg-white text-neutral-900 shadow-sm' 
                 : 'text-neutral-500 hover:text-neutral-900'
@@ -594,39 +683,60 @@ export default function DocumentacaoView() {
       {activeTab === 'local' && (
         <>
           {/* Header & Search */}
-          <section className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <h2 className="text-xl font-bold text-[#111111] flex items-center gap-2">
+          <section className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6">
+            <h2 className="text-lg sm:text-xl font-bold text-[#111111] flex items-center gap-2">
               <Folder size={20} className="text-neutral-700" />
               Documentos de Procedimentos
             </h2>
             
-            <div className="flex items-center gap-4 flex-1 max-w-xl self-end md:self-auto">
-              <div className="relative group flex-1">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#64748B] group-focus-within:text-[#111111] transition-colors" size={18} />
-                <input 
-                    type="text"
-                    placeholder="Pesquisar documentos..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-[#FFFFFF] border border-[#DEE2E6] rounded-[16px] py-3 pl-11 pr-4 outline-none focus:border-[#111111]/30 transition-all text-[#111111] text-sm font-medium placeholder:text-[#64748B]/50"
+              <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 flex-1 lg:max-w-xl w-full">
+                <div className="relative group flex-1 w-full">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#64748B] group-focus-within:text-[#111111] transition-colors" size={18} />
+                  <input 
+                      type="text"
+                      placeholder="Pesquisar documentos..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full bg-[#FFFFFF] border border-[#DEE2E6] rounded-[16px] py-3 pl-11 pr-4 outline-none focus:border-[#111111]/30 transition-all text-[#111111] text-sm font-medium placeholder:text-[#64748B]/50"
+                  />
+                </div>
+                
+                <input
+                  type="file"
+                  ref={localFileInputRef}
+                  onChange={handleLocalFileUpload}
+                  className="hidden"
                 />
+                
+                <button
+                  onClick={() => localFileInputRef.current?.click()}
+                  disabled={isUploadingLocal}
+                  className="w-full sm:w-auto bg-white text-[#111111] border border-[#DEE2E6] hover:bg-slate-50 px-4 py-3 rounded-[16px] font-bold text-xs uppercase tracking-wider transition-all shadow-sm flex items-center justify-center gap-2 flex-shrink-0 disabled:opacity-50"
+                >
+                  {isUploadingLocal ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <FileUp size={16} />
+                  )}
+                  Subir
+                </button>
+
+                <button 
+                  onClick={handleNewDoc}
+                  className="w-full sm:w-auto bg-[#111111] text-white px-5 py-3 rounded-[16px] font-bold text-xs uppercase tracking-wider hover:bg-black transition-all flex items-center justify-center gap-2 flex-shrink-0 cursor-pointer shadow-md"
+                >
+                  <Plus size={16} />
+                  Novo
+                </button>
               </div>
-              <button 
-                onClick={handleNewDoc}
-                className="bg-[#111111] text-white px-5 py-3 rounded-[16px] font-bold text-xs uppercase tracking-wider hover:bg-black transition-all flex items-center gap-2 flex-shrink-0 cursor-pointer"
-              >
-                <Plus size={16} />
-                Novo
-              </button>
-            </div>
           </section>
           
           {/* Main Content Layout */}
           <section className="flex flex-col lg:flex-row gap-6 lg:gap-8 flex-1 items-start min-h-0">
             
             {/* Categories Sidebar */}
-            <div className="w-full lg:w-[260px] flex-shrink-0 flex flex-col gap-2 bg-[#FAFAFA]/50 border border-[#DEE2E6]/60 rounded-[24px] p-4 lg:sticky top-0">
-              <h3 className="text-[11px] font-bold uppercase text-[#64748B] tracking-widest px-4 mb-2">Estrutura</h3>
+            <div className="w-full lg:w-[260px] flex-shrink-0 flex flex-row lg:flex-col gap-2 bg-[#FAFAFA]/50 border border-[#DEE2E6]/60 rounded-[24px] p-2 sm:p-4 lg:sticky lg:top-0 overflow-x-auto lg:overflow-x-visible no-scrollbar pb-3 lg:pb-4">
+              <h3 className="hidden lg:block text-[11px] font-bold uppercase text-[#64748B] tracking-widest px-4 mb-2">Estrutura</h3>
               
               <CategoryItem 
                 label="Início" 
@@ -636,7 +746,7 @@ export default function DocumentacaoView() {
                 count={activeTab === 'local' ? documents.length : gdriveFiles.length}
               />
               
-              <div className="w-full h-px bg-[#0F172A0F] my-2"></div>
+              <div className="hidden lg:block w-full h-px bg-[#0F172A0F] my-2"></div>
               
               {categories.map(cat => (
                 <CategoryItem 
@@ -655,10 +765,10 @@ export default function DocumentacaoView() {
 
               <button 
                 onClick={() => setIsCategoryModalOpen(true)}
-                className="w-[calc(100%-8px)] mx-auto flex items-center gap-3 px-4 py-3 rounded-[14px] text-xs font-bold text-[#64748B] hover:text-[#111111] hover:bg-[#E2E8F0]/30 transition-all border border-dashed border-[#DEE2E6]/80 hover:border-[#111111]/25 mt-3 cursor-pointer"
+                className="flex-shrink-0 lg:w-[calc(100%-8px)] lg:mx-auto flex items-center gap-3 px-4 py-2.5 lg:py-3 rounded-[14px] text-xs font-bold text-[#64748B] hover:text-[#111111] hover:bg-[#E2E8F0]/30 transition-all border border-dashed border-[#DEE2E6]/80 hover:border-[#111111]/25 lg:mt-3 cursor-pointer whitespace-nowrap"
               >
                 <Plus size={14} strokeWidth={2.5} />
-                <span>Nova Categoria</span>
+                <span>Nova</span>
               </button>
             </div>
 
@@ -675,7 +785,12 @@ export default function DocumentacaoView() {
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                         {favorites.map(doc => (
-                          <DocCard key={doc.id} doc={doc} onClick={() => handleOpenDoc(doc)} />
+                          <DocCard 
+                            key={doc.id} 
+                            doc={doc} 
+                            onClick={() => handleOpenDoc(doc)} 
+                            onDelete={(e) => handleDeleteDoc(e, doc.id)}
+                          />
                         ))}
                       </div>
                     </div>
@@ -689,7 +804,12 @@ export default function DocumentacaoView() {
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                         {recents.map(doc => (
-                          <DocCard key={doc.id} doc={doc} onClick={() => handleOpenDoc(doc)} />
+                          <DocCard 
+                            key={doc.id} 
+                            doc={doc} 
+                            onClick={() => handleOpenDoc(doc)} 
+                            onDelete={(e) => handleDeleteDoc(e, doc.id)}
+                          />
                         ))}
                       </div>
                     </div>
@@ -711,6 +831,7 @@ export default function DocumentacaoView() {
                         key={doc.id} 
                         doc={doc} 
                         onClick={() => handleOpenDoc(doc)} 
+                        onDelete={(e) => handleDeleteDoc(e, doc.id)}
                         categories={categories} 
                         projects={projectsList}
                       />
@@ -1069,22 +1190,38 @@ export default function DocumentacaoView() {
       )}
 
       {/* Editor & Configuration Modals */}
-      <DocEditorModal 
-        doc={selectedDoc} 
-        isOpen={isEditorOpen} 
-        onClose={() => {
-          setIsEditorOpen(false);
-          fetchDocuments();
-        }}
-        onSave={(updatedDoc) => {
-          console.log('Saved:', updatedDoc);
-          fetchDocuments();
-        }}
-      />
-
-      {/* Editor & Configuration Modals */}
       {isEditorOpen && selectedDoc && (() => {
         const docType = getDocSpecialistType(selectedDoc);
+        const fileName = (selectedDoc.title || '').toLowerCase();
+        
+        // Prefer local viewer if it has a URL (uploaded files)
+        if (selectedDoc.url) {
+          if (docType === 'image') {
+            return (
+              <LocalImageViewerModal 
+                doc={selectedDoc}
+                isOpen={isEditorOpen}
+                onClose={() => {
+                  setIsEditorOpen(false);
+                  setSelectedDoc(null);
+                }}
+              />
+            );
+          }
+          if (docType === 'pdf') {
+            return (
+              <LocalPdfViewerModal 
+                doc={selectedDoc}
+                isOpen={isEditorOpen}
+                onClose={() => {
+                  setIsEditorOpen(false);
+                  setSelectedDoc(null);
+                }}
+              />
+            );
+          }
+        }
+
         if (docType === 'image') {
           return (
             <ImageEditorProfessional
@@ -1156,8 +1293,8 @@ export default function DocumentacaoView() {
               fetchDocuments();
             }}
             onSave={(updatedDoc) => {
-              setIsEditorOpen(false);
-              setSelectedDoc(null);
+              // setIsEditorOpen(false); // Commented out to keep modal open
+              // setSelectedDoc(null); // Commented out to keep modal open
               fetchDocuments();
             }}
           />
@@ -1446,73 +1583,105 @@ function CategoryItem({ label, icon: Icon, active, onClick, count }: { label: st
   return (
     <button 
       onClick={onClick}
-      className={`w-full flex items-center justify-between px-4 py-2.5 rounded-[14px] transition-colors cursor-pointer ${active ? 'bg-[#111111] text-white shadow-sm' : 'text-[#64748B] hover:bg-[#E2E8F0]/50 hover:text-[#111111]'}`}
+      className={`flex-shrink-0 lg:w-full flex items-center justify-between px-4 py-2.5 rounded-[14px] transition-colors cursor-pointer whitespace-nowrap ${active ? 'bg-[#111111] text-white shadow-sm' : 'text-[#64748B] hover:bg-[#E2E8F0]/50 hover:text-[#111111]'}`}
     >
       <div className="flex items-center gap-3">
         <Icon size={18} className={active ? 'text-white' : 'text-[#64748B]'} />
         <span className="text-sm font-bold">{label}</span>
       </div>
       {count !== undefined && (
-         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${active ? 'bg-white/20 text-white' : 'bg-[#FFFFFF] border border-[#DEE2E6]/60 text-[#64748B]'}`}>{count}</span>
+         <span className={`hidden lg:inline-block text-[10px] font-bold px-2 py-0.5 rounded-md ${active ? 'bg-white/20 text-white' : 'bg-[#FFFFFF] border border-[#DEE2E6]/60 text-[#64748B]'}`}>{count}</span>
       )}
     </button>
   );
 }
 
-function DocCard({ doc, onClick }: { doc: any, onClick: () => void }) {
+function DocCard({ doc, onClick, onDelete }: { doc: any, onClick: () => void, onDelete: (e: React.MouseEvent) => void }) {
   return (
     <div 
       onClick={onClick}
-      className="bg-[#FFFFFF] border border-[#DEE2E6]/60 rounded-[20px] p-5 flex flex-col gap-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:shadow-md transition-all cursor-pointer group hover:border-[#111111]/20 animate-in fade-in dynamic-duration animate-duration-300"
+      className="bg-[#FFFFFF] border border-[#DEE2E6]/60 rounded-[20px] p-5 flex flex-col gap-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:shadow-md transition-all cursor-pointer group hover:border-[#111111]/20 animate-in fade-in dynamic-duration animate-duration-300 relative"
     >
       <div className="flex items-start justify-between">
-        <div className="w-10 h-10 rounded-[12px] bg-[#FAFAFA] border border-[#DEE2E6]/60 flex items-center justify-center text-[#111111] group-hover:scale-105 transition-transform">
-          <FileText size={18} />
+        <div className={`w-10 h-10 rounded-[12px] flex items-center justify-center flex-shrink-0 shadow-sm border ${
+          (doc.title || '').toLowerCase().endsWith('.pdf') 
+            ? 'bg-rose-50 text-rose-600 border-rose-100' 
+            : (doc.title || '').toLowerCase().match(/\.(png|jpg|jpeg|svg|webp)$/)
+            ? 'bg-blue-50 text-blue-600 border-blue-100' 
+            : 'bg-[#FAFAFA] border-[#DEE2E6]/60 text-[#111111]'
+        }`}>
+          {(doc.title || '').toLowerCase().match(/\.(png|jpg|jpeg|svg|webp)$/) ? <ImageIcon size={18} /> : <FileText size={18} />}
         </div>
-        {doc.isFavorite && <Star size={16} className="text-yellow-500 fill-yellow-500" />}
+        <div className="flex items-center gap-2">
+          {doc.isFavorite && <Star size={16} className="text-yellow-500 fill-yellow-500" />}
+          <button
+            onClick={onDelete}
+            className="p-1.5 rounded-lg text-[#64748B] hover:text-rose-600 hover:bg-rose-50 transition-all opacity-0 group-hover:opacity-100"
+            title="Excluir documento"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
       </div>
       <div>
         <h4 className="font-semibold text-[#111111] line-clamp-1">{doc.title}</h4>
-        <span className="text-xs text-[#64748B]">{doc.updated}</span>
+        <span className="text-xs text-[#64748B]">{doc.updated || new Date(doc.updatedAt).toLocaleDateString()}</span>
       </div>
     </div>
   );
 }
 
-function DocListItem({ doc, onClick, categories, projects }: { doc: any, onClick: () => void, categories: any[], projects: any[] }) {
+function DocListItem({ doc, onClick, onDelete, categories, projects }: { doc: any, onClick: () => void, onDelete: (e: React.MouseEvent) => void, categories: any[], projects: any[] }) {
   const matchedCat = categories.find(c => c.id === doc.category) || categories.find(c => c.id === doc.folder);
   const CatIcon = resolveIcon(matchedCat ? matchedCat.icon : Folder);
   const project = projects.find(p => p.id === doc.projectId);
 
+  const fileName = (doc.title || '').toLowerCase();
+  const isPdf = fileName.endsWith('.pdf');
+  const isImage = fileName.match(/\.(png|jpg|jpeg|svg|webp)$/);
+
   return (
     <div 
       onClick={onClick}
-      className="bg-[#FFFFFF] border border-[#DEE2E6]/60 rounded-[16px] p-4 flex items-center justify-between shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:shadow-md transition-all cursor-pointer group hover:bg-[#FAFAFA]"
+      className="bg-[#FFFFFF] border border-[#DEE2E6]/60 rounded-[16px] p-3 sm:p-4 flex items-center justify-between shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:shadow-md transition-all cursor-pointer group hover:bg-[#FAFAFA]"
     >
-      <div className="flex items-center gap-4">
-        <div className="w-10 h-10 rounded-[12px] bg-[#FAFAFA] border border-[#DEE2E6]/60 flex items-center justify-center text-[#64748B]">
-          <FileText size={18} />
+      <div className="flex items-center gap-3 sm:gap-4 overflow-hidden">
+        <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-[12px] flex items-center justify-center flex-shrink-0 shadow-sm border ${
+          isPdf 
+            ? 'bg-rose-50 text-rose-600 border-rose-100' 
+            : isImage 
+            ? 'bg-blue-50 text-blue-600 border-blue-100' 
+            : 'bg-[#FAFAFA] border-[#DEE2E6]/60 text-[#64748B]'
+        }`}>
+          {isImage ? <ImageIcon size={18} /> : <FileText size={18} />}
         </div>
-        <div className="flex flex-col">
-          <h4 className="font-semibold text-[#111111] group-hover:text-black transition-colors">{doc.title}</h4>
-          <div className="flex items-center gap-2 text-xs text-[#64748B]">
+        <div className="flex flex-col min-w-0">
+          <h4 className="font-semibold text-[#111111] group-hover:text-black transition-colors truncate text-sm sm:text-base">{doc.title}</h4>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] sm:text-xs text-[#64748B]">
             <span className="flex items-center gap-1 font-bold text-[#111111]/70"><CatIcon size={12} /> {matchedCat?.label || doc.folder || 'Geral'}</span>
-            <span>•</span>
+            <span className="hidden sm:inline">•</span>
             {project && (
                 <>
-                    <span className="flex items-center gap-1 bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-[4px] font-bold text-[9px] uppercase border border-indigo-100">
+                    <span className="flex items-center gap-1 bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-[4px] font-bold text-[9px] uppercase border border-indigo-100 truncate max-w-[120px]">
                         <GitBranch size={10} /> {project.name}
                     </span>
-                    <span>•</span>
+                    <span className="hidden sm:inline">•</span>
                 </>
             )}
-            <span>Editado: {doc.updated || new Date(doc.updatedAt).toLocaleDateString()}</span>
+            <span className="truncate">Editado: {doc.updated || new Date(doc.updatedAt).toLocaleDateString()}</span>
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
         {doc.isFavorite && <Star size={16} className="text-yellow-500 fill-yellow-500" />}
-        <ChevronRight size={18} className="text-[#64748B] opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+        <button
+          onClick={onDelete}
+          className="p-2 rounded-lg text-[#64748B] hover:text-rose-600 hover:bg-rose-50 transition-all sm:opacity-0 group-hover:opacity-100"
+          title="Excluir documento"
+        >
+          <Trash2 size={16} />
+        </button>
+        <ChevronRight size={18} className="text-[#64748B] sm:opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
       </div>
     </div>
   );

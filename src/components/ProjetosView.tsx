@@ -3,13 +3,14 @@ import {
   GitBranch, Plus, Search, Sparkles, TrendingUp, Users, 
   ChevronRight, Calendar, Star, MessageSquare, Send, Check, Settings, 
   RefreshCw, Layers, Shield, DollarSign, Clock, AlertCircle, X,
-  Filter, ArrowUpRight, CheckSquare, ChevronLeft, LogIn
+  Filter, ArrowUpRight, CheckSquare, ChevronLeft, LogIn, User
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import { showSuccess, showError } from '../lib/alerts';
 import ProjectDetailsModal from './ProjectDetailsModal';
 import NewProjectModal from './NewProjectModal';
+import Markdown from 'react-markdown';
 
 export default function ProjetosView() {
   const { fetchWithAuth, activeWorkspace, user } = useAuth();
@@ -194,7 +195,6 @@ export default function ProjetosView() {
 
   const handleProjectSave = () => {
     syncPlatformData();
-    setSelectedProject(null);
   };
 
   const handleSendAIChat = async () => {
@@ -314,7 +314,7 @@ export default function ProjetosView() {
   // Safe Math calculation for high-fidelity values
   const totalRevenue = financeEntries
     .filter(f => f.type === 'RECEITA')
-    .reduce((acc, f) => acc + Number(f.amount || 0), 0) || projects.reduce((acc, p) => acc + (p.id * 7500 % 24000) + 9000, 0);
+    .reduce((acc, f) => acc + Number(f.amount || 0), 0) || projects.reduce((acc, p) => acc + Number(p.budget || 0), 0);
 
   const activeCount = projects.filter(p => !['Concluido', 'Pausado', 'Concluído'].includes(p.status)).length;
   const finishedCount = projects.filter(p => ['Concluído', 'Concluido'].includes(p.status)).length;
@@ -358,8 +358,8 @@ export default function ProjetosView() {
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━
           TOP NAVBAR & GLOBAL INPUT
           ━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <header className="border-b border-neutral-100 py-4 px-6 sm:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-2.5 w-full md:w-auto">
+      <header className="border-b border-neutral-100 py-4 px-4 sm:px-8 flex flex-col lg:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-2.5 w-full lg:w-auto">
           <div className="w-8 h-8 rounded-lg bg-neutral-950 flex items-center justify-center font-bold text-white text-xs">
             C
           </div>
@@ -370,12 +370,12 @@ export default function ProjetosView() {
         </div>
 
         {/* Dynamic Global Autocomplete */}
-        <div className="relative w-full md:max-w-md">
+        <div className="relative w-full lg:max-w-md">
           <div className="flex items-center bg-[#FAFAFA] border border-neutral-200/50 hover:border-neutral-300 rounded-xl px-3 py-1.5 transition-all text-xs focus-within:bg-white focus-within:border-neutral-900">
             <Search size={14} className="text-neutral-400 mr-2" />
             <input 
               type="text" 
-              placeholder="Pesquisa rápida (Projetos, Clientes, Tarefas...)" 
+              placeholder="Pesquisa rápida..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="bg-transparent border-none outline-none w-full font-medium placeholder:text-neutral-400"
@@ -443,16 +443,16 @@ export default function ProjetosView() {
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━
           PREMIUM TITLE BAR & CORE CONTROLS
           ━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <section className="px-6 sm:px-8 pt-8 pb-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-left">
+      <section className="px-4 sm:px-8 pt-8 pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-left">
         <div>
-          <h2 className="text-2xl font-black text-neutral-950 tracking-tight">Projetos</h2>
-          <p className="text-xs text-neutral-500 font-medium mt-1">Gerencie e controle todo o ciclo operacional estratégico da sua empresa.</p>
+          <h2 className="text-2xl sm:text-2xl font-black text-neutral-950 tracking-tight">Projetos</h2>
+          <p className="text-xs text-neutral-500 font-medium mt-1">Gerencie e controle todo o ciclo operacional estratégico.</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <button 
             onClick={() => setIsModalOpen(true)}
-            className="px-4 py-2 bg-neutral-950 hover:bg-neutral-900 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm flex items-center gap-2"
+            className="flex-1 sm:flex-none px-4 py-2 bg-neutral-950 hover:bg-neutral-900 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2"
           >
             <Plus size={14} />
             Novo Projeto
@@ -633,6 +633,11 @@ export default function ProjetosView() {
                               {p.name}
                             </h4>
 
+                            <div className="flex items-center gap-1 mt-1 text-[9px] text-neutral-500 font-medium italic">
+                              <User size={10} className="text-neutral-400" />
+                              {p.owner || 'Sem dono'}
+                            </div>
+
                             {/* Priority Status indicator */}
                             <div className="flex items-center gap-2 mt-2.5">
                               <span className={`text-[8px] font-black tracking-wider uppercase px-1.5 py-0.5 rounded-md ${
@@ -662,9 +667,9 @@ export default function ProjetosView() {
 
                             {/* Team initials display */}
                             <div className="mt-4 pt-3 border-t border-neutral-100 flex items-center justify-between">
-                              <span className="text-[9px] font-bold text-neutral-400 uppercase">Valores</span>
-                              <span className="text-[10px] font-black text-neutral-800">
-                                R$ {((p.id * 8500 % 16000) + 7000).toLocaleString('pt-BR')}
+                              <span className="text-[9px] font-bold text-neutral-400 uppercase">Faturamento</span>
+                              <span className="text-xs font-black text-neutral-900">
+                                R$ {Number(p.budget || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                               </span>
                             </div>
                           </div>
@@ -969,9 +974,15 @@ export default function ProjetosView() {
                     <div className={`p-3 rounded-2xl text-xs max-w-[85%] leading-relaxed ${
                       h.role === 'user' 
                         ? 'bg-neutral-950 text-white font-semibold rounded-tr-none' 
-                        : 'bg-neutral-100 text-neutral-800 font-medium rounded-tl-none border border-neutral-200/50'
+                        : 'bg-neutral-100 text-neutral-800 font-medium rounded-tl-none border border-neutral-200/50 prose prose-sm prose-neutral max-w-none'
                     }`}>
-                      {h.text}
+                      {h.role === 'user' ? (
+                        h.text
+                      ) : (
+                        <div className="markdown-body">
+                          <Markdown>{h.text}</Markdown>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

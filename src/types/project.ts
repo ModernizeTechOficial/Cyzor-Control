@@ -69,11 +69,15 @@ export interface ProjectExtended {
   owner: string;
   priority: string;
   deadline: string;
+  dueDate?: string;
+  budget?: string;
+  companyId?: number;
   column: string;
   description?: string;
   criteria?: Array<{ id: number; text: string; completed: boolean }>;
   
   // Extended fields
+  progress?: number;
   hasFullData?: boolean;
   tasks?: Task[];
   sprints?: Sprint[];
@@ -84,5 +88,4 @@ export interface ProjectExtended {
   comments?: Comment[];
   history?: Activity[];
   velocity?: Array<{ sprint: string; pts: number }>;
-  progress?: number;
 }

@@ -14,19 +14,19 @@ interface EventModalProps {
 }
 
 export default function EventModal({ isOpen, onClose, onSave, eventToEdit, initialDate, initialHour }: EventModalProps) {
-  const { token, activeWorkspace, user } = useAuth();
+  const { token, activeWorkspace, user, fetchWithAuth } = useAuth();
   const [dbProjects, setDbProjects] = useState<any[]>([]);
   const [dbCompanies, setDbCompanies] = useState<any[]>([]);
   const [dbMembers, setDbMembers] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchCompaniesAndProjects = async () => {
-      if (!isOpen || !token || !activeWorkspace) return;
+      if (!isOpen || !activeWorkspace) return;
       try {
         const [projRes, compRes, membRes] = await Promise.all([
-          fetch('/api/projects', { headers: { 'Authorization': `Bearer ${token}` } }),
-          fetch('/api/companies', { headers: { 'Authorization': `Bearer ${token}` } }),
-          fetch('/api/workspace/members', { headers: { 'Authorization': `Bearer ${token}` } })
+          fetchWithAuth('/api/projects'),
+          fetchWithAuth('/api/companies'),
+          fetchWithAuth('/api/workspace/members')
         ]);
         if (projRes.ok) {
           const projs = await projRes.json();

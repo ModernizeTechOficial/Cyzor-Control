@@ -86,25 +86,25 @@ export default function ProdutosView() {
   const activeCount = products.filter(p => p.status === 'Produção').length;
   const devCount = products.filter(p => p.status === 'Em Desenvolvimento' || p.status === 'Desenvolvimento').length;
 
-  return (
-    <div className="flex flex-col gap-6 md:gap-10">
-      {/* Header */}
-      <section className="relative flex justify-between items-end">
-        <div>
-          <h1 className="text-4xl font-display font-bold text-[#111111] mb-2 tracking-tight">Produtos</h1>
-          <p className="text-[#64748B] text-lg font-medium tracking-wide">Gerencie todos os produtos, plataformas e soluções do ecossistema.</p>
-        </div>
-        <div className="flex gap-3">
-          <button className="bg-[#FFFFFF] text-[#111111] px-5 py-3 rounded-[14px] font-bold text-sm tracking-wide border border-[#0F172A0F] hover:bg-[#FAFAFA] transition-all flex items-center gap-2">
-            <ArrowDownToLine size={18} />
-            Importar Produto
-          </button>
-          <button onClick={() => setIsNewModalOpen(true)} className="bg-[#111111] text-white px-6 py-3 rounded-[14px] font-bold text-sm tracking-wide shadow-[0_4px_14px_rgba(0,0,0,0.15)] hover:bg-black transition-all flex items-center gap-2">
-            <Plus size={18} />
-            Novo Produto
-          </button>
-        </div>
-      </section>
+    return (
+      <div className="flex flex-col gap-6 md:gap-10 text-left">
+        {/* Header */}
+        <section className="relative flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-display font-bold text-[#111111] mb-2 tracking-tight">Produtos</h1>
+            <p className="text-[#64748B] text-base sm:text-lg font-medium tracking-wide">Gerencie todos os produtos, plataformas e soluções do ecossistema.</p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <button className="bg-[#FFFFFF] text-[#111111] px-5 py-3 rounded-[14px] font-bold text-sm tracking-wide border border-[#0F172A0F] hover:bg-[#FAFAFA] transition-all flex items-center justify-center gap-2">
+              <ArrowDownToLine size={18} />
+              Importar Produto
+            </button>
+            <button onClick={() => setIsNewModalOpen(true)} className="bg-[#111111] text-white px-6 py-3 rounded-[14px] font-bold text-sm tracking-wide shadow-[0_4px_14px_rgba(0,0,0,0.15)] hover:bg-black transition-all flex items-center justify-center gap-2">
+              <Plus size={18} />
+              Novo Produto
+            </button>
+          </div>
+        </section>
 
       {/* Metrics */}
       <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
@@ -115,8 +115,8 @@ export default function ProdutosView() {
       </section>
 
       {/* Filters & Search */}
-      <section className="flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="relative group flex-1 max-w-md">
+      <section className="flex flex-col lg:flex-row gap-4 items-center justify-between">
+        <div className="relative group flex-1 w-full lg:max-w-md">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#64748B] group-focus-within:text-[#111111] transition-colors" size={20} />
           <input 
               type="text"
@@ -126,9 +126,10 @@ export default function ProdutosView() {
               className="w-full bg-[#FFFFFF] border border-[#0F172A0F] rounded-[16px] py-3.5 pl-12 pr-4 outline-none focus:border-[#111111]/30 hover:border-[#0F172A0F]-dark transition-all text-[#111111] font-medium placeholder:text-[#64748B]/50 shadow-[0_2px_8px_rgba(0,0,0,0.01)]"
           />
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 w-full lg:w-auto overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
           <FilterButton label="Empresa" />
           <FilterButton label="Status" />
+          <FilterButton label="Categoria" />
         </div>
       </section>
 

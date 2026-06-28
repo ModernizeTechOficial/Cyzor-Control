@@ -64,8 +64,9 @@ export default function SecAdminModulos({ section }: { section: string }) {
   });
 
   // AI settings state
+  const [aiApiKey, setAiApiKey] = useState('');
   const [aiProvider, setAiProvider] = useState('Google Gemini');
-  const [aiDefaultModel, setAiDefaultModel] = useState('gemini-3.5-flash');
+  const [aiDefaultModel, setAiDefaultModel] = useState('gemini-3.1-flash-lite');
   const [aiTemperature, setAiTemperature] = useState('0.7');
   const [aiMaxTokens, setAiMaxTokens] = useState('8192');
   const [aiAutonBackground, setAiAutonBackground] = useState(true);
@@ -142,7 +143,8 @@ export default function SecAdminModulos({ section }: { section: string }) {
         // IA models states
         if (settings.aiConfig) {
           setAiProvider(settings.aiConfig.provider || 'Google Gemini');
-          setAiDefaultModel(settings.aiConfig.model || 'gemini-3.5-flash');
+          setAiDefaultModel(settings.aiConfig.model || 'gemini-3.1-flash-lite');
+          setAiApiKey(settings.aiConfig.apiKey || '');
           setAiTemperature(settings.aiConfig.temperature || '0.7');
           setAiMaxTokens(settings.aiConfig.maxTokens || '8192');
           setAiAutonBackground(settings.aiConfig.autonBackground ?? true);
@@ -150,6 +152,15 @@ export default function SecAdminModulos({ section }: { section: string }) {
           setAiAutonInsights(settings.aiConfig.autonInsights ?? true);
           setAiAutonFinance(settings.aiConfig.autonFinance ?? false);
           setAiAutonPriority(settings.aiConfig.autonPriority ?? true);
+        }
+
+        // Fetch real stats for the MiniCards
+        const statsRes = await fetchWithAuth('/api/ai/memory-stats');
+        if (statsRes.ok) {
+          const stats = await statsRes.json();
+          setDocsCount(stats.documents);
+          setProjectCount(stats.projects);
+          setIdeaCount(stats.ideas);
         }
 
         // Integrations list state
@@ -188,7 +199,7 @@ export default function SecAdminModulos({ section }: { section: string }) {
 
     } catch (err) {
       console.error(err);
-      setToast({ message: "Erro ao conectar-se ao banco de dados Postgres.", type: "error" });
+      setToast({ message: "Erro ao conectar-se ao banco de dados SQLite.", type: "error" });
     } finally {
       setLoading(false);
     }
@@ -210,6 +221,7 @@ export default function SecAdminModulos({ section }: { section: string }) {
         aiConfig: {
           provider: aiProvider,
           model: aiDefaultModel,
+          apiKey: aiApiKey,
           temperature: aiTemperature,
           maxTokens: aiMaxTokens,
           autonBackground: aiAutonBackground,
@@ -748,7 +760,24 @@ export default function SecAdminModulos({ section }: { section: string }) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
             <SelectField label="Provedor (Provider)" options={['Google Gemini']} value={aiProvider} onChange={setAiProvider} />
-            <SelectField label="Modelo de Processamento" options={['gemini-3.5-flash', 'gemini-3.1-pro-preview', 'gemini-3.1-flash-lite']} value={aiDefaultModel} onChange={setAiDefaultModel} />
+            <SelectField label="Modelo de Processamento" options={['gemini-3.1-flash-lite', 'gemini-3.1-pro-preview', 'gemini-2.0-flash-exp']} value={aiDefaultModel} onChange={setAiDefaultModel} />
+            <div className="col-span-1 md:col-span-2">
+              <InputField 
+                label="Gemini API Key (Vinculada ao Sistema)" 
+                value={aiApiKey} 
+                onChange={setAiApiKey} 
+                placeholder="Insira sua chave AI da Google Studio..." 
+                type={showKeyPassword ? "text" : "password"}
+              />
+              <button 
+                type="button"
+                onClick={() => setShowKeyPassword(!showKeyPassword)}
+                className="text-[10px] font-bold text-[#64748B] hover:text-[#111111] mt-1 flex items-center gap-1"
+              >
+                {showKeyPassword ? <EyeOff size={12} /> : <Eye size={12} />}
+                {showKeyPassword ? "Ocultar Chave" : "Mostrar Chave"}
+              </button>
+            </div>
             <InputField label="Temperatura criativa (0.0 a 1.0)" value={aiTemperature} onChange={setAiTemperature} />
             <InputField label="Máximo de Tokens de Saída" value={aiMaxTokens} onChange={setAiMaxTokens} />
           </div>

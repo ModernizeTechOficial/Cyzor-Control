@@ -66,23 +66,23 @@ export default function EmpresasView() {
     setIsModalOpen(true);
   };
 
-  return (
-    <div className="flex flex-col lg:flex-row gap-6 lg:gap-10">
-      {/* Main Content Area */}
-      <div className={`flex flex-col gap-6 lg:gap-10 transition-all duration-300 ${selectedCompany ? 'w-full lg:w-2/3' : 'w-full'}`}>
-        <section className="relative flex justify-between items-end">
-          <div>
-            <h1 className="text-4xl font-display font-bold text-[#111111] mb-2 tracking-tight">Empresas</h1>
-            <p className="text-[#64748B] text-lg font-medium tracking-wide">Gestão centralizada do portfólio de empresas.</p>
-          </div>
-          <button 
-            onClick={() => { setEditingCompany(null); setIsModalOpen(true); }}
-            className="bg-[#111111] text-white px-6 py-3.5 rounded-[16px] font-bold text-sm tracking-wide shadow-[0_4px_14px_rgba(0,0,0,0.15)] hover:bg-black transition-all flex items-center gap-2 hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]"
-          >
-            <Plus size={18} />
-            Nova Empresa
-          </button>
-        </section>
+    return (
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-10 text-left">
+        {/* Main Content Area */}
+        <div className={`flex flex-col gap-6 lg:gap-10 transition-all duration-300 ${selectedCompany ? 'w-full lg:w-2/3' : 'w-full'}`}>
+          <section className="relative flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-display font-bold text-[#111111] mb-2 tracking-tight">Empresas</h1>
+              <p className="text-[#64748B] text-base sm:text-lg font-medium tracking-wide">Gestão centralizada do portfólio de empresas.</p>
+            </div>
+            <button 
+              onClick={() => { setEditingCompany(null); setIsModalOpen(true); }}
+              className="w-full sm:w-auto bg-[#111111] text-white px-6 py-3.5 rounded-[16px] font-bold text-sm tracking-wide shadow-[0_4px_14px_rgba(0,0,0,0.15)] hover:bg-black transition-all flex items-center justify-center gap-2 hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]"
+            >
+              <Plus size={18} />
+              Nova Empresa
+            </button>
+          </section>
         
         <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
           <MetricCard title="Total de Empresas" value={companies.length.toString()} icon={Building2} />
@@ -92,46 +92,46 @@ export default function EmpresasView() {
         </section>
 
         <section className="flex gap-10">
-          <div className="bg-[#FFFFFF] border border-[#0F172A0F] rounded-[30px] p-8 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex-1 overflow-hidden">
-            <div className="flex justify-between items-center mb-8">
-              <h3 className="text-xl font-display font-bold text-[#111111] tracking-tight">Portfólio</h3>
+          <div className="bg-[#FFFFFF] border border-[#0F172A0F] rounded-[24px] sm:rounded-[30px] p-5 sm:p-8 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex-1 overflow-hidden">
+            <div className="flex justify-between items-center mb-6 sm:mb-8">
+              <h3 className="text-lg sm:text-xl font-display font-bold text-[#111111] tracking-tight">Portfólio</h3>
               <button className="w-8 h-8 rounded-[12px] flex items-center justify-center hover:bg-[#FAFAFA] transition-colors border border-transparent hover:border-[#0F172A0F] text-[#64748B]">
                 <MoreHorizontal size={20} />
               </button>
             </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto -mx-5 sm:mx-0">
               <table className="w-full text-left border-collapse min-w-[700px]">
                 <thead>
-                  <tr className="text-[11px] font-bold uppercase text-[#64748B] border-b border-[#0F172A0F] tracking-widest whitespace-nowrap">
-                    <th className="pb-4 font-bold">Nome</th>
+                  <tr className="text-[10px] sm:text-[11px] font-bold uppercase text-[#64748B] border-b border-[#0F172A0F] tracking-widest whitespace-nowrap">
+                    <th className="pb-4 font-bold px-5 sm:px-0">Nome</th>
                     <th className="pb-4 font-bold">Segmento</th>
                     <th className="pb-4 font-bold">Produtos</th>
                     <th className="pb-4 font-bold">Projetos</th>
                     <th className="pb-4 font-bold">Receita</th>
                     <th className="pb-4 font-bold">Status</th>
-                    <th className="pb-4 font-bold"></th>
+                    <th className="pb-4 font-bold px-5 sm:px-0"></th>
                   </tr>
                 </thead>
-                <tbody className="text-sm">
+                <tbody className="text-[13px] sm:text-sm">
                   {companies.map((c) => (
                     <tr 
                       key={c.id} 
                       onClick={() => { setSelectedCompany(c); setActiveTab('Informações Gerais'); }}
                       className={`border-b border-[#0F172A0F]/50 last:border-0 hover:bg-[#FAFAFA]/50 transition-colors cursor-pointer group ${selectedCompany?.id === c.id ? 'bg-[#FAFAFA]' : ''}`}
                     >
-                      <td className="py-5 font-semibold text-[#111111] whitespace-nowrap">{c.name}</td>
-                      <td className="py-5 text-[#64748B]">{c.industry || 'N/A'}</td>
-                      <td className="py-5 text-[#111111] font-medium">{c.products || 0}</td>
-                      <td className="py-5 text-[#111111] font-medium">{c.projects || 0}</td>
-                      <td className="py-5 font-semibold text-[#111111]">
+                      <td className="py-4 sm:py-5 font-semibold text-[#111111] whitespace-nowrap px-5 sm:px-0">{c.name}</td>
+                      <td className="py-4 sm:py-5 text-[#64748B]">{c.industry || 'N/A'}</td>
+                      <td className="py-4 sm:py-5 text-[#111111] font-medium">{c.products || 0}</td>
+                      <td className="py-4 sm:py-5 text-[#111111] font-medium">{c.projects || 0}</td>
+                      <td className="py-4 sm:py-5 font-semibold text-[#111111] whitespace-nowrap">
                         {`R$ ${finance
                             .filter(f => f.companyId === c.id && f.type === 'RECEITA')
                             .reduce((sum, f) => sum + Number(f.amount), 0)
                             .toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                          }`}
                       </td>
-                      <td className="py-5">
-                        <span className={`px-2.5 py-1.5 rounded-[10px] text-[11px] font-bold uppercase tracking-wider ${
+                      <td className="py-4 sm:py-5">
+                        <span className={`px-2.5 py-1.5 rounded-[10px] text-[10px] sm:text-[11px] font-bold uppercase tracking-wider ${
                           (c.status === 'Ativo' || c.status === 'ACTIVE' || !c.status) ? 'bg-green-50 text-green-700 border border-green-100' : 
                           c.status === 'Em Risco' ? 'bg-red-50 text-red-700 border border-red-100' :
                           'bg-gray-50 text-gray-500 border border-gray-100'
@@ -139,11 +139,11 @@ export default function EmpresasView() {
                           {c.status || 'Ativo'}
                         </span>
                       </td>
-                      <td className="py-5 text-right">
+                      <td className="py-4 sm:py-5 text-right px-5 sm:px-0">
                         <div className="flex items-center justify-end gap-2">
                            <button 
                              onClick={(e) => handleEditClick(e, c)}
-                             className="p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-[#E2E8F0] text-[#64748B] hover:text-[#111111] transition-all"
+                             className="p-2 rounded-lg opacity-100 sm:opacity-0 group-hover:opacity-100 hover:bg-[#E2E8F0] text-[#64748B] hover:text-[#111111] transition-all"
                            >
                              <Edit3 size={16} />
                            </button>

@@ -53,6 +53,7 @@ export default function GoogleKeepView() {
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [keepError, setKeepError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Note Creator input states
   const [isExpandingCreator, setIsExpandingCreator] = useState(false);
@@ -73,42 +74,42 @@ export default function GoogleKeepView() {
   const [editShowColorPicker, setEditShowColorPicker] = useState(false);
 
   const creatorRef = useRef<HTMLDivElement>(null);
+  const { fetchWithAuth } = useAuth();
 
-  // Load state from local storage or default to empty as requested for new users
-  useEffect(() => {
-    const savedNotes = localStorage.getItem('cyzor_keep_notes');
-    if (savedNotes) {
-      try {
-        setNotes(JSON.parse(savedNotes));
-      } catch (err) {
-        console.error('Failed to load notes from offline cache:', err);
+  const fetchNotes = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetchWithAuth('/api/notes');
+      if (response.ok) {
+        const data = await response.json();
+        // Convert from database schema to KeepNote format
+        const formattedNotes = data.map((note: any) => ({
+          id: note.id.toString(),
+          title: note.title,
+          content: note.content || '',
+          type: note.content && note.content.startsWith('[{"id"') ? 'checklist' : 'text',
+          checklistItems: note.content && note.content.startsWith('[{"id"') ? JSON.parse(note.content) : [],
+          color: note.color,
+          isPinned: note.isPinned,
+          label: (note.tags && note.tags.length > 0) ? note.tags[0] : undefined,
+          updatedAt: note.updatedAt
+        }));
+        setNotes(formattedNotes);
+      } else {
+        setKeepError("Não foi possível carregar as notas do servidor.");
       }
-    } else {
-      setNotes([]);
-      localStorage.setItem('cyzor_keep_notes', JSON.stringify([]));
+    } catch (error) {
+      console.error("Error fetching notes:", error);
+      setKeepError("Falha de conexão ao carregar as notas.");
+    } finally {
+      setIsLoading(false);
     }
-  }, []);
-
-  // Save changes to cache
-  const saveAndCacheNotes = (newNotes: KeepNote[]) => {
-    setNotes(newNotes);
-    localStorage.setItem('cyzor_keep_notes', JSON.stringify(newNotes));
   };
 
-  // Close creator on click outside
+  // Load state from API
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (creatorRef.current && !creatorRef.current.contains(event.target as Node)) {
-        // Only collapse if nothing was written yet, otherwise keep expanded or save automatically
-        if (!newTitle && !newContent && checklistInputItems.every(i => !i.text)) {
-          setIsExpandingCreator(false);
-          setShowColorPicker(false);
-        }
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [newTitle, newContent, checklistInputItems]);
+    fetchNotes();
+  }, []);
 
   // Add / Remove items in checklist creator
   const addChecklistInputLine = () => {
@@ -131,87 +132,148 @@ export default function GoogleKeepView() {
   };
 
   // Save new Note
-  const handleSaveNewNote = () => {
+  const handleSaveNewNote = async () => {
     if (!newTitle.trim() && !newContent.trim() && (creatorType === 'checklist' && checklistInputItems.every(i => !i.text.trim()))) {
       // Completely empty, just collapse
       setIsExpandingCreator(false);
       return;
     }
 
-    const newNote: KeepNote = {
-      id: 'note-' + Date.now(),
-      title: newTitle.trim(),
-      content: creatorType === 'text' ? newContent.trim() : '',
-      type: creatorType,
-      checklistItems: creatorType === 'checklist' ? checklistInputItems.filter(item => item.text.trim() !== '') : [],
-      color: newColor,
-      isPinned: false,
-      label: newNewLabel || undefined,
-      updatedAt: new Date().toISOString()
-    };
+    const newNoteContent = creatorType === 'text' 
+      ? newContent.trim() 
+      : JSON.stringify(checklistInputItems.filter(item => item.text.trim() !== ''));
 
-    const updatedNotes = [newNote, ...notes];
-    saveAndCacheNotes(updatedNotes);
+    const tags = newNewLabel ? [newNewLabel] : [];
 
-    // Reset creator inputs
-    setNewTitle('');
-    setNewContent('');
-    setNewColor('white');
-    setNewNewLabel('');
-    setChecklistInputItems([{ id: '1', text: '', completed: false }]);
-    setIsExpandingCreator(false);
-    setShowColorPicker(false);
+    try {
+      const response = await fetchWithAuth('/api/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newTitle.trim(),
+          content: newNoteContent,
+          color: newColor,
+          isPinned: false,
+          tags: tags
+        })
+      });
+
+      if (response.ok) {
+        await fetchNotes();
+        // Reset creator inputs
+        setNewTitle('');
+        setNewContent('');
+        setNewColor('white');
+        setNewNewLabel('');
+        setChecklistInputItems([{ id: '1', text: '', completed: false }]);
+        setIsExpandingCreator(false);
+        setShowColorPicker(false);
+      } else {
+        setKeepError("Não foi possível salvar a nova nota.");
+      }
+    } catch (error) {
+      console.error("Error saving new note:", error);
+      setKeepError("Falha de conexão ao salvar a nota.");
+    }
   };
 
   // Delete Note
-  const handleDeleteNote = (noteId: string) => {
-    const updated = notes.filter(n => n.id !== noteId);
-    saveAndCacheNotes(updated);
+  const handleDeleteNote = async (noteId: string) => {
+    try {
+      const response = await fetchWithAuth(`/api/notes/${noteId}`, {
+        method: 'DELETE'
+      });
+      if (response.ok) {
+        setNotes(notes.filter(n => n.id !== noteId));
+      } else {
+         setKeepError("Não foi possível excluir a nota.");
+      }
+    } catch (error) {
+      console.error("Error deleting note:", error);
+      setKeepError("Falha de conexão ao excluir a nota.");
+    }
+  };
+
+  // Update note helper
+  const updateNoteServer = async (noteId: string, updates: any) => {
+    try {
+      const response = await fetchWithAuth(`/api/notes/${noteId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+      if (!response.ok) {
+         setKeepError("Não foi possível atualizar a nota.");
+      } else {
+         // Keep local UI in sync smoothly without full reload if it's just a toggle
+         await fetchNotes();
+      }
+    } catch (error) {
+      console.error("Error updating note:", error);
+      setKeepError("Falha de conexão ao atualizar a nota.");
+    }
   };
 
   // Pin Note
   const handleTogglePin = (noteId: string) => {
-    const updated = notes.map(n => n.id === noteId ? { ...n, isPinned: !n.isPinned } : n);
-    saveAndCacheNotes(updated);
+    const note = notes.find(n => n.id === noteId);
+    if (!note) return;
+    
+    // Optimistic UI update
+    setNotes(notes.map(n => n.id === noteId ? { ...n, isPinned: !n.isPinned } : n));
+    
+    updateNoteServer(noteId, { isPinned: !note.isPinned });
   };
 
   // Change note color interactively
   const handleChangeNoteColor = (noteId: string, color: string) => {
-    const updated = notes.map(n => n.id === noteId ? { ...n, color } : n);
-    saveAndCacheNotes(updated);
+    // Optimistic UI update
+    setNotes(notes.map(n => n.id === noteId ? { ...n, color } : n));
+    
+    updateNoteServer(noteId, { color });
   };
 
   // Toggle checklist item within live notes cards
   const handleToggleChecklistItem = (noteId: string, itemId: string) => {
-    const updated = notes.map(n => {
-      if (n.id === noteId) {
-        const updatedChecklist = n.checklistItems.map(item => 
-          item.id === itemId ? { ...item, completed: !item.completed } : item
-        );
-        return { ...n, checklistItems: updatedChecklist };
-      }
-      return n;
-    });
-    saveAndCacheNotes(updated);
+    const note = notes.find(n => n.id === noteId);
+    if (!note || note.type !== 'checklist') return;
+
+    const updatedChecklist = note.checklistItems.map(item => 
+      item.id === itemId ? { ...item, completed: !item.completed } : item
+    );
+    
+    // Optimistic update
+    setNotes(notes.map(n => n.id === noteId ? { ...n, checklistItems: updatedChecklist } : n));
+    
+    updateNoteServer(noteId, { content: JSON.stringify(updatedChecklist) });
   };
 
   // Update complete note modal save
-  const handleUpdateNote = (e: React.FormEvent) => {
+  const handleUpdateNote = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeEditingNote) return;
 
     // Filter out blank checklist items if it is of type checklist
-    const processedNote = {
-      ...activeEditingNote,
-      checklistItems: activeEditingNote.type === 'checklist' 
+    const processedChecklistItems = activeEditingNote.type === 'checklist' 
         ? activeEditingNote.checklistItems.filter(item => item.text.trim() !== '')
-        : [],
-      updatedAt: new Date().toISOString()
+        : [];
+        
+    const contentToSave = activeEditingNote.type === 'checklist' 
+        ? JSON.stringify(processedChecklistItems) 
+        : activeEditingNote.content;
+
+    const tags = activeEditingNote.label ? [activeEditingNote.label] : [];
+
+    const updates = {
+      title: activeEditingNote.title,
+      content: contentToSave,
+      color: activeEditingNote.color,
+      isPinned: activeEditingNote.isPinned,
+      tags: tags
     };
 
-    const updated = notes.map(n => n.id === processedNote.id ? processedNote : n);
-    saveAndCacheNotes(updated);
     setActiveEditingNote(null);
+    await updateNoteServer(activeEditingNote.id, updates);
   };
 
   const addEditChecklistItem = () => {

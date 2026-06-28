@@ -462,7 +462,7 @@ export default function AbaSprints({ project, onUpdateProject }: AbaSprintsProps
                             draggable
                             onDragStart={(e) => handleDragStart(e, task.id)}
                             onClick={() => setSelectedTask(task)}
-                            className="bg-[#FAFAFA]/70 border border-[#0F172A0F] rounded-[12px] p-2.5 cursor-grab active:cursor-grabbing hover:bg-white transition-all hover:shadow-sm"
+                            className="bg-white p-4 rounded-xl border border-neutral-200/50 hover:border-neutral-300 shadow-[0_1px_3px_rgba(0,0,0,0.01)] hover:shadow-sm cursor-grab active:cursor-grabbing transition-all text-left relative group flex flex-col gap-2"
                           >
                             <h5 className="text-[11px] font-semibold text-[#111111] leading-tight mb-2">{task.name}</h5>
                             <div className="flex items-center justify-between text-[8px] font-bold text-[#64748B]">

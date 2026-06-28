@@ -256,7 +256,7 @@ export default function PdfViewerProfessional({ doc, onSave, onClose }: PdfViewe
               <div className="flex justify-center my-1 text-slate-400">↓ Drizzle Queries / Sockets ↓</div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="bg-emerald-50 text-emerald-800 border border-emerald-200 p-2 rounded-xl text-center font-bold">
-                  PostgreSQL DB Instance<br />(Cloud SQL Cloud Dedicated)
+                  SQLite DB Instance<br />(Local Database Cloud Dedicated)
                 </div>
                 <div className="bg-indigo-50 text-indigo-800 border border-indigo-200 p-2 rounded-xl text-center font-bold">
                   Firebase Firestore Engine<br />(NoSQL Cache Realtime)
@@ -265,7 +265,7 @@ export default function PdfViewerProfessional({ doc, onSave, onClose }: PdfViewe
             </div>
 
             <p className="text-xs text-slate-700">
-              A persistência híbrida une o melhor de dois mundos: rapidez extrema com NoSQL para triggers de edição instantânea, e integridade relacional robusta em PostgreSQL para dados auditáveis de relatórios contratuais de faturamento.
+              A persistência híbrida une o melhor de dois mundos: rapidez extrema com NoSQL para triggers de edição instantânea, e integridade relacional robusta em SQLite para dados auditáveis de relatórios contratuais de faturamento.
             </p>
           </div>
         );
@@ -297,7 +297,7 @@ export default function PdfViewerProfessional({ doc, onSave, onClose }: PdfViewe
                   <td className="py-2.5 px-3 text-center font-bold text-[#64748B]">Mensal</td>
                 </tr>
                 <tr>
-                  <td className="py-2.5 px-3 font-semibold text-slate-800">Cloud SQL PostgreSQL (2 Cores, 8GB RAM)</td>
+                  <td className="py-2.5 px-3 font-semibold text-slate-800">Local Database SQLite (2 Cores, 8GB RAM)</td>
                   <td className="py-2.5 px-3 text-right font-mono font-bold text-emerald-700">$290.00</td>
                   <td className="py-2.5 px-3 text-center font-bold text-[#64748B]">Mensal</td>
                 </tr>

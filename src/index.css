@@ -31,6 +31,17 @@ body {
   background: #CBD5E1;
 }
 
+/* Auto-hiding Scrollbar */
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: #E2E8F0;
+}
+.custom-scrollbar:hover::-webkit-scrollbar-thumb:hover {
+  background: #CBD5E1;
+}
+
 /* Dark Mode Implementation */
 html.dark {
   filter: invert(1) hue-rotate(180deg);
@@ -40,4 +51,45 @@ html.dark img,
 html.dark video,
 html.dark .no-invert {
   filter: invert(1) hue-rotate(180deg);
+}
+
+/* Custom Flow Edge Pulse Animation */
+.react-flow__edge-path.animated {
+  stroke-dasharray: 8;
+  animation: flow-pulse 0.8s linear infinite;
+  stroke-width: 3;
+}
+
+@keyframes flow-pulse {
+  from {
+    stroke-dashoffset: 16;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.react-flow__handle {
+  width: 12px !important;
+  height: 12px !important;
+  border-radius: 50% !important;
+  background-color: white !important;
+  border: 2px solid #3b82f6 !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+}
+
+.react-flow__handle:hover {
+  transform: scale(1.6) !important;
+  background-color: #3b82f6 !important;
+  border-color: #2563eb !important;
+}
+
+.react-flow__handle::after {
+  content: '';
+  position: absolute;
+  top: -10px;
+  bottom: -10px;
+  left: -10px;
+  right: -10px;
 }

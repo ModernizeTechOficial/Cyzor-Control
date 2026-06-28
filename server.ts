@@ -1,49 +1,29 @@
+import 'dotenv/config';
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import helmet from "helmet";
-import cors from "cors";
-import rateLimit from "express-rate-limit";
-import cookieParser from "cookie-parser";
-import { requireAuth, AuthRequest } from "./src/middleware/auth";
-import { getOrCreateUser, getUserSaaSState, updateUserActiveWorkspace, getUserWorkspaces } from "./src/db/queries";
-import apiRouter from "./src/db/api";
-import authRouter from "./src/api/auth";
-
-import { env } from "./src/config/env";
+import { requireAuth, AuthRequest } from "./src/middleware/auth.ts";
+import { getOrCreateUser, getUserSaaSState, updateUserActiveWorkspace, getUserWorkspaces } from "./src/db/queries.ts";
+import apiRouter from "./src/db/api.ts";
 
 async function startServer() {
   const app = express();
-  app.set("trust proxy", 1);
-  const PORT = env.port;
-
-  app.use(helmet({ contentSecurityPolicy: false })); // Disabled CSP for React DEV
-  app.use(cors());
-  app.use(cookieParser());
-  
-  const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, 
-    max: 1000, 
-    message: "Too many requests, please try again later."
-  });
-  app.use("/api/", limiter);
-
-  // API Route: Required Healthcheck for Cyzor PaaS
-  app.get("/health", (req, res) => {
-    res.json({ status: "ok" });
-  });
+  const PORT = 3000;
 
   // Middleware to parse JSON bodies
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
+  // Debug logger for API requests
+  app.use("/api", (req, res, next) => {
+    console.log(`[API Request] ${req.method} ${req.url}`);
+    next();
+  });
+
   // API Route: Healthcheck
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", service: "Cyzor Control SaaS API" });
   });
-
-  // Local JWT Auth Router
-  app.use("/api/auth/v2", authRouter);
 
   // API Route: Synchronize signed-in user inside Postgres
   app.post("/api/auth/sync", requireAuth, async (req: AuthRequest, res) => {
@@ -97,28 +77,21 @@ async function startServer() {
     }
   });
 
-  // API Route: AI Generation
-  app.post("/api/gemini", requireAuth, async (req: AuthRequest, res) => {
-    try {
-      const { prompt } = req.body;
-      if (!prompt) {
-        res.status(400).json({ error: "Prompt is required" });
-        return;
-      }
-      
-      const { getAIProvider } = await import("./src/ai/AIProvider");
-      const aiProvider = getAIProvider();
-
-      const response = await aiProvider.chat([{ role: "user", content: prompt }]);
-      res.json({ text: response.text });
-    } catch (error: any) {
-      console.error("Error in /api/gemini route:", error);
-      res.status(500).json({ error: error.message || "Internal server error" });
-    }
-  });
-
   // Mount modular routes that require an active workspace
   app.use("/api", apiRouter);
+
+  // AI Node Generation
+  app.post("/api/flow-builder/generate-node", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const { prompt, context } = req.body;
+      const { generateNodeDefinition } = await import("./src/lib/gemini.ts");
+      const nodeDef = await generateNodeDefinition(prompt, context);
+      res.json({ status: "success", node: nodeDef });
+    } catch (error: any) {
+      console.error("AI Generation Error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
 
   // Serve static/compiled frontend under Vite dev middleware or standard static server
   if (process.env.NODE_ENV !== "production") {

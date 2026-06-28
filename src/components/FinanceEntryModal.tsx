@@ -18,6 +18,8 @@ export default function FinanceEntryModal({ isOpen, onClose, onSuccess, entry }:
   const [category, setCategory] = useState('');
   const [companyId, setCompanyId] = useState('');
   const [projectId, setProjectId] = useState('');
+  const [isRecurrent, setIsRecurrent] = useState(false);
+  const [dueDate, setDueDate] = useState('');
   const [loading, setLoading] = useState(false);
   
   const [companies, setCompanies] = useState<any[]>([]);
@@ -33,6 +35,8 @@ export default function FinanceEntryModal({ isOpen, onClose, onSuccess, entry }:
         setCategory(entry.category || '');
         setCompanyId(entry.companyId?.toString() || '');
         setProjectId(entry.projectId?.toString() || '');
+        setIsRecurrent(entry.isRecurrent || false);
+        setDueDate(entry.dueDate ? safeToISOString(entry.dueDate).split('T')[0] : '');
       } else {
         resetForm();
       }
@@ -73,7 +77,9 @@ export default function FinanceEntryModal({ isOpen, onClose, onSuccess, entry }:
           category,
           companyId: companyId ? Number(companyId) : null,
           projectId: projectId ? Number(projectId) : null,
-          date: entry?.date || new Date().toISOString(),
+          isRecurrent,
+          dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+          date: safeToISOString(entry?.date) || new Date().toISOString(),
           status: entry?.status || 'PENDENTE'
         })
       });
@@ -81,9 +87,13 @@ export default function FinanceEntryModal({ isOpen, onClose, onSuccess, entry }:
         onSuccess?.();
         if (!entry) resetForm();
         onClose();
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        alert(errorData.error || 'Erro ao salvar lançamento.');
       }
     } catch(err) {
       console.error(err);
+      alert('Erro ao conectar com o servidor.');
     } finally {
       setLoading(false);
     }
@@ -114,6 +124,8 @@ export default function FinanceEntryModal({ isOpen, onClose, onSuccess, entry }:
     setType('RECEITA');
     setCompanyId('');
     setProjectId('');
+    setIsRecurrent(false);
+    setDueDate('');
   };
 
   return (
@@ -194,6 +206,20 @@ export default function FinanceEntryModal({ isOpen, onClose, onSuccess, entry }:
                   <option value="">Nenhum Projeto</option>
                   {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="flex items-center gap-3">
+              <input type="checkbox" checked={isRecurrent} onChange={e => setIsRecurrent(e.target.checked)} className="w-5 h-5 rounded border-[#0F172A0F] text-[#111111] focus:ring-[#111111]" />
+              <label className="text-[11px] font-bold tracking-widest uppercase text-[#64748B]">Lançamento Recorrente</label>
+            </div>
+            <div className="flex flex-col gap-2 w-full">
+              <label className="text-[11px] font-bold tracking-widest uppercase text-[#64748B] px-1">Data de Vencimento</label>
+              <div className="relative group">
+                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-[#64748B] group-focus-within:text-[#111111] transition-colors" size={18} />
+                <input value={dueDate} onChange={e => setDueDate(e.target.value)} type="date" className="w-full bg-[#FFFFFF] border border-[#0F172A0F] rounded-[16px] py-3.5 pl-12 pr-4 outline-none focus:border-[#111111]/30 transition-all text-[#111111] font-medium" />
               </div>
             </div>
           </div>

@@ -52,7 +52,7 @@ export default function AgendaPage() {
   const [showExecutiveDashboard, setShowExecutiveDashboard] = useState(false);
   
   // Google Calendar Integration State
-  const { googleCalendarToken, connectGoogleCalendar, user, token, activeWorkspace } = useAuth();
+  const { googleCalendarToken, connectGoogleCalendar, user, token, activeWorkspace, fetchWithAuth } = useAuth();
   const [isSyncingGCal, setIsSyncingGCal] = useState(false);
   const [gcalError, setGcalError] = useState<string | null>(null);
 
@@ -73,12 +73,10 @@ export default function AgendaPage() {
   // Fetch events from real backend
   useEffect(() => {
     const fetchEvents = async () => {
-      if (!activeWorkspace || !token) return;
+      if (!activeWorkspace) return;
       try {
         setLoading(true);
-        const res = await fetch('/api/agenda', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const res = await fetchWithAuth('/api/agenda');
         if (res.ok) {
           const data = await res.json();
           setEvents(data || []);
@@ -90,7 +88,7 @@ export default function AgendaPage() {
       }
     };
     fetchEvents();
-  }, [token, activeWorkspace]);
+  }, [fetchWithAuth, activeWorkspace]);
 
   // Fetch and Sync Google Calendar Events
   const syncGoogleCalendar = async () => {
@@ -169,11 +167,10 @@ export default function AgendaPage() {
       const isGoogleEvent = googleCalendarToken && saved.id.startsWith('gcal-');
       if (!isGoogleEvent) {
         try {
-          const res = await fetch(`/api/agenda/${saved.id}`, {
+          const res = await fetchWithAuth(`/api/agenda/${saved.id}`, {
             method: 'PUT',
             headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
+              'Content-Type': 'application/json'
             },
             body: JSON.stringify(saved)
           });
@@ -227,11 +224,10 @@ export default function AgendaPage() {
         }
       } else {
         try {
-          const res = await fetch('/api/agenda', {
+          const res = await fetchWithAuth('/api/agenda', {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
+              'Content-Type': 'application/json'
             },
             body: JSON.stringify(saved)
           });
@@ -250,9 +246,8 @@ export default function AgendaPage() {
     const isGoogleEvent = googleCalendarToken && id.startsWith('gcal-');
     if (!isGoogleEvent) {
       try {
-        await fetch(`/api/agenda/${id}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` }
+        await fetchWithAuth(`/api/agenda/${id}`, {
+          method: 'DELETE'
         });
       } catch (err) {
         console.error("Failed to delete event from DB:", err);
@@ -275,11 +270,10 @@ export default function AgendaPage() {
     const isGoogleEvent = googleCalendarToken && updated.id.startsWith('gcal-');
     if (!isGoogleEvent) {
       try {
-        const res = await fetch(`/api/agenda/${updated.id}`, {
+        const res = await fetchWithAuth(`/api/agenda/${updated.id}`, {
           method: 'PUT',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify(updated)
         });

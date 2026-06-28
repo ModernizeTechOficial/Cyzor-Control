@@ -77,15 +77,15 @@ export default function IdeiasView() {
   };
 
   return (
-    <div className="flex flex-col gap-6 md:gap-10">
-      <section className="relative flex justify-between items-end">
+    <div className="flex flex-col gap-6 md:gap-10 text-left">
+      <section className="relative flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
-          <h1 className="text-4xl font-display font-bold text-[#111111] mb-2 tracking-tight">Banco de Ideias</h1>
-          <p className="text-[#64748B] text-lg font-medium tracking-wide">Armazenamento, organização e validação de Produto.</p>
+          <h1 className="text-3xl sm:text-4xl font-display font-bold text-[#111111] mb-2 tracking-tight">Banco de Ideias</h1>
+          <p className="text-[#64748B] text-base sm:text-lg font-medium tracking-wide">Armazenamento, organização e validação de Produto.</p>
         </div>
         <button 
           onClick={() => setIsNewModalOpen(true)}
-          className="bg-[#111111] text-white px-6 py-3.5 rounded-[16px] font-bold text-sm tracking-wide shadow-[0_4px_14px_rgba(0,0,0,0.15)] hover:bg-black transition-all flex items-center gap-2 hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]"
+          className="w-full sm:w-auto bg-[#111111] text-white px-6 py-3 sm:py-3.5 rounded-[14px] sm:rounded-[16px] font-bold text-sm tracking-wide shadow-[0_4px_14px_rgba(0,0,0,0.15)] hover:bg-black transition-all flex items-center justify-center gap-2 hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)]"
         >
           <Plus size={18} />
           Nova Ideia
@@ -128,16 +128,20 @@ function KanbanColumn({ title, columnId, ideas, onIdeaClick, onDropIdea }: { tit
   
   return (
     <div 
-      className="flex flex-col gap-4 min-w-[300px] w-[300px] bg-[#FAFAFA]/50 border border-[#0F172A0F] rounded-[24px] p-4 flex-shrink-0"
+      className="flex-shrink-0 w-72 bg-[#FAFAFA]/50 rounded-2xl p-3 border border-neutral-100 flex flex-col min-h-[520px]"
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => onDropIdea(e, columnId)}
     >
-      <div className="flex justify-between items-center px-2 py-1">
-        <h4 className="text-[11px] font-bold uppercase text-[#64748B] tracking-widest">{title}</h4>
-        <span className="text-[11px] font-bold bg-[#FFFFFF] border border-[#0F172A0F] text-[#111111] px-2 py-1 rounded-lg">{columnIdeas.length}</span>
+      <div className="flex items-center justify-between mb-3 px-1 text-left">
+        <div className="flex items-center gap-2">
+          <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-neutral-50 text-neutral-600 border border-neutral-200/50">
+            {title}
+          </span>
+          <span className="text-[10px] font-extrabold text-neutral-400">({columnIdeas.length})</span>
+        </div>
       </div>
       
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[580px] pr-1 scrollbar-none flex-1">
         {columnIdeas.map(idea => (
           <KanbanCard key={idea.id} idea={idea} onClick={() => onIdeaClick(idea)} />
         ))}
@@ -154,7 +158,7 @@ function KanbanCard({ idea, onClick }: { idea: any, onClick: () => void }) {
       onClick={onClick} 
       draggable 
       onDragStart={(e) => e.dataTransfer.setData('ideaId', idea.id.toString())}
-      className="bg-[#FFFFFF] p-5 rounded-[20px] border border-[#0F172A0F] shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.04)] transition-all cursor-pointer active:cursor-grabbing border-t-[3px] border-t-transparent hover:border-t-[#111111] group"
+      className="bg-white p-4 rounded-xl border border-neutral-200/50 hover:border-neutral-300 shadow-[0_1px_3px_rgba(0,0,0,0.01)] hover:shadow-sm cursor-grab active:cursor-grabbing transition-all text-left relative group"
     >
       <div className="flex justify-between items-start mb-3">
         <span className="text-[10px] font-bold uppercase px-2 py-1 rounded bg-[#FAFAFA] text-[#64748B]">{idea.categoria}</span>

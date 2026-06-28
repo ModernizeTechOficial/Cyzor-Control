@@ -1,9 +1,10 @@
 import { Search, Bell, PanelLeftClose, PanelLeft, Sun, Moon, LogOut, User, CheckCircle2, AlertTriangle, Info, Clock } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
+import { useBranding } from '../hooks/useBranding.ts';
 
 function NotificationMenu() {
-  const { token, activeWorkspace } = useAuth();
+  const { fetchWithAuth, activeWorkspace } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -12,9 +13,7 @@ function NotificationMenu() {
     const fetchNotifications = async () => {
       if (!activeWorkspace) return;
       try {
-        const res = await fetch('/api/notifications', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const res = await fetchWithAuth('/api/notifications');
         if (res.ok) {
           const data = await res.json();
           setNotifications(data);
@@ -26,16 +25,15 @@ function NotificationMenu() {
       }
     };
     fetchNotifications();
-  }, [token, activeWorkspace]);
+  }, [fetchWithAuth, activeWorkspace]);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   const markAllAsRead = async () => {
     setNotifications(notifications.map(n => ({ ...n, isRead: true })));
     try {
-      await fetch('/api/notifications/read-all', {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${token}` }
+      await fetchWithAuth('/api/notifications/read-all', {
+        method: 'PUT'
       });
     } catch (err) {}
   };
@@ -43,9 +41,8 @@ function NotificationMenu() {
   const markAsRead = async (id: number) => {
     setNotifications(notifications.map(n => n.id === id ? { ...n, isRead: true } : n));
     try {
-      await fetch(`/api/notifications/${id}/read`, {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${token}` }
+      await fetchWithAuth(`/api/notifications/${id}/read`, {
+        method: 'PUT'
       });
     } catch (err) {}
   };
@@ -218,6 +215,25 @@ function UserProfileMenu() {
 
 export default function Topbar({ isSidebarCollapsed, toggleSidebar }: { isSidebarCollapsed: boolean, toggleSidebar: () => void }) {
   const [isDark, setIsDark] = useState(false);
+  const [time, setTime] = useState(new Date());
+  const { activeWorkspace } = useAuth();
+  const [isOnline, setIsOnline] = useState(true);
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     const isDarkStored = localStorage.getItem('theme') === 'dark';
@@ -242,32 +258,70 @@ export default function Topbar({ isSidebarCollapsed, toggleSidebar }: { isSideba
   };
 
   return (
-    <div className={`fixed top-0 right-0 h-16 lg:h-20 bg-[#FAFAFA]/80 backdrop-blur-md border-b border-[#0F172A0F] flex items-center justify-between px-4 sm:px-6 md:px-8 z-20 transition-all duration-300 left-0 ${isSidebarCollapsed ? 'lg:left-[88px]' : 'lg:left-[280px]'}`}>
-      <div className="flex items-center gap-2 lg:gap-4 w-full max-w-xl">
-        <button onClick={toggleSidebar} className="text-[#64748B] hover:text-[#111111] transition-colors flex items-center justify-center w-10 h-10 rounded-[14px] hover:bg-[#FFFFFF] border border-transparent hover:border-[#0F172A0F] flex-shrink-0">
-          {isSidebarCollapsed ? <PanelLeft size={20} /> : <PanelLeftClose size={20} />}
+    <div className={`fixed top-0 right-0 h-16 lg:h-20 bg-white/80 backdrop-blur-2xl border-b border-[#0F172A08] flex items-center justify-between px-4 sm:px-6 md:px-10 z-20 transition-all duration-300 left-0 ${isSidebarCollapsed ? 'lg:left-[88px]' : 'lg:left-[280px]'}`}>
+      <div className="flex items-center gap-4 lg:gap-8 w-full max-w-4xl">
+        <button onClick={toggleSidebar} className="text-[#64748B] hover:text-[#111111] transition-all flex items-center justify-center w-10 h-10 rounded-2xl hover:bg-white border border-transparent hover:border-[#0F172A0F] flex-shrink-0 group">
+          {isSidebarCollapsed ? <PanelLeft size={18} className="group-hover:scale-110 transition-transform" /> : <PanelLeftClose size={18} className="group-hover:scale-110 transition-transform" />}
         </button>
-        <div className="relative w-full hidden sm:block">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#64748B]" size={18} />
+        
+        <div className="hidden lg:flex items-center gap-8 h-8 px-2">
+           <div className="flex flex-col gap-0.5">
+              <span className="text-[9px] font-black text-[#64748B] uppercase tracking-[0.2em] opacity-40">Company</span>
+              <span className="text-[12px] font-bold text-[#111111] tracking-tight">Cyzor Group SA</span>
+           </div>
+           <div className="w-px h-6 bg-[#0F172A08]" />
+           <div className="flex flex-col gap-0.5">
+              <span className="text-[9px] font-black text-[#64748B] uppercase tracking-[0.2em] opacity-40">Workspace</span>
+              <div className="flex items-center gap-2">
+                 <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500'}`} />
+                 <span className="text-[12px] font-bold text-[#111111] tracking-tight">{activeWorkspace?.name || 'Main Operations'}</span>
+              </div>
+           </div>
+        </div>
+
+        <div className="relative w-full hidden md:block max-w-md ml-4">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#64748B] opacity-50" size={16} />
           <input 
             type="text" 
-            placeholder="Busca universal..." 
-            className="w-full bg-[#FFFFFF] border border-[#0F172A0F] shadow-[0_2px_8px_rgba(0,0,0,0.02)] rounded-[20px] py-2.5 pl-11 pr-14 text-sm outline-none focus:border-[#111111]/20 transition-all text-[#111111] font-medium placeholder:text-[#64748B]/60"
+            placeholder="Search anything..." 
+            className="w-full bg-[#FAFAFA] border border-[#0F172A05] hover:border-[#0F172A15] rounded-2xl py-2.5 pl-11 pr-14 text-[13px] outline-none focus:border-[#111111]/10 focus:bg-white transition-all text-[#111111] font-bold placeholder:text-[#64748B]/40 shadow-[inset_0_2px_4px_rgba(0,0,0,0.01)]"
           />
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-1 rounded bg-[#FAFAFA] border border-[#0F172A0F] text-[10px] text-[#64748B] font-medium tracking-widest uppercase hidden lg:block">
-            ⌘ K
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 px-1.5 py-1 rounded-lg bg-white border border-[#0F172A08] shadow-sm hidden lg:flex">
+            <span className="text-[10px] font-black text-[#111111] opacity-20">⌘</span>
+            <span className="text-[10px] font-black text-[#111111] opacity-20">K</span>
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-2 lg:gap-4">
-        <button 
-          onClick={toggleTheme}
-          className="relative w-10 h-10 rounded-[14px] bg-[#FFFFFF] border border-[#0F172A0F] flex items-center justify-center hover:bg-[#FAFAFA] transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.02)] text-[#111111] group"
-        >
-          {isDark ? <Sun size={18} className="text-[#64748B] group-hover:text-[#111111] transition-colors" /> : <Moon size={18} className="text-[#64748B] group-hover:text-[#111111] transition-colors" />}
-        </button>
-        <NotificationMenu />
-        <UserProfileMenu />
+
+      <div className="flex items-center gap-4 lg:gap-8">
+        <div className="hidden xl:flex items-center gap-6 pr-6 border-r border-[#0F172A08]">
+           <div className="flex flex-col items-end gap-0.5">
+              <span className="text-[13px] font-bold text-[#111111] tracking-tighter">
+                 {time.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </span>
+              <span className="text-[9px] font-black text-[#64748B] uppercase tracking-[0.2em] opacity-40">
+                 {time.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()}
+              </span>
+           </div>
+           <div className="flex flex-col items-end gap-0.5">
+              <span className="text-[10px] font-bold text-[#111111] flex items-center gap-1.5 tracking-tight">
+                 <CheckCircle2 size={12} className="text-emerald-500" />
+                 Synced
+              </span>
+              <span className="text-[9px] font-black text-[#64748B] uppercase tracking-[0.2em] opacity-40">Just now</span>
+           </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+           <button 
+             onClick={toggleTheme}
+             className="w-10 h-10 rounded-2xl bg-white border border-[#0F172A08] flex items-center justify-center hover:bg-[#FAFAFA] hover:border-[#0F172A15] transition-all shadow-sm text-[#111111] group"
+           >
+             {isDark ? <Sun size={18} className="text-[#64748B] group-hover:text-[#111111] transition-colors" /> : <Moon size={18} className="text-[#64748B] group-hover:text-[#111111] transition-colors" />}
+           </button>
+           <NotificationMenu />
+           <UserProfileMenu />
+        </div>
       </div>
     </div>
   );

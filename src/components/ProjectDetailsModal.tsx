@@ -17,6 +17,8 @@ import AbaDocumentos from './project-tabs/AbaDocumentos';
 import AbaComentarios from './project-tabs/AbaComentarios';
 import AbaHistorico from './project-tabs/AbaHistorico';
 import DocEditorModal from './DocEditorModal';
+import LocalPdfViewerModal from './LocalPdfViewerModal';
+import LocalImageViewerModal from './LocalImageViewerModal';
 
 interface ProjectDetailsModalProps {
   project: any;
@@ -33,6 +35,21 @@ export default function ProjectDetailsModal({ project, isOpen, onClose, onSave }
   const [prevProjectId, setPrevProjectId] = useState<number | null>(null);
   const [editingDoc, setEditingDoc] = useState<any>(null);
   const [isDocEditorOpen, setIsDocEditorOpen] = useState(false);
+  const [isPdfViewerOpen, setIsPdfViewerOpen] = useState(false);
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [companies, setCompanies] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        const res = await fetchWithAuth('/api/companies');
+        if (res.ok) setCompanies(await res.json());
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchCompanies();
+  }, [fetchWithAuth]);
 
   const handleOpenDoc = async (docId?: number) => {
     if (!editedProject) return;
@@ -43,11 +60,22 @@ export default function ProjectDetailsModal({ project, isOpen, onClose, onSave }
                 const allDocs = await res.json();
                 const doc = allDocs.find((d: any) => d.id === docId);
                 if (doc) {
+                    const fileName = doc.title?.toLowerCase() || '';
+                    const isPdf = fileName.endsWith('.pdf');
+                    const isImage = fileName.endsWith('.png') || fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.svg') || fileName.endsWith('.webp');
+                    
                     setEditingDoc({
                        ...doc,
                        category: doc.folder // Adapt structure for Editor
                     });
-                    setIsDocEditorOpen(true);
+
+                    if (isPdf) {
+                        setIsPdfViewerOpen(true);
+                    } else if (isImage) {
+                        setIsImageViewerOpen(true);
+                    } else {
+                        setIsDocEditorOpen(true);
+                    }
                 }
             }
         } catch (e) {
@@ -70,11 +98,14 @@ export default function ProjectDetailsModal({ project, isOpen, onClose, onSave }
             const enriched: ProjectExtended = {
                 id: project.id,
                 name: project.name,
-                company: project.company || 'Empresa não vinculada',
+                company: project.company || project.companyName || 'Empresa não vinculada',
+                companyId: project.companyId,
                 owner: project.owner || 'Sem dono',
                 priority: project.priority || 'Média',
-                deadline: project.deadline || 'Sem prazo',
-                column: project.column || 'planejamento',
+                deadline: project.deadline || project.dueDate || 'Sem prazo',
+                dueDate: project.dueDate || '',
+                budget: project.budget || '0',
+                column: project.column || project.status?.toLowerCase() || 'planejamento',
                 description: project.description || '',
                 criteria: project.criteria || [],
                 tasks: [],
@@ -211,7 +242,11 @@ export default function ProjectDetailsModal({ project, isOpen, onClose, onSave }
                 comments: updated.comments,
                 criteria: updated.criteria,
                 velocity: updated.velocity,
-                progress: progressPercent
+                progress: progressPercent,
+                budget: updated.budget,
+                dueDate: updated.dueDate,
+                companyId: updated.companyId,
+                owner: updated.owner
             })
         });
     } catch (e) {
@@ -338,6 +373,7 @@ export default function ProjectDetailsModal({ project, isOpen, onClose, onSave }
               project={editedProject} 
               isEditing={isEditing} 
               onChange={handleUpdateProject} 
+              companies={companies}
             />
           )}
 
@@ -453,6 +489,28 @@ export default function ProjectDetailsModal({ project, isOpen, onClose, onSave }
                 }
             };
             fetchDocs();
+        }}
+      />
+    )}
+    
+    {isPdfViewerOpen && editingDoc && (
+      <LocalPdfViewerModal 
+        doc={editingDoc}
+        isOpen={isPdfViewerOpen}
+        onClose={() => {
+          setIsPdfViewerOpen(false);
+          setEditingDoc(null);
+        }}
+      />
+    )}
+
+    {isImageViewerOpen && editingDoc && (
+      <LocalImageViewerModal 
+        doc={editingDoc}
+        isOpen={isImageViewerOpen}
+        onClose={() => {
+          setIsImageViewerOpen(false);
+          setEditingDoc(null);
         }}
       />
     )}

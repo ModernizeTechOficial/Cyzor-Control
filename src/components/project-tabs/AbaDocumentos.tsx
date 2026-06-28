@@ -8,7 +8,8 @@ import {
   Download,
   UploadCloud,
   AlertCircle,
-  Loader2
+  Loader2,
+  Image as ImageIcon
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { showSuccess, showError, confirmAction } from "../../lib/alerts";
@@ -357,8 +358,18 @@ export default function AbaDocumentos({
                     className="bg-white border border-[#0F172A0F] rounded-[16px] p-4 flex items-center justify-between group shadow-[0_2px_10px_rgba(0,0,0,0.01)] hover:shadow-md transition-all"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-[12px] bg-[#FAFAFA] border border-[#0F172A0F] flex items-center justify-center text-[#111111] shadow-sm">
-                        <FileText size={18} />
+                      <div className={`w-10 h-10 rounded-[12px] flex items-center justify-center shadow-sm ${
+                        doc.title.toLowerCase().endsWith('.pdf') 
+                          ? 'bg-rose-50 text-rose-600 border border-rose-100' 
+                          : doc.title.toLowerCase().match(/\.(png|jpg|jpeg|svg|webp)$/)
+                          ? 'bg-blue-50 text-blue-600 border border-blue-100'
+                          : 'bg-[#FAFAFA] border border-[#0F172A0F] text-[#111111]'
+                      }`}>
+                        {doc.title.toLowerCase().match(/\.(png|jpg|jpeg|svg|webp)$/) ? (
+                          <ImageIcon size={18} />
+                        ) : (
+                          <FileText size={18} />
+                        )}
                       </div>
 
                       <div className="flex flex-col">

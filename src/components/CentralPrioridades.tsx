@@ -3,7 +3,7 @@ import { AlertCircle, Target, CheckCircle2, Clock, Lightbulb, TriangleAlert, Cal
 import { useAuth } from '../context/AuthContext.tsx';
 
 export default function CentralPrioridades() {
-  const { token, activeWorkspace } = useAuth();
+  const { fetchWithAuth, activeWorkspace } = useAuth();
   const [priorityProjects, setPriorityProjects] = useState<any[]>([]);
   const [featuredIdeas, setFeaturedIdeas] = useState<any[]>([]);
   const [pendingDecisions, setPendingDecisions] = useState<string[]>([]);
@@ -12,12 +12,12 @@ export default function CentralPrioridades() {
 
   useEffect(() => {
     const fetchDashData = async () => {
-      if (!token || !activeWorkspace) return;
+      if (!activeWorkspace) return;
       try {
         const [projRes, ideaRes, tasksRes] = await Promise.all([
-          fetch('/api/projects', { headers: { 'Authorization': `Bearer ${token}` } }),
-          fetch('/api/ideas', { headers: { 'Authorization': `Bearer ${token}` } }),
-          fetch('/api/tasks', { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetchWithAuth('/api/projects'),
+          fetchWithAuth('/api/ideas'),
+          fetchWithAuth('/api/tasks'),
         ]);
 
         const [projs, ideas, tasks] = await Promise.all([
@@ -75,7 +75,7 @@ export default function CentralPrioridades() {
       }
     };
     fetchDashData();
-  }, [token, activeWorkspace]);
+  }, [fetchWithAuth, activeWorkspace]);
   return (
     <div className="bg-[#FFFFFF] border border-[#0F172A0F] rounded-[30px] p-6 lg:p-8 col-span-1 xl:col-span-3 shadow-[0_4px_24px_rgba(0,0,0,0.02)] transition-colors">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">

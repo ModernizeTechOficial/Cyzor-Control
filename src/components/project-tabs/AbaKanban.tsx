@@ -351,7 +351,7 @@ export default function AbaKanban({ project, onUpdateProject }: AbaKanbanProps) 
                       draggable
                       onDragStart={(e: any) => handleDragStart(e, task.id)}
                       onClick={() => setSelectedTask(task)}
-                      className="bg-[#FFFFFF] p-4 rounded-[16px] border border-[#0F172A0F] hover:border-[#111111]/30 hover:shadow-md shadow-[0_2px_12px_rgba(0,0,0,0.01)] transition-all cursor-pointer group flex flex-col gap-3 text-left"
+                      className="bg-white p-4 rounded-xl border border-neutral-200/50 hover:border-neutral-300 shadow-[0_1px_3px_rgba(0,0,0,0.01)] hover:shadow-sm cursor-grab active:cursor-grabbing transition-all text-left relative group flex flex-col gap-3"
                     >
                       <div className="flex justify-between items-start gap-2">
                         <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-md ${

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import MetricCard from './MetricCard';
 import FinanceEntryModal from './FinanceEntryModal';
 import { useAuth } from '../context/AuthContext';
-import { DollarSign, TrendingUp, CreditCard, ArrowUpRight, ArrowDownRight, Server, Globe, Key, Database, MoreHorizontal, Edit3 } from 'lucide-react';
+import { DollarSign, TrendingUp, CreditCard, ArrowUpRight, ArrowDownRight, Server, Globe, Key, Database, MoreHorizontal, Edit3, Layers } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 
 const COLORS = ['#111111', '#475569', '#94A3B8', '#CBD5E1', '#E2E8F0'];
@@ -12,23 +12,25 @@ export default function FinanceiroView() {
   const [editingEntry, setEditingEntry] = useState<any>(null);
 
   const [entries, setEntries] = useState<any[]>([]);
+  const [projects, setProjects] = useState<any[]>([]);
   const { fetchWithAuth, activeWorkspace } = useAuth();
   
-  const fetchFinance = async () => {
+  const fetchData = async () => {
     if (!activeWorkspace) return;
     try {
-      const res = await fetchWithAuth('/api/finance');
-      if (res.ok) {
-        const data = await res.json();
-        setEntries(data || []);
-      }
+      const [finRes, projRes] = await Promise.all([
+        fetchWithAuth('/api/finance'),
+        fetchWithAuth('/api/projects')
+      ]);
+      if (finRes.ok) setEntries(await finRes.json());
+      if (projRes.ok) setProjects(await projRes.json());
     } catch(err) {
       console.error(err);
     }
   };
 
   useEffect(() => {
-    fetchFinance();
+    fetchData();
   }, [activeWorkspace]);
 
   const handleEditClick = (entry: any) => {
@@ -42,6 +44,7 @@ export default function FinanceiroView() {
     revenueAnual,
     custoMensal,
     lucroEstimado,
+    projetoRevenue,
     chartRevenueData,
     companyData,
     tableData
@@ -53,7 +56,13 @@ export default function FinanceiroView() {
     let rMensal = 0;
     let rAnual = 0;
     let cMensal = 0;
+    let pRevenue = 0;
     
+    // Project budgets
+    projects.forEach(p => {
+      pRevenue += Number(p.budget || 0);
+    });
+
     // Revenue array by month for chart (0-11)
     const monthlyRevenue = Array(12).fill(0);
     const companyRevenue: Record<string, number> = {};
@@ -105,37 +114,39 @@ export default function FinanceiroView() {
       revenueAnual: rAnual,
       custoMensal: cMensal,
       lucroEstimado: rMensal - cMensal,
+      projetoRevenue: pRevenue,
       chartRevenueData: chartRev.length > 0 ? chartRev : [{ name: monthNames[currentMonth], value: 0 }],
       companyData: companyDataWithPercentage,
       tableData: sortedEntries
     };
-  }, [entries]);
+  }, [entries, projects]);
 
   const formatCurrency = (val: number) => `R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  return (
-    <div className="flex flex-col gap-6 md:gap-10">
-      <section className="relative flex justify-between items-end">
-        <div>
-          <h1 className="text-4xl font-display font-bold text-[#111111] mb-2 tracking-tight">Financeiro</h1>
-          <p className="text-[#64748B] text-lg font-medium tracking-wide">Saúde financeira, receitas e custos de infraestrutura.</p>
-        </div>
-        <div className="flex gap-3">
-          <button className="bg-[#FFFFFF] text-[#111111] px-5 py-3 rounded-[14px] font-bold text-sm tracking-wide border border-[#0F172A0F] hover:bg-[#FAFAFA] transition-all">
-            Exportar Relatório
-          </button>
-          <button onClick={() => setIsModalOpen(true)} className="bg-[#111111] text-white px-6 py-3 rounded-[14px] font-bold text-sm tracking-wide shadow-[0_4px_14px_rgba(0,0,0,0.15)] hover:bg-black transition-all">
-            Novo Lançamento
-          </button>
-        </div>
-      </section>
+    return (
+      <div className="flex flex-col gap-6 md:gap-10 text-left">
+        <section className="relative flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-display font-bold text-[#111111] mb-2 tracking-tight">Financeiro</h1>
+            <p className="text-[#64748B] text-base sm:text-lg font-medium tracking-wide">Saúde financeira, receitas e custos de infraestrutura.</p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <button className="bg-[#FFFFFF] text-[#111111] px-5 py-3 rounded-[14px] font-bold text-sm tracking-wide border border-[#0F172A0F] hover:bg-[#FAFAFA] transition-all flex items-center justify-center gap-2">
+              Exportar Relatório
+            </button>
+            <button onClick={() => setIsModalOpen(true)} className="bg-[#111111] text-white px-6 py-3 rounded-[14px] font-bold text-sm tracking-wide shadow-[0_4px_14px_rgba(0,0,0,0.15)] hover:bg-black transition-all flex items-center justify-center gap-2">
+              Novo Lançamento
+            </button>
+          </div>
+        </section>
       
       {/* Metric Cards */}
-      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-        <MetricCard title="Receita Mensal" value={formatCurrency(revenueMensal)} sub="Este mês" icon={DollarSign} />
+      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
+        <MetricCard title="Receita Mensal" value={formatCurrency(revenueMensal)} sub="Lançamentos pagos" icon={DollarSign} />
         <MetricCard title="Receita Anual" value={formatCurrency(revenueAnual)} sub={`Ano Atual (${new Date().getFullYear()})`} icon={TrendingUp} />
         <MetricCard title="Custos Mensais" value={formatCurrency(custoMensal)} sub="Infraestrutura, APIs, etc." icon={CreditCard} />
-        <MetricCard title="Lucro Estimado" value={formatCurrency(lucroEstimado)} sub="Mês atual" icon={ArrowUpRight} />
+        <MetricCard title="Pipeline Projetos" value={formatCurrency(projetoRevenue)} sub="Receita em andamento" icon={Layers} />
+        <MetricCard title="Lucro Líquido" value={formatCurrency(lucroEstimado)} sub="Mês atual" icon={ArrowUpRight} />
       </section>
 
       {/* Main Charts Area */}
@@ -217,22 +228,24 @@ export default function FinanceiroView() {
       </section>
 
       {/* Transactions Table */}
-      <section className="bg-[#FFFFFF] rounded-[24px] border border-[#0F172A0F] shadow-[0_2px_12px_rgba(0,0,0,0.02)] overflow-hidden flex flex-col">
+      <section className="bg-[#FFFFFF] rounded-[24px] border border-[#0F172A0F] shadow-[0_2px_12px_rgba(0,0,0,0.02)] overflow-hidden flex flex-col text-left">
         <div className="px-6 py-5 border-b border-[#0F172A0F] flex justify-between items-center bg-[#FAFAFA]">
           <h3 className="text-sm font-bold uppercase text-[#64748B] tracking-widest">Últimas Transações</h3>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto -mx-0">
+          <table className="w-full text-left border-collapse min-w-[700px]">
             <thead>
               <tr className="border-b border-[#0F172A0F]">
                 <th className="px-6 py-4 text-xs font-bold uppercase text-[#94A3B8] tracking-wider whitespace-nowrap">Data</th>
                 <th className="px-6 py-4 text-xs font-bold uppercase text-[#94A3B8] tracking-wider">Descrição</th>
                 <th className="px-6 py-4 text-xs font-bold uppercase text-[#94A3B8] tracking-wider">Categoria</th>
                 <th className="px-6 py-4 text-xs font-bold uppercase text-[#94A3B8] tracking-wider">Empresa</th>
+                <th className="px-6 py-4 text-xs font-bold uppercase text-[#94A3B8] tracking-wider">Recorrente</th>
+                <th className="px-6 py-4 text-xs font-bold uppercase text-[#94A3B8] tracking-wider">Vencimento</th>
                 <th className="px-6 py-4 text-xs font-bold uppercase text-[#94A3B8] tracking-wider text-right">Valor</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="text-[13px] sm:text-sm">
               {tableData.length > 0 ? tableData.map((row) => {
                 const isPositive = row.type === 'RECEITA';
                 return (
@@ -241,13 +254,13 @@ export default function FinanceiroView() {
                     className="border-b border-[#0F172A0F] last:border-0 hover:bg-[#FAFAFA]/50 transition-colors group cursor-pointer"
                     onClick={() => handleEditClick(row)}
                   >
-                    <td className="px-6 py-4 text-sm font-medium text-[#64748B] whitespace-nowrap">
+                    <td className="px-6 py-4 font-medium text-[#64748B] whitespace-nowrap">
                       {new Date(row.date || Date.now()).toLocaleDateString('pt-BR')}
                     </td>
-                    <td className="px-6 py-4 text-sm font-semibold text-[#111111]">
+                    <td className="px-6 py-4 font-semibold text-[#111111]">
                       <div className="flex items-center gap-2">
-                        {row.description}
-                        <button className="opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-[#E2E8F0] text-[#64748B] transition-all">
+                        <span className="truncate max-w-[200px]">{row.description}</span>
+                        <button className="opacity-100 sm:opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-[#E2E8F0] text-[#64748B] transition-all">
                            <Edit3 size={12} />
                         </button>
                       </div>
@@ -255,8 +268,12 @@ export default function FinanceiroView() {
                     <td className="px-6 py-4">
                       <span className="text-[10px] uppercase font-bold px-2 py-1 bg-[#F1F5F9] text-[#64748B] rounded-md">{row.category}</span>
                     </td>
-                    <td className="px-6 py-4 text-sm font-medium text-[#475569]">{row.company || '-'}</td>
-                    <td className={`px-6 py-4 text-sm font-bold text-right flex justify-end items-center gap-1 ${isPositive ? 'text-green-600' : 'text-red-500'}`}>
+                    <td className="px-6 py-4 font-medium text-[#475569]">{row.company || '-'}</td>
+                    <td className="px-6 py-4 font-medium text-[#475569]">{row.isRecurrent ? 'Sim' : 'Não'}</td>
+                    <td className="px-6 py-4 font-medium text-[#475569]">
+                      {row.dueDate ? new Date(row.dueDate).toLocaleDateString('pt-BR') : '-'}
+                    </td>
+                    <td className={`px-6 py-4 font-bold text-right flex justify-end items-center gap-1 whitespace-nowrap ${isPositive ? 'text-green-600' : 'text-red-500'}`}>
                       {isPositive ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
                       {formatCurrency(Number(row.amount))}
                     </td>
@@ -275,7 +292,7 @@ export default function FinanceiroView() {
       <FinanceEntryModal 
         isOpen={isModalOpen} 
         onClose={() => { setIsModalOpen(false); setEditingEntry(null); }} 
-        onSuccess={fetchFinance} 
+        onSuccess={fetchData} 
         entry={editingEntry}
       />
     </div>

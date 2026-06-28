@@ -59,7 +59,7 @@ export default function CodeEditorProfessional({ doc, onSave, onClose }: CodeEdi
       {
         name: 'database_schema.sql',
         type: 'sql',
-        content: `-- PostgreSQL schema setup\nCREATE TABLE IF NOT EXISTS system_contracts (\n  id SERIAL PRIMARY KEY,\n  contract_uuid VARCHAR(120) NOT NULL UNIQUE,\n  client_name VARCHAR(255) NOT NULL,\n  total_faturamento NUMERIC(12, 2) DEFAULT 0.00,\n  status_rubrica VARCHAR(45) NOT NULL DEFAULT 'PENDING',\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\n-- Create index for performance searches\nCREATE INDEX idx_contracts_uuid ON system_contracts (contract_uuid);\n`
+        content: `-- SQLite schema setup\nCREATE TABLE IF NOT EXISTS system_contracts (\n  id SERIAL PRIMARY KEY,\n  contract_uuid VARCHAR(120) NOT NULL UNIQUE,\n  client_name VARCHAR(255) NOT NULL,\n  total_faturamento NUMERIC(12, 2) DEFAULT 0.00,\n  status_rubrica VARCHAR(45) NOT NULL DEFAULT 'PENDING',\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\n-- Create index for performance searches\nCREATE INDEX idx_contracts_uuid ON system_contracts (contract_uuid);\n`
       },
       {
         name: 'package_saas.json',
@@ -108,7 +108,7 @@ export default function CodeEditorProfessional({ doc, onSave, onClose }: CodeEdi
     const lastWord = words[words.length - 1];
 
     if (lastWord.length >= 3) {
-      const allWords = ['interface', 'async', 'function', 'import', 'System', 'Drizzle', 'PostgreSQL', 'Query', 'Faturamento', 'Contracts', 'console.log', 'analyzeWorkspace'];
+      const allWords = ['interface', 'async', 'function', 'import', 'System', 'Drizzle', 'SQLite', 'Query', 'Faturamento', 'Contracts', 'console.log', 'analyzeWorkspace'];
       const filtered = allWords.filter(w => w.toLowerCase().startsWith(lastWord.toLowerCase()) && w !== lastWord);
       if (filtered.length > 0) {
         setSuggestions(filtered);
