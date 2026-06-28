@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real as decimal } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, real as decimal, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 import { relations } from 'drizzle-orm';
 
@@ -16,7 +16,10 @@ export const users = sqliteTable('users', {
   settings: text('settings', { mode: "json" }).default({}),
   createdAt: integer('created_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
   updatedAt: integer('updated_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
-});
+}, (t) => ({
+  emailIdx: index('users_email_idx').on(t.email),
+  uidIdx: index('users_uid_idx').on(t.uid),
+}));
 
 // WORKSPACES
 export const workspaces = sqliteTable('workspaces', {
@@ -27,7 +30,9 @@ export const workspaces = sqliteTable('workspaces', {
   settings: text('settings', { mode: "json" }).default({}),
   createdAt: integer('created_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
   updatedAt: integer('updated_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
-});
+}, (t) => ({
+  ownerIdx: index('workspaces_owner_idx').on(t.ownerUid),
+}));
 
 // WORKSPACE MEMBERS
 export const workspaceMembers = sqliteTable('workspace_members', {
@@ -36,7 +41,10 @@ export const workspaceMembers = sqliteTable('workspace_members', {
   userUid: text('user_uid').notNull().references(() => users.uid, { onDelete: 'cascade' }),
   role: text('role').notNull().default('MEMBER'), // OWNER, ADMIN, MEMBER
   createdAt: integer('created_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
-});
+}, (t) => ({
+  wsUserIdx: index('ws_members_ws_user_idx').on(t.workspaceId, t.userUid),
+  userIdx: index('ws_members_user_idx').on(t.userUid),
+}));
 
 // COMPANIES (Empresas)
 export const companies = sqliteTable('companies', {
@@ -50,7 +58,9 @@ export const companies = sqliteTable('companies', {
   status: text('status').default('Ativo'), // Ativo, Inativo
   createdAt: integer('created_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
   updatedAt: integer('updated_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
-});
+}, (t) => ({
+  wsIdx: index('companies_ws_idx').on(t.workspaceId),
+}));
 
 // PRODUCTS
 export const products = sqliteTable('products', {
@@ -63,7 +73,10 @@ export const products = sqliteTable('products', {
   launchDate: integer('launch_date', { mode: "timestamp_ms" }),
   createdAt: integer('created_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
   updatedAt: integer('updated_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
-});
+}, (t) => ({
+  wsIdx: index('products_ws_idx').on(t.workspaceId),
+  compIdx: index('products_comp_idx').on(t.companyId),
+}));
 
 // PROJECTS
 export const projects = sqliteTable('projects', {
@@ -87,7 +100,9 @@ export const projects = sqliteTable('projects', {
   velocity: text('velocity', { mode: "json" }).default([]),
   createdAt: integer('created_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
   updatedAt: integer('updated_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
-});
+}, (t) => ({
+  wsIdx: index('projects_ws_idx').on(t.workspaceId),
+}));
 
 // SPRINTS
 export const sprints = sqliteTable('sprints', {
@@ -99,7 +114,9 @@ export const sprints = sqliteTable('sprints', {
   endDate: integer('end_date', { mode: "timestamp_ms" }),
   status: text('status').default('PLANNED'), // PLANNED, ACTIVE, COMPLETED
   createdAt: integer('created_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
-});
+}, (t) => ({
+  projIdx: index('sprints_proj_idx').on(t.projectId),
+}));
 
 // TASKS (Kanban)
 export const tasks = sqliteTable('tasks', {
@@ -120,7 +137,10 @@ export const tasks = sqliteTable('tasks', {
   dependencies: text('dependencies', { mode: "json" }).default([]), // New field
   createdAt: integer('created_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
   updatedAt: integer('updated_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
-});
+}, (t) => ({
+  projIdx: index('tasks_proj_idx').on(t.projectId),
+  sprintIdx: index('tasks_sprint_idx').on(t.sprintId),
+}));
 
 // IDEAS
 export const ideas = sqliteTable('ideas', {
@@ -135,7 +155,9 @@ export const ideas = sqliteTable('ideas', {
   convertedToProjectId: integer('converted_to_project_id').references(() => projects.id, { onDelete: 'set null' }),
   createdAt: integer('created_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
   updatedAt: integer('updated_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
-});
+}, (t) => ({
+  wsIdx: index('ideas_ws_idx').on(t.workspaceId),
+}));
 
 // DOCUMENTS
 export const documents = sqliteTable('documents', {
@@ -153,7 +175,9 @@ export const documents = sqliteTable('documents', {
   isFavorite: integer('is_favorite', { mode: "boolean" }).default(false),
   createdAt: integer('created_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
   updatedAt: integer('updated_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
-});
+}, (t) => ({
+  wsIdx: index('documents_ws_idx').on(t.workspaceId),
+}));
 
 // NOTES (Google Keep clone)
 export const notes = sqliteTable('notes', {
@@ -167,7 +191,9 @@ export const notes = sqliteTable('notes', {
   authorUid: text('author_uid').references(() => users.uid, { onDelete: 'set null' }),
   createdAt: integer('created_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
   updatedAt: integer('updated_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
-});
+}, (t) => ({
+  wsIdx: index('notes_ws_idx').on(t.workspaceId),
+}));
 
 // FLOWS (Visual Systems Studio)
 export const flows = sqliteTable('flow_builder_flows', {
@@ -179,7 +205,9 @@ export const flows = sqliteTable('flow_builder_flows', {
   flowJson: text('flow_json', { mode: "json" }).notNull().default({ nodes: [], edges: [] }),
   createdAt: integer('created_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
   updatedAt: integer('updated_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
-});
+}, (t) => ({
+  wsIdx: index('flows_ws_idx').on(t.workspaceId),
+}));
 
 export const aiMemories = sqliteTable('ai_memories', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -189,7 +217,9 @@ export const aiMemories = sqliteTable('ai_memories', {
   importance: integer('importance').default(5), // 1-10
   createdAt: integer('created_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
   updatedAt: integer('updated_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`)
-});
+}, (t) => ({
+  wsIdx: index('ai_memories_ws_idx').on(t.workspaceId),
+}));
 
 // FINANCE ENTRIES
 export const financeEntries = sqliteTable('finance_entries', {
@@ -207,7 +237,10 @@ export const financeEntries = sqliteTable('finance_entries', {
   dueDate: integer('due_date', { mode: "timestamp_ms" }),
   createdAt: integer('created_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
   updatedAt: integer('updated_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
-});
+}, (t) => ({
+  wsIdx: index('finance_ws_idx').on(t.workspaceId),
+  dateIdx: index('finance_date_idx').on(t.date),
+}));
 
 // AI HISTORY
 export const aiHistory = sqliteTable('ai_history', {
@@ -218,7 +251,9 @@ export const aiHistory = sqliteTable('ai_history', {
   response: text('response').notNull(),
   contextType: text('context_type'), // e.g. 'general', 'project_12', 'document_10'
   createdAt: integer('created_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
-});
+}, (t) => ({
+  wsIdx: index('ai_history_ws_idx').on(t.workspaceId),
+}));
 
 // NOTIFICATIONS
 export const notifications = sqliteTable('notifications', {
@@ -229,7 +264,9 @@ export const notifications = sqliteTable('notifications', {
   type: text('type').default('info'), // info, success, warning, error
   isRead: integer('is_read', { mode: "boolean" }).default(false),
   createdAt: integer('created_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
-});
+}, (t) => ({
+  wsIdx: index('notifications_ws_idx').on(t.workspaceId),
+}));
 
 // AGENDA EVENTS
 export const agendaEvents = sqliteTable('agenda_events', {
@@ -261,7 +298,10 @@ export const agendaEvents = sqliteTable('agenda_events', {
   timeBlockType: text('time_block_type').default('none'),
   createdAt: integer('created_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
   updatedAt: integer('updated_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
-});
+}, (t) => ({
+  wsIdx: index('agenda_ws_idx').on(t.workspaceId),
+  dateIdx: index('agenda_date_idx').on(t.date),
+}));
 
 // --- RELATIONS ---
 

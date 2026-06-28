@@ -25,7 +25,42 @@ async function startServer() {
     res.json({ status: "ok", service: "Cyzor Control SaaS API" });
   });
 
-  // API Route: Synchronize signed-in user inside Postgres
+  // API Route: Extended Database Healthcheck
+  app.get("/api/health/db", async (req, res) => {
+    try {
+      const fs = require('fs');
+      const dbPath = process.env.DATABASE_PATH || 'database/database.sqlite';
+      const fileExists = fs.existsSync(dbPath);
+      let fileSizeInBytes = 0;
+      if (fileExists) {
+        fileSizeInBytes = fs.statSync(dbPath).size;
+      }
+      
+      const { db } = require('./src/db/index.ts');
+      const { sql } = require('drizzle-orm');
+      
+      const journalMode = await db.get(sql`PRAGMA journal_mode`);
+      const foreignKeys = await db.get(sql`PRAGMA foreign_keys`);
+      const integrityCheck = await db.get(sql`PRAGMA integrity_check`);
+
+      res.json({
+        status: "ok",
+        database: "SQLite",
+        file_exists: fileExists,
+        size_bytes: fileSizeInBytes,
+        journal_mode: journalMode ? Object.values(journalMode)[0] : "unknown",
+        foreign_keys: foreignKeys ? Object.values(foreignKeys)[0] : "unknown",
+        integrity_check: integrityCheck ? Object.values(integrityCheck)[0] : "unknown"
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        status: "error",
+        error: error.message
+      });
+    }
+  });
+
+  // API Route: Synchronize signed-in user inside SQLite
   app.post("/api/auth/sync", requireAuth, async (req: AuthRequest, res) => {
     try {
       const { uid, email, name, picture } = req.user!;

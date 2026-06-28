@@ -88,7 +88,7 @@ export default function PresentationProfessional({ doc, onSave, onClose }: Prese
         background: '#0F172A',
         elements: [
           { id: 'el_4', type: 'title', content: 'Nossa Visão Estratégica', x: 10, y: 15, color: '#38bdf8', fontSize: 26, animation: 'zoom' },
-          { id: 'el_5', type: 'text', content: '• Integração em Tempo Real com Google Workspace e Drive\n• Editores dedicados inteligentes para Imagens, PDFs, Tabelas, Código\n• Segurança de nível regulatório para dados em Cloud SQL dedicado', x: 10, y: 35, color: '#f1f5f9', fontSize: 15, animation: 'fade' },
+          { id: 'el_5', type: 'text', content: '• Integração em Tempo Real com Google Workspace e Drive\n• Editores dedicados inteligentes para Imagens, PDFs, Tabelas, Código\n• Segurança de nível regulatório para dados em banco local dedicado', x: 10, y: 35, color: '#f1f5f9', fontSize: 15, animation: 'fade' },
           { id: 'el_6', type: 'shape', content: 'rect', x: 80, y: 40, color: '#6366f1', shapeType: 'rect' }
         ]
       }

@@ -1300,21 +1300,39 @@ apiRouter.get("/workspaces-detailed", async (req: AuthRequest, res) => {
     .innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
     .where(eq(workspaceMembers.userUid, req.user!.uid));
 
-    const detailedList = [];
-    for (const ws of list) {
-      const [companiesCount] = await db.select({ count: sql<number>`CAST(count(*) AS INTEGER)` }).from(companies).where(eq(companies.workspaceId, ws.id));
-      const [projectsCount] = await db.select({ count: sql<number>`CAST(count(*) AS INTEGER)` }).from(projects).where(eq(projects.workspaceId, ws.id));
-      const [productsCount] = await db.select({ count: sql<number>`CAST(count(*) AS INTEGER)` }).from(products).where(eq(products.workspaceId, ws.id));
-
-      detailedList.push({
-        ...ws,
-        stats: {
-          companies: companiesCount?.count || 0,
-          projects: projectsCount?.count || 0,
-          products: productsCount?.count || 0
-        }
-      });
+    if (list.length === 0) {
+      return res.json([]);
     }
+
+    const wsIds = list.map(ws => ws.id);
+
+    const compCounts = await db.select({
+      workspaceId: companies.workspaceId,
+      count: sql<number>`CAST(count(*) AS INTEGER)`
+    }).from(companies).where(inArray(companies.workspaceId, wsIds)).groupBy(companies.workspaceId);
+
+    const projCounts = await db.select({
+      workspaceId: projects.workspaceId,
+      count: sql<number>`CAST(count(*) AS INTEGER)`
+    }).from(projects).where(inArray(projects.workspaceId, wsIds)).groupBy(projects.workspaceId);
+
+    const prodCounts = await db.select({
+      workspaceId: products.workspaceId,
+      count: sql<number>`CAST(count(*) AS INTEGER)`
+    }).from(products).where(inArray(products.workspaceId, wsIds)).groupBy(products.workspaceId);
+
+    const compMap = new Map(compCounts.map(c => [c.workspaceId, c.count]));
+    const projMap = new Map(projCounts.map(c => [c.workspaceId, c.count]));
+    const prodMap = new Map(prodCounts.map(c => [c.workspaceId, c.count]));
+
+    const detailedList = list.map(ws => ({
+      ...ws,
+      stats: {
+        companies: compMap.get(ws.id) || 0,
+        projects: projMap.get(ws.id) || 0,
+        products: prodMap.get(ws.id) || 0
+      }
+    }));
 
     res.json(detailedList);
   } catch (error) {

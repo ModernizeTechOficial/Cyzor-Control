@@ -265,7 +265,7 @@ export default function SecAdminModulos({ section }: { section: string }) {
     }
   };
 
-  // --- COMPANIES CRUD OPERATIONS WITH LIVE POSTGRESQL ---
+  // --- COMPANIES CRUD OPERATIONS WITH LIVE SQLITE ---
   const handleOpenCompanyModal = (co?: any) => {
     if (co) {
       setEditingCompany(co);

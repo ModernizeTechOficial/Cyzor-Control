@@ -26,8 +26,11 @@ try {
   sqlite = new Database(dbPath, { fileMustExist: false });
   // WAL mode for performance
   sqlite.pragma('journal_mode = WAL');
-  sqlite.pragma('foreign_keys = ON');
   sqlite.pragma('synchronous = NORMAL');
+  sqlite.pragma('foreign_keys = ON');
+  sqlite.pragma('temp_store = MEMORY');
+  sqlite.pragma('cache_size = -64000');
+  sqlite.pragma('busy_timeout = 5000');
 } catch (error: any) {
   console.error('[Database Error] Arquivo do banco de dados inexistente, corrompido ou sem permissão de leitura/escrita:', error.message);
   process.exit(1);
@@ -42,6 +45,35 @@ try {
 } catch (error: any) {
   console.error('[Database Error] Falha ao realizar migração automática. Pode haver tabela inexistente ou esquema inconsistente:', error.message);
 }
+
+// Graceful shutdown
+function closeDatabase() {
+  console.log('[Database] Fechando conexão SQLite...');
+  if (sqlite) {
+    // If you need to finalize pending queries or transactions, better-sqlite3 handles it during close,
+    // though active transactions might roll back if not explicitly committed.
+    try {
+      sqlite.close();
+      console.log('[Database] Conexão encerrada com sucesso.');
+    } catch (err) {
+      console.error('[Database] Erro ao fechar banco de dados:', err);
+    }
+  }
+  process.exit(0);
+}
+
+process.on('SIGINT', closeDatabase);
+process.on('SIGTERM', closeDatabase);
+
+process.on('uncaughtException', (err) => {
+  console.error('[Database Error] Uncaught Exception:', err);
+  closeDatabase();
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[Database Error] Unhandled Rejection at:', promise, 'reason:', reason);
+  closeDatabase();
+});
 
 
 

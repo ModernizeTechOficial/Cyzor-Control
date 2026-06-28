@@ -67,7 +67,7 @@ export default function PrivacyView({ onBack }: { onBack: () => void }) {
 
           <h2>4. Segurança e Armazenamento</h2>
           <p>
-            A Cyzor emprega infraestrutura do Google Cloud (Firebase, Firestore, Cloud SQL) para armazenar 
+            A Cyzor emprega infraestrutura local com SQLite para armazenar 
             seus dados com criptografia em repouso e em trânsito. O acesso é restrito a sessões autenticadas 
             com protocolos avançados de autorização.
           </p>
