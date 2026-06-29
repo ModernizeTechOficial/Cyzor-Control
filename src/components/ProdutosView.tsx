@@ -59,12 +59,12 @@ export default function ProdutosView() {
       
       return {
         ...p,
-        empresa: company ? company.name : 'N/A',
-        companyName: company ? company.name : 'N/A',
+        empresa: p.empresa || (company ? company.name : 'Empresa Interna'),
+        companyName: p.companyName || (company ? company.name : 'Empresa Interna'),
         desc: p.description,
-        projectsCount: linkedProjects.length,
-        revenue: 'R$ 0,00',
-        logo: p.name ? p.name.charAt(0).toUpperCase() : 'P',
+        projectsCount: p.projectsCount !== undefined ? p.projectsCount : linkedProjects.length,
+        revenue: p.revenue !== undefined ? p.revenue : 'R$ 0,00',
+        logo: p.logo || (p.name ? p.name.charAt(0).toUpperCase() : 'P'),
         updated: new Date(p.updatedAt || p.createdAt || Date.now()).toLocaleDateString()
       };
     });
@@ -145,6 +145,7 @@ export default function ProdutosView() {
             statusFilter={statusFilter} setStatusFilter={setStatusFilter}
             companyFilter={companyFilter} setCompanyFilter={setCompanyFilter}
             viewMode={viewMode} setViewMode={setViewMode}
+            companies={companies}
           />
           
           {viewMode === 'grid' && (
@@ -171,6 +172,7 @@ export default function ProdutosView() {
             <ProductKanban 
               products={filteredProducts} 
               onSelect={(p) => setSelectedProduct(p)} 
+              onRefresh={fetchData}
             />
           )}
         </div>

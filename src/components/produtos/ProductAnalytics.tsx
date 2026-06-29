@@ -1,23 +1,54 @@
+import { useState, useEffect } from 'react';
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { LineChart, Line } from 'recharts';
 import { BarChart3, Activity } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 export default function ProductAnalytics() {
-  const revenueData = [
-    { name: 'Cyzor ERP', value: 45000 },
-    { name: 'App Vendas', value: 22000 },
-    { name: 'Portal RH', value: 12000 },
-    { name: 'Analytics', value: 5500 }
-  ];
+  const { token } = useAuth();
+  const [revenueData, setRevenueData] = useState<any[]>([]);
+  const [deploysData, setDeploysData] = useState<any[]>([]);
 
-  const deploysData = [
-    { name: 'Jan', deploys: 45 },
-    { name: 'Fev', deploys: 52 },
-    { name: 'Mar', deploys: 48 },
-    { name: 'Abr', deploys: 70 },
-    { name: 'Mai', deploys: 85 },
-    { name: 'Jun', deploys: 128 },
-  ];
+  useEffect(() => {
+    if (!token) return;
+    Promise.all([
+      fetch('/api/products', { headers: { Authorization: `Bearer ${token}` } }),
+      fetch('/api/deploys', { headers: { Authorization: `Bearer ${token}` } })
+    ])
+    .then(responses => Promise.all(responses.map(r => r.ok ? r.json() : [])))
+    .then(([prods, deps]) => {
+      // Process revenue
+      if (Array.isArray(prods)) {
+        const pRev = prods
+          .map(p => ({
+            name: p.name,
+            value: typeof p.revenue === 'string' ? parseFloat(p.revenue.replace(/[^0-9.]/g, '')) * (p.revenue.includes('k') ? 1000 : 1) : 0
+          }))
+          .sort((a, b) => b.value - a.value)
+          .slice(0, 4);
+        setRevenueData(pRev);
+      }
+      
+      // Process deploys
+      if (Array.isArray(deps)) {
+        const last6Months = Array.from({length: 6}).map((_, i) => {
+          const d = new Date();
+          d.setMonth(d.getMonth() - (5 - i));
+          return d;
+        });
+        
+        const dData = last6Months.map(date => {
+          const monthName = date.toLocaleDateString('pt-BR', { month: 'short' });
+          const count = deps.filter(d => {
+            const dDate = new Date(d.createdAt);
+            return dDate.getMonth() === date.getMonth() && dDate.getFullYear() === date.getFullYear();
+          }).length;
+          return { name: monthName, deploys: count };
+        });
+        setDeploysData(dData);
+      }
+    })
+    .catch(err => console.error(err));
+  }, [token]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -92,6 +123,7 @@ export default function ProductAnalytics() {
                 axisLine={false} 
                 tickLine={false} 
                 tick={{ fill: '#64748B', fontSize: 12, fontWeight: 500 }}
+                allowDecimals={false}
               />
               <Tooltip 
                 contentStyle={{ 

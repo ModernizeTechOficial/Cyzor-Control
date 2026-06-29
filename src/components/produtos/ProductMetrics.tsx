@@ -1,13 +1,42 @@
+import { useState, useEffect } from 'react';
 import { Activity, Download, Users, Key, Server, Rocket, MoreHorizontal } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 export default function ProductMetrics() {
+  const { token } = useAuth();
+  const [data, setData] = useState<any>(null);
+  
+  useEffect(() => {
+    if (!token) return;
+    Promise.all([
+      fetch('/api/products', { headers: { Authorization: `Bearer ${token}` } }),
+      fetch('/api/projects', { headers: { Authorization: `Bearer ${token}` } }),
+      fetch('/api/deploys', { headers: { Authorization: `Bearer ${token}` } }),
+      fetch('/api/finance', { headers: { Authorization: `Bearer ${token}` } })
+    ])
+    .then(responses => Promise.all(responses.map(r => r.ok ? r.json() : [])))
+    .then(([prods, projs, deps, fins]) => {
+      setData({ products: prods, projects: projs, deploys: deps, finance: fins });
+    })
+    .catch(err => console.error("Error fetching metrics:", err));
+  }, [token]);
+
+  const revenue = Array.isArray(data?.finance) ? data.finance.filter((f: any) => f.type === 'RECEITA' && f.status === 'PAGO').reduce((acc: number, cur: any) => acc + parseFloat(cur.amount || '0'), 0) : 0;
+  const deployCount = Array.isArray(data?.deploys) ? data.deploys.length : 0;
+  const projectCount = Array.isArray(data?.projects) ? data.projects.length : 0;
+  const productCount = Array.isArray(data?.products) ? data.products.length : 0;
+
+  const formatCurrency = (val: number) => {
+    if (val >= 1000000) return `R$ ${(val / 1000000).toFixed(1)}M`;
+    if (val >= 1000) return `R$ ${(val / 1000).toFixed(1)}k`;
+    return `R$ ${val}`;
+  };
+
   const metrics = [
-    { label: 'Receita', value: 'R$ 84.5k', trend: '+12%', up: true, icon: Activity },
-    { label: 'Downloads', value: '12.4k', trend: '+5%', up: true, icon: Download },
-    { label: 'Clientes Ativos', value: '842', trend: '+18', up: true, icon: Users },
-    { label: 'Licenças', value: '1.2k', trend: '-2', up: false, icon: Key },
-    { label: 'Instâncias', value: '45', trend: 'Estável', up: true, icon: Server },
-    { label: 'Deploys Mensais', value: '128', trend: '+24', up: true, icon: Rocket },
+    { label: 'Receita Total', value: formatCurrency(revenue), trend: '+0%', up: true, icon: Activity },
+    { label: 'Produtos', value: productCount, trend: 'Total', up: true, icon: Server },
+    { label: 'Projetos', value: projectCount, trend: 'Ativos', up: true, icon: Users },
+    { label: 'Deploys Totais', value: deployCount, trend: 'Geral', up: true, icon: Rocket },
   ];
 
   return (

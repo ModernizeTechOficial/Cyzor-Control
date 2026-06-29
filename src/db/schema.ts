@@ -375,6 +375,21 @@ export const milestones = sqliteTable('milestones', {
   createdAt: integer('created_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
 });
 
+export const deploys = sqliteTable('deploys', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  productId: integer('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+  version: text('version').notNull(),
+  status: text('status').default('success'), // success, failed, in_progress
+  userUid: text('user_uid').references(() => users.uid, { onDelete: 'set null' }),
+  duration: text('duration'), // e.g. "1m 24s"
+  logs: text('logs'),
+  createdAt: integer('created_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
+}, (t) => ({
+  wsIdx: index('deploys_ws_idx').on(t.workspaceId),
+  prodIdx: index('deploys_prod_idx').on(t.productId),
+}));
+
 export const sprintsRelations = relations(sprints, ({ one, many }) => ({
   project: one(projects, { fields: [sprints.projectId], references: [projects.id] }),
   tasks: many(tasks),

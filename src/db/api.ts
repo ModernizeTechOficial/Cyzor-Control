@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requireAuth, AuthRequest } from "../middleware/auth.ts";
 import { db } from "./index.ts";
-import { companies, products, projects, tasks, ideas, documents, financeEntries, sprints, milestones, aiMemories, notifications, agendaEvents, users, workspaceMembers, workspaces, flows, notes } from "./schema.ts";
+import { companies, products, projects, tasks, ideas, documents, financeEntries, sprints, milestones, aiMemories, notifications, agendaEvents, users, workspaceMembers, workspaces, flows, notes, deploys } from "./schema.ts";
 import { eq, and, desc, sql, or, inArray } from "drizzle-orm";
 import { getUserSaaSState } from "./queries.ts";
 
@@ -259,8 +259,59 @@ apiRouter.put("/ideas/:id", async (req: AuthRequest, res) => {
 
 // --- PRODUCTS ---
 apiRouter.get("/products", async (req: AuthRequest, res) => {
-  const data = await db.select().from(products).where(eq(products.workspaceId, req.workspaceId!));
-  res.json(data);
+  try {
+    const prods = await db.select().from(products).where(eq(products.workspaceId, req.workspaceId!));
+    
+    // Get companies map
+    const comps = await db.select().from(companies).where(eq(companies.workspaceId, req.workspaceId!));
+    const companyMap = comps.reduce((acc, c) => ({ ...acc, [c.id]: c.name }), {} as Record<number, string>);
+
+    // Get projects count map
+    const projs = await db.select({ id: projects.id, productId: projects.productId }).from(projects).where(eq(projects.workspaceId, req.workspaceId!));
+    const projectCountMap: Record<number, number> = {};
+    const productToProjectIds: Record<number, number[]> = {};
+    projs.forEach(p => {
+      if (p.productId) {
+        projectCountMap[p.productId] = (projectCountMap[p.productId] || 0) + 1;
+        if (!productToProjectIds[p.productId]) productToProjectIds[p.productId] = [];
+        productToProjectIds[p.productId].push(p.id);
+      }
+    });
+
+    // Get revenue map
+    const allFinance = await db.select({
+        amount: financeEntries.amount,
+        projectId: financeEntries.projectId,
+        type: financeEntries.type,
+        status: financeEntries.status
+    }).from(financeEntries).where(and(eq(financeEntries.workspaceId, req.workspaceId!), eq(financeEntries.type, 'RECEITA'), eq(financeEntries.status, 'PAGO')));
+    
+    const projectRevenueMap: Record<number, number> = {};
+    allFinance.forEach(f => {
+      if (f.projectId) {
+        projectRevenueMap[f.projectId] = (projectRevenueMap[f.projectId] || 0) + Number(f.amount || 0);
+      }
+    });
+
+    const enrichedProds = prods.map(p => {
+      const projIds = productToProjectIds[p.id] || [];
+      const revenue = projIds.reduce((sum, pid) => sum + (projectRevenueMap[pid] || 0), 0);
+      
+      return {
+        ...p,
+        empresa: p.companyId ? companyMap[p.companyId] : 'Empresa Interna',
+        companyName: p.companyId ? companyMap[p.companyId] : 'Empresa Interna',
+        projectsCount: projectCountMap[p.id] || 0,
+        revenue: revenue >= 1000 ? `R$ ${(revenue / 1000).toFixed(1)}k` : `R$ ${revenue.toFixed(0)}`,
+        logo: p.name?.charAt(0) || 'P'
+      };
+    });
+
+    res.json(enrichedProds);
+  } catch(e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to fetch products" });
+  }
 });
 apiRouter.post("/products", async (req: AuthRequest, res) => {
   const data = await db.insert(products).values({ ...req.body, workspaceId: req.workspaceId! }).returning();
@@ -269,6 +320,61 @@ apiRouter.post("/products", async (req: AuthRequest, res) => {
 apiRouter.put("/products/:id", async (req: AuthRequest, res) => {
   const data = await db.update(products).set(req.body).where(and(eq(products.id, Number(req.params.id)), eq(products.workspaceId, req.workspaceId!))).returning();
   res.json(data[0]);
+});
+
+apiRouter.get("/products/:id/kpis", async (req: AuthRequest, res) => {
+  const productId = Number(req.params.id);
+  try {
+    // 1. Check product existence
+    const [prod] = await db.select().from(products)
+      .where(and(eq(products.id, productId), eq(products.workspaceId, req.workspaceId!)));
+    if (!prod) return res.status(404).json({ error: "Product not found" });
+
+    // 2. Projects count
+    const projList = await db.select({ id: projects.id, createdAt: projects.createdAt }).from(projects)
+      .where(and(eq(projects.productId, productId), eq(projects.workspaceId, req.workspaceId!)));
+    const projectsCount = projList.length;
+
+    // 3. Deploys count
+    const deploysList = await db.select({ id: deploys.id, createdAt: deploys.createdAt }).from(deploys)
+      .where(and(eq(deploys.productId, productId), eq(deploys.workspaceId, req.workspaceId!)));
+    const deploysCount = deploysList.length;
+    
+    // Sort deploys by creation to find the latest
+    deploysList.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
+    const lastDeployTime = deploysList.length > 0 ? new Date(deploysList[0].createdAt!).getTime() : null;
+    let lastDeployStr = 'Nenhum';
+    if (lastDeployTime) {
+      const diffHrs = Math.floor((Date.now() - lastDeployTime) / (1000 * 60 * 60));
+      lastDeployStr = diffHrs > 24 ? `Há ${Math.floor(diffHrs/24)}d` : `Há ${diffHrs}h`;
+    }
+
+    // 4. Finance (Revenue)
+    const projectIds = projList.map(p => p.id);
+    let revenue = 0;
+    if (projectIds.length > 0) {
+      const finList = await db.select().from(financeEntries)
+        .where(and(
+          eq(financeEntries.workspaceId, req.workspaceId!),
+          eq(financeEntries.type, 'RECEITA'),
+          eq(financeEntries.status, 'PAGO'),
+          inArray(financeEntries.projectId, projectIds)
+        ));
+      revenue = finList.reduce((sum, f) => sum + Number(f.amount || 0), 0);
+    }
+
+    // 5. Tasks/Ideas count as approximation for "Clients" / "Licenses" since we don't have those tables
+    // Just mock the others or return 0 for what we don't have
+    
+    res.json({
+      projects: { count: projectsCount },
+      revenue: { total: revenue },
+      deploys: { count: deploysCount, lastDeploy: lastDeployStr }
+    });
+  } catch (error) {
+    console.error("Error fetching product KPIs:", error);
+    res.status(500).json({ error: "Failed to fetch product KPIs" });
+  }
 });
 
 // --- SPRINTS ---
@@ -649,6 +755,57 @@ apiRouter.delete("/milestones/:id", async (req: AuthRequest, res) => {
         console.error("Error deleting milestone:", error);
         res.status(500).json({ error: "Failed to delete milestone" });
     }
+});
+
+// --- DEPLOYS ---
+apiRouter.get("/deploys", async (req: AuthRequest, res) => {
+  const { productId } = req.query;
+  const conditions = [eq(deploys.workspaceId, req.workspaceId!)];
+  if (productId) conditions.push(eq(deploys.productId, Number(productId)));
+  
+  try {
+    const data = await db.select({
+      id: deploys.id,
+      version: deploys.version,
+      status: deploys.status,
+      duration: deploys.duration,
+      logs: deploys.logs,
+      createdAt: deploys.createdAt,
+      userUid: deploys.userUid,
+      userName: users.displayName
+    })
+    .from(deploys)
+    .leftJoin(users, eq(deploys.userUid, users.uid))
+    .where(and(...conditions))
+    .orderBy(desc(deploys.createdAt));
+    
+    res.json(data);
+  } catch (error) {
+    console.error("Error fetching deploys:", error);
+    res.status(500).json({ error: "Failed to fetch deploys" });
+  }
+});
+
+apiRouter.post("/deploys", async (req: AuthRequest, res) => {
+  try {
+    const { productId, version, status, duration, logs } = req.body;
+    if (!productId || !version) {
+      return res.status(400).json({ error: "productId and version are required" });
+    }
+    const [newDeploy] = await db.insert(deploys).values({
+      workspaceId: req.workspaceId!,
+      productId: Number(productId),
+      version,
+      status: status || 'success',
+      duration: duration || '0s',
+      logs: logs || '',
+      userUid: req.user!.uid
+    }).returning();
+    res.json(newDeploy);
+  } catch (error) {
+    console.error("Error creating deploy:", error);
+    res.status(500).json({ error: "Failed to create deploy" });
+  }
 });
 
 // --- DOCUMENTS ---

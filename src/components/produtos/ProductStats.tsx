@@ -1,4 +1,6 @@
+import { useState, useEffect } from 'react';
 import { Package, CheckCircle2, FlaskConical, DollarSign, Rocket, Users, FolderGit2, TrendingUp, TrendingDown } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 interface ProductStatsProps {
   totalProducts: number;
@@ -8,11 +10,36 @@ interface ProductStatsProps {
 }
 
 export default function ProductStats({ totalProducts, activeProducts, devProducts, totalProjects }: ProductStatsProps) {
+  const { token } = useAuth();
+  const [data, setData] = useState<any>({ finance: [], deploys: [] });
+
+  useEffect(() => {
+    if (!token) return;
+    Promise.all([
+      fetch('/api/finance', { headers: { Authorization: `Bearer ${token}` } }),
+      fetch('/api/deploys', { headers: { Authorization: `Bearer ${token}` } })
+    ])
+    .then(responses => Promise.all(responses.map(r => r.ok ? r.json() : [])))
+    .then(([fins, deps]) => {
+      setData({ finance: fins, deploys: deps });
+    })
+    .catch(err => console.error(err));
+  }, [token]);
+
+  const revenue = Array.isArray(data.finance) ? data.finance.filter((f: any) => f.type === 'RECEITA' && f.status === 'PAGO').reduce((acc: number, cur: any) => acc + parseFloat(cur.amount || '0'), 0) : 0;
+  const deployCount = Array.isArray(data.deploys) ? data.deploys.length : 0;
+
+  const formatCurrency = (val: number) => {
+    if (val >= 1000000) return `R$ ${(val / 1000000).toFixed(1)}M`;
+    if (val >= 1000) return `R$ ${(val / 1000).toFixed(1)}k`;
+    return `R$ ${val}`;
+  };
+
   const stats = [
     {
       title: 'Total de Produtos',
       value: totalProducts.toString(),
-      trend: '+3 este mês',
+      trend: 'Geral',
       trendUp: true,
       subtext: `${activeProducts} em produção`,
       icon: Package,
@@ -20,11 +47,11 @@ export default function ProductStats({ totalProducts, activeProducts, devProduct
       bg: 'bg-blue-50',
     },
     {
-      title: 'Receita Mensal',
-      value: 'R$ 84.500',
-      trend: '↑ 12%',
+      title: 'Receita Anual/Mensal',
+      value: formatCurrency(revenue),
+      trend: 'Total',
       trendUp: true,
-      subtext: 'vs último mês',
+      subtext: 'Somatório de todas as receitas',
       icon: DollarSign,
       color: 'text-emerald-600',
       bg: 'bg-emerald-50',
@@ -32,7 +59,7 @@ export default function ProductStats({ totalProducts, activeProducts, devProduct
     {
       title: 'Em Desenvolvimento',
       value: devProducts.toString(),
-      trend: '3 em fase final',
+      trend: 'Geral',
       trendUp: true,
       subtext: 'Lançamento próximo',
       icon: FlaskConical,
@@ -40,11 +67,11 @@ export default function ProductStats({ totalProducts, activeProducts, devProduct
       bg: 'bg-amber-50',
     },
     {
-      title: 'Deploys este mês',
-      value: '128',
-      trend: 'Estável',
+      title: 'Deploys Realizados',
+      value: deployCount.toString(),
+      trend: 'Geral',
       trendUp: true,
-      subtext: 'Sem incidentes críticos',
+      subtext: 'Histórico completo de releases',
       icon: Rocket,
       color: 'text-purple-600',
       bg: 'bg-purple-50',
