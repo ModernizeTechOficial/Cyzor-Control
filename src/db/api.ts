@@ -2,7 +2,7 @@ import { Router } from "express";
 import { requireAuth, AuthRequest } from "../middleware/auth.ts";
 import { db } from "./index.ts";
 import { companies, products, projects, tasks, ideas, documents, financeEntries, sprints, milestones, aiMemories, notifications, agendaEvents, users, workspaceMembers, workspaces, flows, notes } from "./schema.ts";
-import { eq, and, desc, sql, or } from "drizzle-orm";
+import { eq, and, desc, sql, or, inArray } from "drizzle-orm";
 import { getUserSaaSState } from "./queries.ts";
 
 const apiRouter = Router();
