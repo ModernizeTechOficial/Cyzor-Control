@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext.tsx';
 import { 
   Building2, Users, Shield, BotMessageSquare, Link as LinkIcon, DollarSign,
   Plus, Edit3, Trash2, Search, Filter, RefreshCw, Database, Activity, 
-  Loader2, Check, Sparkles, CheckCircle2, UserCheck,
+  Loader2, Check, Sparkles, CheckCircle2, UserCheck, UserPlus,
   Calendar, ListTodo, FolderOpen, FileCheck, Eye, EyeOff, X, Key, Settings2, ExternalLink, Layers
 } from 'lucide-react';
 import { InputField, SelectField, CheckboxOption, MiniCard, BtnSave, Toast } from './SettingsHelpers';
@@ -50,6 +50,10 @@ export default function SecAdminModulos({ section }: { section: string }) {
   const [members, setMembers] = useState<any[]>([]);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('MEMBER');
+  const [inviteName, setInviteName] = useState('');
+  const [inviteCargo, setInviteCargo] = useState('');
+  const [inviteProjectId, setInviteProjectId] = useState('');
+  const [workspaceProjects, setWorkspaceProjects] = useState<any[]>([]);
   const [inviting, setInviting] = useState(false);
 
   // Active User/Member Role to check permission boundaries
@@ -195,6 +199,12 @@ export default function SecAdminModulos({ section }: { section: string }) {
         if (me) {
           setUserRoleInWorkspace(me.role);
         }
+      }
+
+      // 4. Fetch workspace projects for dynamic dropdown
+      const projRes = await fetchWithAuth('/api/projects');
+      if (projRes.ok) {
+        setWorkspaceProjects(await projRes.json());
       }
 
     } catch (err) {
@@ -350,7 +360,7 @@ export default function SecAdminModulos({ section }: { section: string }) {
   // --- COLLABORATORS AND ROLES OPERATIONS ---
   const handleInviteUser = async () => {
     if (!inviteEmail.trim()) {
-      setToast({ message: "Por favor insira um email de usuário para buscar.", type: "error" });
+      setToast({ message: "Por favor insira um e-mail válido.", type: "error" });
       return;
     }
     try {
@@ -358,11 +368,20 @@ export default function SecAdminModulos({ section }: { section: string }) {
       const res = await fetchWithAuth('/api/workspace/members', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: inviteEmail.trim(), role: inviteRole })
+        body: JSON.stringify({ 
+          email: inviteEmail.trim(), 
+          role: inviteRole,
+          displayName: inviteName.trim() || undefined,
+          cargo: inviteCargo.trim() || undefined,
+          projectId: inviteProjectId || undefined
+        })
       });
       if (res.ok) {
-        setToast({ message: "Usuário adicionado com sucesso ao Workspace!", type: "success" });
+        setToast({ message: "Colaborador adicionado e notificado com sucesso!", type: "success" });
         setInviteEmail('');
+        setInviteName('');
+        setInviteCargo('');
+        setInviteProjectId('');
         // Reload list
         const refM = await fetchWithAuth('/api/workspace/members');
         if (refM.ok) {
@@ -371,10 +390,11 @@ export default function SecAdminModulos({ section }: { section: string }) {
         }
       } else {
         const errorData = await res.json();
-        setToast({ message: errorData.error || "Email corporativo não encontrado. Peça para o colaborador cadastrar uma conta principal primeiro.", type: "error" });
+        setToast({ message: errorData.error || "Falha ao adicionar colaborador.", type: "error" });
       }
     } catch (err) {
       console.error(err);
+      setToast({ message: "Erro de rede.", type: "error" });
     } finally {
       setInviting(false);
     }
@@ -611,32 +631,82 @@ export default function SecAdminModulos({ section }: { section: string }) {
             <p className="text-sm text-[#64748B] leading-relaxed">Gerencie as pessoas reais autorizadas a cooperar no seu workspace.</p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-between bg-[#FAFAFA] border border-[#0F172A0F] rounded-[24px] p-5">
-            <div className="flex-1 flex flex-col sm:flex-row gap-3">
-              <input 
-                type="email" 
-                placeholder="Ex email: sarah@cyzor.com" 
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                className="flex-1 bg-[#FFFFFF] border border-[#0F172A0F] rounded-[12px] py-2.5 px-4 text-sm font-semibold outline-none focus:border-[#111111]/30" 
-              />
-              <select 
-                value={inviteRole}
-                onChange={(e) => setInviteRole(e.target.value)}
-                className="bg-[#FFFFFF] border border-[#0F172A0F] rounded-[12px] py-2.5 px-4 text-xs font-bold outline-none cursor-pointer"
-              >
-                <option value="MEMBER">Gestor / Colaborador</option>
-                <option value="ADMIN">Administrador</option>
-              </select>
+          <div className="bg-[#FAFAFA] border border-[#0F172A0F] rounded-[24px] p-6 flex flex-col gap-6">
+            <h3 className="text-xs font-bold uppercase text-[#64748B] tracking-widest flex items-center gap-2">
+              <UserPlus size={14} className="text-[#4f46e5]" /> Cadastrar & Integrar Novo Colaborador (Padrão Jira)
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="flex flex-col gap-1.5 lg:col-span-1">
+                <label className="text-[10px] font-bold uppercase text-[#64748B] tracking-wider">E-mail Corporativo</label>
+                <input 
+                  type="email" 
+                  placeholder="sarah@cyzor.com" 
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  className="bg-white border border-[#0F172A0F] rounded-[12px] py-2.5 px-4 text-sm font-semibold outline-none focus:border-[#111111]/30 w-full" 
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5 lg:col-span-1">
+                <label className="text-[10px] font-bold uppercase text-[#64748B] tracking-wider">Nome Completo</label>
+                <input 
+                  type="text" 
+                  placeholder="Sarah Jenkins" 
+                  value={inviteName}
+                  onChange={(e) => setInviteName(e.target.value)}
+                  className="bg-white border border-[#0F172A0F] rounded-[12px] py-2.5 px-4 text-sm font-semibold outline-none focus:border-[#111111]/30 w-full" 
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5 lg:col-span-1">
+                <label className="text-[10px] font-bold uppercase text-[#64748B] tracking-wider">Cargo / Função</label>
+                <input 
+                  type="text" 
+                  placeholder="Desenvolvedora Backend" 
+                  value={inviteCargo}
+                  onChange={(e) => setInviteCargo(e.target.value)}
+                  className="bg-white border border-[#0F172A0F] rounded-[12px] py-2.5 px-4 text-sm font-semibold outline-none focus:border-[#111111]/30 w-full" 
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5 lg:col-span-1">
+                <label className="text-[10px] font-bold uppercase text-[#64748B] tracking-wider">Vincular ao Projeto</label>
+                <select 
+                  value={inviteProjectId}
+                  onChange={(e) => setInviteProjectId(e.target.value)}
+                  className="bg-white border border-[#0F172A0F] rounded-[12px] py-2.5 px-4 text-xs font-bold outline-none cursor-pointer w-full h-[41px]"
+                >
+                  <option value="">-- Autodeterminar Projeto --</option>
+                  {workspaceProjects.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1.5 lg:col-span-1">
+                <label className="text-[10px] font-bold uppercase text-[#64748B] tracking-wider">Nível de Acesso</label>
+                <select 
+                  value={inviteRole}
+                  onChange={(e) => setInviteRole(e.target.value)}
+                  className="bg-white border border-[#0F172A0F] rounded-[12px] py-2.5 px-4 text-xs font-bold outline-none cursor-pointer w-full h-[41px]"
+                >
+                  <option value="MEMBER">Gestor / Colaborador</option>
+                  <option value="ADMIN">Administrador</option>
+                </select>
+              </div>
             </div>
-            <button 
-              onClick={handleInviteUser}
-              disabled={inviting}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#111111] text-white rounded-[12px] text-xs font-bold hover:bg-black transition-all cursor-pointer shadow-md"
-            >
-              {inviting ? <Loader2 className="animate-spin" size={14} /> : <UserCheck size={14} />}
-              Convidar Usuário
-            </button>
+
+            <div className="flex justify-end pt-2 border-t border-[#0F172A0F]">
+              <button 
+                onClick={handleInviteUser}
+                disabled={inviting}
+                className="flex items-center justify-center gap-2 px-6 py-3 bg-[#111111] hover:bg-black text-white rounded-[12px] text-xs font-bold transition-all cursor-pointer shadow-md disabled:opacity-50 min-w-[200px]"
+              >
+                {inviting ? <Loader2 className="animate-spin" size={14} /> : <UserCheck size={14} />}
+                Cadastrar & Enviar Notificação
+              </button>
+            </div>
           </div>
 
           <div className="bg-[#FFFFFF] border border-[#0F172A0F] rounded-[24px] overflow-hidden">

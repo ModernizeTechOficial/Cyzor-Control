@@ -16,7 +16,7 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
     companies: 0,
     products: 0,
     projects: 0,
-    clients: 124, // baseline
+    clients: 0,
     revenue: 0,
     tasks: 0
   });
@@ -27,13 +27,14 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
   const [tasks, setTasks] = useState<any[]>([]);
   const [members, setMembers] = useState<any[]>([]);
   const [agendaEvents, setAgendaEvents] = useState<any[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       if (!activeWorkspace) return;
       try {
-        const [compRes, prodRes, projRes, finRes, depRes, taskRes, memberRes, agendaRes] = await Promise.all([
+        const [compRes, prodRes, projRes, finRes, depRes, taskRes, memberRes, agendaRes, clientRes] = await Promise.all([
           fetchWithAuth('/api/companies'),
           fetchWithAuth('/api/products'),
           fetchWithAuth('/api/projects'),
@@ -41,10 +42,11 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
           fetchWithAuth('/api/deploys'),
           fetchWithAuth('/api/tasks'),
           fetchWithAuth('/api/workspace/members'),
-          fetchWithAuth('/api/agenda')
+          fetchWithAuth('/api/agenda'),
+          fetchWithAuth('/api/clients')
         ]);
 
-        const [companies, products, projectsData, financeData, deploysData, tasksData, membersData, agendaData] = await Promise.all([
+        const [companies, products, projectsData, financeData, deploysData, tasksData, membersData, agendaData, clientsData] = await Promise.all([
           compRes.ok ? compRes.json() : [],
           prodRes.ok ? prodRes.json() : [],
           projRes.ok ? projRes.json() : [],
@@ -52,7 +54,8 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
           depRes.ok ? depRes.json() : [],
           taskRes.ok ? taskRes.json() : [],
           memberRes.ok ? memberRes.json() : [],
-          agendaRes.ok ? agendaRes.json() : []
+          agendaRes.ok ? agendaRes.json() : [],
+          clientRes.ok ? clientRes.json() : []
         ]);
 
         setProjects(projectsData);
@@ -61,6 +64,7 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
         setTasks(tasksData);
         setMembers(membersData);
         setAgendaEvents(agendaData);
+        setClients(clientsData);
 
         const totalRevenue = financeData
           .filter((f: any) => f.type === 'RECEITA')
@@ -70,7 +74,7 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
           companies: companies.length,
           products: products.length,
           projects: projectsData.length,
-          clients: Math.max(124, companies.length * 3 + 45), // estimate based on registered companies
+          clients: clientsData.length,
           revenue: Number(totalRevenue / 1000),
           tasks: tasksData.length
         });
@@ -85,7 +89,7 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
   }, [activeWorkspace]);
 
   return (
-    <div className="flex flex-col gap-8 w-full max-w-[1600px] mx-auto p-1.5">
+    <div className="w-full mx-auto pb-12 flex flex-col gap-10 animate-in fade-in duration-500 relative px-4 sm:px-6 lg:px-10">
       {/* Header, Visão Executiva do Ecossistema and Key Overview (Full Width) */}
       <div className="flex flex-col gap-8">
         <HomeHeader />
@@ -123,6 +127,7 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
             finance={finance}
             agendaEvents={agendaEvents}
             metrics={metrics}
+            clients={clients}
           />
         </div>
       </div>

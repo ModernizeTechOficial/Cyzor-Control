@@ -40,6 +40,7 @@ export const workspaceMembers = sqliteTable('workspace_members', {
   workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
   userUid: text('user_uid').notNull().references(() => users.uid, { onDelete: 'cascade' }),
   role: text('role').notNull().default('MEMBER'), // OWNER, ADMIN, MEMBER
+  cargo: text('cargo').default('Colaborador'), // Job title / function (e.g. Desenvolvedor, QA, PM)
   createdAt: integer('created_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
 }, (t) => ({
   wsUserIdx: index('ws_members_ws_user_idx').on(t.workspaceId, t.userUid),
@@ -60,6 +61,24 @@ export const companies = sqliteTable('companies', {
   updatedAt: integer('updated_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
 }, (t) => ({
   wsIdx: index('companies_ws_idx').on(t.workspaceId),
+}));
+
+// CLIENTS (Clientes)
+export const clients = sqliteTable('clients', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  email: text('email'),
+  phone: text('phone'),
+  companyId: integer('company_id').references(() => companies.id, { onDelete: 'set null' }),
+  status: text('status').default('Ativo'), // Ativo, Inativo, Lead
+  notes: text('notes'),
+  role: text('role'), // Cargo
+  tags: text('tags', { mode: 'json' }).default([]),
+  createdAt: integer('created_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
+  updatedAt: integer('updated_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
+}, (t) => ({
+  wsIdx: index('clients_ws_idx').on(t.workspaceId),
 }));
 
 // PRODUCTS
@@ -314,6 +333,7 @@ export const workspacesRelations = relations(workspaces, ({ one, many }) => ({
   owner: one(users, { fields: [workspaces.ownerUid], references: [users.uid] }),
   members: many(workspaceMembers),
   companies: many(companies),
+  clients: many(clients),
   products: many(products),
   projects: many(projects),
   ideas: many(ideas),
@@ -324,6 +344,11 @@ export const workspacesRelations = relations(workspaces, ({ one, many }) => ({
   notifications: many(notifications),
   agendaEvents: many(agendaEvents),
   flows: many(flows),
+}));
+
+export const clientsRelations = relations(clients, ({ one }) => ({
+  workspace: one(workspaces, { fields: [clients.workspaceId], references: [workspaces.id] }),
+  company: one(companies, { fields: [clients.companyId], references: [companies.id] }),
 }));
 
 export const flowsRelations = relations(flows, ({ one }) => ({

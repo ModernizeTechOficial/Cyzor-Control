@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from "motion/react";
 import { useAuth } from '../context/AuthContext.tsx';
 import { useBranding } from '../hooks/useBranding.ts';
-import { LayoutDashboard, Building2, Package, GitBranch, Lightbulb, FileText, DollarSign, BotMessageSquare, Settings, Calendar, ShieldCheck, StickyNote, Workflow } from 'lucide-react';
+import { LayoutDashboard, Building2, Users, Package, GitBranch, Lightbulb, FileText, DollarSign, BotMessageSquare, Settings, Calendar, ShieldCheck, StickyNote, Workflow } from 'lucide-react';
 import { View } from '../types';
 
 export default function Sidebar({ 
@@ -75,6 +75,7 @@ export default function Sidebar({
       <div className="flex flex-col gap-1 w-full flex-1 overflow-y-auto overflow-x-hidden mt-2 px-1.5 custom-scrollbar">
         <NavItem icon={LayoutDashboard} label="Dashboard" active={currentView === 'dashboard'} onClick={() => setCurrentView('dashboard')} isCollapsed={isCollapsed} />
         <NavItem icon={Building2} label="Empresas" active={currentView === 'empresas'} onClick={() => setCurrentView('empresas')} isCollapsed={isCollapsed} />
+        <NavItem icon={Users} label="Clientes" active={currentView === 'clientes'} onClick={() => setCurrentView('clientes')} isCollapsed={isCollapsed} />
         <NavItem icon={Package} label="Produtos" active={currentView === 'produtos'} onClick={() => setCurrentView('produtos')} isCollapsed={isCollapsed} />
         <NavItem icon={GitBranch} label="Projetos" active={currentView === 'projetos'} onClick={() => setCurrentView('projetos')} isCollapsed={isCollapsed} badge="3" />
         <NavItem icon={Lightbulb} label="Ideias" active={currentView === 'ideias'} onClick={() => setCurrentView('ideias')} isCollapsed={isCollapsed} />

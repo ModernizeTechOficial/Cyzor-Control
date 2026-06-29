@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { requireAuth, AuthRequest } from "../middleware/auth.ts";
 import { db } from "./index.ts";
-import { companies, products, projects, tasks, ideas, documents, financeEntries, sprints, milestones, aiMemories, notifications, agendaEvents, users, workspaceMembers, workspaces, flows, notes, deploys } from "./schema.ts";
+import { companies, clients, products, projects, tasks, ideas, documents, financeEntries, sprints, milestones, aiMemories, notifications, agendaEvents, users, workspaceMembers, workspaces, flows, notes, deploys } from "./schema.ts";
 import { eq, and, desc, sql, or, inArray } from "drizzle-orm";
 import { getUserSaaSState } from "./queries.ts";
+import { sendProjectNotificationEmail, testSmtpConnection } from "./mail.ts";
 
 const apiRouter = Router();
 
@@ -153,6 +154,107 @@ apiRouter.post("/companies", async (req: AuthRequest, res) => {
   } catch (error) {
     console.error("Error creating company:", error);
     res.status(500).json({ error: "Failed to create company" });
+  }
+});
+
+// --- CLIENTS ---
+apiRouter.get("/clients", async (req: AuthRequest, res) => {
+  try {
+    const data = await db
+      .select({
+        id: clients.id,
+        workspaceId: clients.workspaceId,
+        name: clients.name,
+        email: clients.email,
+        phone: clients.phone,
+        companyId: clients.companyId,
+        status: clients.status,
+        notes: clients.notes,
+        role: clients.role,
+        tags: clients.tags,
+        createdAt: clients.createdAt,
+        updatedAt: clients.updatedAt,
+        companyName: companies.name
+      })
+      .from(clients)
+      .leftJoin(companies, eq(clients.companyId, companies.id))
+      .where(eq(clients.workspaceId, req.workspaceId!));
+    res.json(data);
+  } catch (error) {
+    console.error("Error fetching clients:", error);
+    res.status(500).json({ error: "Failed to fetch clients" });
+  }
+});
+
+apiRouter.post("/clients", async (req: AuthRequest, res) => {
+  try {
+    const { name, email, phone, companyId, status, notes, role, tags } = req.body;
+    if (!name) {
+      return res.status(400).json({ error: "Client name is required" });
+    }
+    const data = await db.insert(clients).values({
+      workspaceId: req.workspaceId!,
+      name,
+      email: email || null,
+      phone: phone || null,
+      companyId: companyId ? Number(companyId) : null,
+      status: status || 'Ativo',
+      notes: notes || null,
+      role: role || null,
+      tags: tags || []
+    }).returning();
+    res.json(data[0]);
+  } catch (error) {
+    console.error("Error creating client:", error);
+    res.status(500).json({ error: "Failed to create client" });
+  }
+});
+
+apiRouter.put("/clients/:id", async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email, phone, companyId, status, notes, role, tags } = req.body;
+    const updateValues: any = {};
+    if (name !== undefined) updateValues.name = name;
+    if (email !== undefined) updateValues.email = email;
+    if (phone !== undefined) updateValues.phone = phone;
+    if (companyId !== undefined) updateValues.companyId = companyId ? Number(companyId) : null;
+    if (status !== undefined) updateValues.status = status;
+    if (notes !== undefined) updateValues.notes = notes;
+    if (role !== undefined) updateValues.role = role;
+    if (tags !== undefined) updateValues.tags = tags;
+    updateValues.updatedAt = new Date();
+
+    const data = await db
+      .update(clients)
+      .set(updateValues)
+      .where(and(eq(clients.id, Number(id)), eq(clients.workspaceId, req.workspaceId!)))
+      .returning();
+    
+    if (data.length === 0) {
+      return res.status(404).json({ error: "Client not found" });
+    }
+    res.json(data[0]);
+  } catch (error) {
+    console.error("Error updating client:", error);
+    res.status(500).json({ error: "Failed to update client" });
+  }
+});
+
+apiRouter.delete("/clients/:id", async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const data = await db
+      .delete(clients)
+      .where(and(eq(clients.id, Number(id)), eq(clients.workspaceId, req.workspaceId!)))
+      .returning();
+    if (data.length === 0) {
+      return res.status(404).json({ error: "Client not found" });
+    }
+    res.json({ success: true, deleted: data[0] });
+  } catch (error) {
+    console.error("Error deleting client:", error);
+    res.status(500).json({ error: "Failed to delete client" });
   }
 });
 
@@ -1104,6 +1206,7 @@ apiRouter.get("/workspace/members", async (req: AuthRequest, res) => {
       displayName: users.displayName,
       photoUrl: users.photoUrl,
       role: workspaceMembers.role,
+      cargo: workspaceMembers.cargo,
     })
     .from(workspaceMembers)
     .innerJoin(users, eq(workspaceMembers.userUid, users.uid))
@@ -1322,9 +1425,20 @@ apiRouter.delete("/companies/:id", async (req: AuthRequest, res) => {
 // --- WORKSPACE MEMBERS ADMIN OPTIONS ---
 apiRouter.put("/workspace/members/:userUid/role", async (req: AuthRequest, res) => {
   try {
-    const { role } = req.body;
+    const { role, cargo } = req.body;
     const { userUid } = req.params;
-    await db.update(workspaceMembers).set({ role }).where(and(eq(workspaceMembers.userUid, userUid), eq(workspaceMembers.workspaceId, req.workspaceId!)));
+    const updates: any = {};
+    if (role !== undefined) updates.role = role;
+    if (cargo !== undefined) updates.cargo = cargo;
+    
+    await db.update(workspaceMembers)
+      .set(updates)
+      .where(and(eq(workspaceMembers.userUid, userUid), eq(workspaceMembers.workspaceId, req.workspaceId!)));
+      
+    if (cargo !== undefined) {
+      await db.update(users).set({ role: cargo }).where(eq(users.uid, userUid));
+    }
+    
     res.json({ success: true });
   } catch (error) {
     console.error("Error setting member role:", error);
@@ -1345,23 +1459,133 @@ apiRouter.delete("/workspace/members/:userUid", async (req: AuthRequest, res) =>
 
 apiRouter.post("/workspace/members", async (req: AuthRequest, res) => {
   try {
-    const { email, role } = req.body;
+    const { email, role, displayName, cargo, projectId } = req.body;
     if (!email) {
-      return res.status(400).json({ error: "Email is required" });
+      return res.status(400).json({ error: "O e-mail é obrigatório." });
     }
-    const [usr] = await db.select().from(users).where(eq(users.email, email));
-    if (!usr) {
-      return res.status(404).json({ error: "User with this email is not registered in the database." });
+    
+    // Check if user exists in the system
+    let usr = null;
+    const [existingUsr] = await db.select().from(users).where(eq(users.email, email));
+    
+    if (existingUsr) {
+      usr = existingUsr;
+    } else {
+      // If user does not exist, we dynamically create them (real employee provisioning like Jira!)
+      const generatedUid = "invited_" + email.replace(/[^a-zA-Z0-9]/g, "_") + "_" + Math.floor(Math.random() * 1000);
+      const [newUsr] = await db.insert(users).values({
+        uid: generatedUid,
+        email: email,
+        displayName: displayName || email.split('@')[0],
+        role: cargo || "Colaborador",
+      }).returning();
+      usr = newUsr;
     }
-    const [existing] = await db.select().from(workspaceMembers).where(and(eq(workspaceMembers.workspaceId, req.workspaceId!), eq(workspaceMembers.userUid, usr.uid)));
-    if (existing) {
-      return res.status(400).json({ error: "User is already a member of this workspace" });
+
+    // Check if user is already in this workspace
+    const [existingMember] = await db.select()
+      .from(workspaceMembers)
+      .where(and(eq(workspaceMembers.workspaceId, req.workspaceId!), eq(workspaceMembers.userUid, usr.uid)));
+      
+    if (existingMember) {
+      return res.status(400).json({ error: "O usuário já é colaborador neste workspace." });
     }
+
+    // Add member to workspace
     await db.insert(workspaceMembers).values({
       workspaceId: req.workspaceId!,
       userUid: usr.uid,
-      role: role || "MEMBER"
+      role: role || "MEMBER",
+      cargo: cargo || "Colaborador"
     });
+
+    // Get Workspace Name
+    const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, req.workspaceId!));
+    const workspaceName = workspace ? workspace.name : "Cyzor Workspace";
+    const assignedBy = req.user?.displayName || req.user?.email || "Administrador";
+
+    // Handle Project Assignment & Team integration
+    let assignedProject = null;
+    if (projectId) {
+      const [proj] = await db.select().from(projects).where(and(eq(projects.id, Number(projectId)), eq(projects.workspaceId, req.workspaceId!)));
+      assignedProject = proj;
+    } else {
+      // Auto-assign to first project in workspace if exists
+      const [firstProj] = await db.select().from(projects).where(eq(projects.workspaceId, req.workspaceId!)).limit(1);
+      assignedProject = firstProj;
+    }
+
+    if (assignedProject) {
+      const currentTeam = assignedProject.team || [];
+      const isAlreadyInTeam = currentTeam.some((m: any) => m.email === email);
+      if (!isAlreadyInTeam) {
+        const initials = (displayName || usr.displayName || email.split('@')[0])
+          .split(' ')
+          .map((n: string) => n[0])
+          .join('')
+          .slice(0, 2)
+          .toUpperCase();
+        
+        const newMember = {
+          name: displayName || usr.displayName || email.split('@')[0],
+          role: cargo || "Colaborador",
+          email: email,
+          avatar: initials,
+          allocation: 100
+        };
+        const updatedTeam = [...currentTeam, newMember];
+        
+        const log = {
+          id: Date.now(),
+          user: assignedBy,
+          action: `adicionou o membro "${newMember.name}" como ${newMember.role}`,
+          time: "Agora"
+        };
+        
+        await db.update(projects).set({
+          team: updatedTeam,
+          history: [log, ...(assignedProject.history || [])]
+        }).where(eq(projects.id, assignedProject.id));
+      }
+
+      // Send professional notification e-mail
+      await sendProjectNotificationEmail({
+        to: email,
+        userName: displayName || usr.displayName || email.split('@')[0],
+        projectName: assignedProject.name,
+        role: cargo || "Colaborador",
+        workspaceName,
+        assignedBy,
+        workspaceId: req.workspaceId!,
+      });
+    } else {
+      // If no project exists at all in the workspace, we dynamically create an initial one for them to join (Jira-style)
+      const [newProj] = await db.insert(projects).values({
+        workspaceId: req.workspaceId!,
+        name: "Onboarding & Atividades Gerais",
+        description: "Projeto padrão para onboarding e rastreamento das primeiras atividades do novo colaborador.",
+        status: "Em Andamento",
+        priority: "Média",
+        team: [{
+          name: displayName || usr.displayName || email.split('@')[0],
+          role: cargo || "Colaborador",
+          email: email,
+          avatar: (displayName || email).charAt(0).toUpperCase(),
+          allocation: 100
+        }]
+      }).returning();
+
+      await sendProjectNotificationEmail({
+        to: email,
+        userName: displayName || usr.displayName || email.split('@')[0],
+        projectName: newProj.name,
+        role: cargo || "Colaborador",
+        workspaceName,
+        assignedBy,
+        workspaceId: req.workspaceId!,
+      });
+    }
+
     res.json({ success: true, userUid: usr.uid });
   } catch (error: any) {
     console.error("Error adding workspace member:", error);
@@ -1440,6 +1664,58 @@ apiRouter.put("/workspace-settings", async (req: AuthRequest, res) => {
   } catch (error) {
     console.error("Error updating workspace settings:", error);
     res.status(500).json({ error: "Failed to update workspace settings" });
+  }
+});
+
+apiRouter.post("/mail/test-smtp", async (req: AuthRequest, res) => {
+  try {
+    const { host, port, user, pass, from, to } = req.body;
+    if (!host || !port || !user || !pass || !from || !to) {
+      return res.status(400).json({ error: "Todos os campos (servidor, porta, usuário, senha, remetente, destinatário) são obrigatórios para o teste." });
+    }
+    const result = await testSmtpConnection({
+      host,
+      port: Number(port),
+      user,
+      pass,
+      from,
+      to,
+      workspaceId: req.workspaceId!
+    });
+    res.json(result);
+  } catch (err: any) {
+    console.error("Test SMTP error route:", err);
+    res.status(500).json({ success: false, error: err.message || String(err) });
+  }
+});
+
+apiRouter.post("/mail/send-sample", async (req: AuthRequest, res) => {
+  try {
+    const { to } = req.body;
+    if (!to) {
+      return res.status(400).json({ error: "Destinatário de teste é obrigatório." });
+    }
+
+    // Load first project in workspace if any
+    const [project] = await db.select().from(projects).where(eq(projects.workspaceId, req.workspaceId!)).limit(1);
+    const projectName = project ? project.name : "Projeto Exemplo Alpha";
+    const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, req.workspaceId!));
+    const workspaceName = workspace ? workspace.name : "Cyzor Control Workspace";
+
+    const result = await sendProjectNotificationEmail({
+      to,
+      userName: "Membro de Teste",
+      projectName,
+      role: "Engenheiro de Software Sênior",
+      workspaceName,
+      assignedBy: req.user?.displayName || "Administrador do Sistema",
+      workspaceId: req.workspaceId!
+    });
+
+    res.json(result);
+  } catch (err: any) {
+    console.error("Send sample email error route:", err);
+    res.status(500).json({ success: false, error: err.message || String(err) });
   }
 });
 

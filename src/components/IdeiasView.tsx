@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import NewIdeaModal from './NewIdeaModal';
 import IdeaDetailsModal from './IdeaDetailsModal';
 import { useAuth } from '../context/AuthContext';
+import StandardHeader from './layout/StandardHeader';
+import { Plus, Download, Upload } from 'lucide-react';
 
-import IdeaHeader from './ideias/IdeaHeader';
 import IdeaStats from './ideias/IdeaStats';
 import IdeaToolbar from './ideias/IdeaToolbar';
 import IdeaKanban from './ideias/IdeaKanban';
@@ -109,8 +110,31 @@ export default function IdeiasView() {
   };
 
   return (
-    <div className="w-full max-w-[1400px] mx-auto pb-12 flex flex-col gap-8 animate-in fade-in duration-500 relative">
-      <IdeaHeader onNewIdea={() => setIsNewModalOpen(true)} />
+    <div className="w-full mx-auto pb-12 flex flex-col gap-10 animate-in fade-in duration-500 relative px-4 sm:px-6 lg:px-10">
+      <StandardHeader 
+        title="Banco de Ideias"
+        subtitle="Capture, valide e transforme ideias em produtos do ecossistema Cyzor."
+        actions={[
+          {
+            label: 'Importar',
+            icon: Upload,
+            onClick: () => {},
+            variant: 'secondary'
+          },
+          {
+            label: 'Exportar',
+            icon: Download,
+            onClick: () => {},
+            variant: 'secondary'
+          },
+          {
+            label: 'Nova Ideia',
+            icon: Plus,
+            onClick: () => setIsNewModalOpen(true),
+            variant: 'primary'
+          }
+        ]}
+      />
       
       <IdeaStats 
         totalIdeas={ideas.length}

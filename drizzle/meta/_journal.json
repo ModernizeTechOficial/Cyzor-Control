@@ -15,6 +15,20 @@
       "when": 1782631183452,
       "tag": "0001_aberrant_bucky",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1782637200000,
+      "tag": "0002_add_clients",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1782637300000,
+      "tag": "0003_add_cargo_to_workspace_members",
+      "breakpoints": true
     }
   ]
 }

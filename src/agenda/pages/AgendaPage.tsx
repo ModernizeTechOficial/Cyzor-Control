@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { CalendarViewType, AgendaEvent, EventCategory } from '../types/agenda';
 import { useAuth } from '../../context/AuthContext';
+import StandardHeader from '../../components/layout/StandardHeader';
 import { 
   fetchGoogleCalendarEvents, 
   createGoogleCalendarEvent, 
@@ -362,49 +363,33 @@ export default function AgendaPage() {
   }, [selectedDate, currentCalendarView]);
 
   return (
-    <div id="agenda-module" className="flex flex-col gap-6 md:gap-10">
+    <div id="agenda-module" className="flex flex-col gap-10 animate-in fade-in duration-500 px-4 sm:px-6 lg:px-10 pb-12">
       
       {/* 1. Header Area */}
-      <section className="relative flex flex-col xl:flex-row xl:justify-between xl:items-end gap-6 border-b border-[#0F172A0A] pb-6">
-        <div>
-          <h1 className="text-4xl font-display font-bold text-[#111111] mb-2 tracking-tight">Agenda</h1>
-          <p className="text-[#64748B] text-lg font-medium tracking-wide">Planejamento integrado e inteligência analítica de compromissos.</p>
-        </div>
-
-        {/* Executive Action Buttons */}
-        <div className="flex flex-wrap items-center gap-3">
-          <button 
-            type="button"
-            onClick={() => handleOpenNewEvent()}
-            className="bg-[#111111] text-white px-5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm hover:bg-black transition-all flex items-center gap-2"
-          >
-            <Plus size={14} />
-            Novo Compromisso
-          </button>
-          
-          <button 
-            type="button"
-            onClick={() => handleOpenNewEvent('reuniao')}
-            className="bg-white text-neutral-800 border border-[#0F172A1C] px-5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-[#FAFAFA] transition-all flex items-center gap-2"
-          >
-            <Video size={14} className="text-[#64748B]" />
-            Nova Reunião
-          </button>
-
-          <button 
-            type="button"
-            onClick={() => setShowExecutiveDashboard(!showExecutiveDashboard)}
-            className={`border px-5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 ${
-              showExecutiveDashboard 
-                ? 'bg-[#111111] text-white border-[#111111]' 
-                : 'bg-white text-neutral-800 border-[#0F172A1C] hover:bg-[#FAFAFA]'
-            }`}
-          >
-            <ChartIcon size={14} />
-            {showExecutiveDashboard ? 'Voltar para Calendário' : 'Painel Executivo'}
-          </button>
-        </div>
-      </section>
+      <StandardHeader 
+        title="Agenda"
+        subtitle="Planejamento integrado e inteligência analítica de compromissos."
+        actions={[
+          {
+            label: 'Novo Compromisso',
+            icon: Plus,
+            onClick: () => handleOpenNewEvent(),
+            variant: 'primary'
+          },
+          {
+            label: 'Nova Reunião',
+            icon: Video,
+            onClick: () => handleOpenNewEvent('reuniao'),
+            variant: 'secondary'
+          },
+          {
+            label: showExecutiveDashboard ? 'Calendário' : 'Painel Executivo',
+            icon: ChartIcon,
+            onClick: () => setShowExecutiveDashboard(!showExecutiveDashboard),
+            variant: 'secondary'
+          }
+        ]}
+      />
 
       {/* Google Calendar Sync Integration Panel */}
       <section className="bg-[#FAFBF9] border border-[#DEE2E6]/60 rounded-[24px] p-5 flex flex-col md:flex-row md:items-center justify-between gap-5">

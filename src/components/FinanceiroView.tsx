@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import MetricCard from './MetricCard';
+import StandardHeader from './layout/StandardHeader';
 import FinanceEntryModal from './FinanceEntryModal';
 import { useAuth } from '../context/AuthContext';
-import { DollarSign, TrendingUp, CreditCard, ArrowUpRight, ArrowDownRight, Server, Globe, Key, Database, MoreHorizontal, Edit3, Layers } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, CreditCard, ArrowUpRight, ArrowDownRight, Server, Globe, Key, Database, MoreHorizontal, Edit3, Layers, ChevronRight, Plus } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 
 const COLORS = ['#111111', '#475569', '#94A3B8', '#CBD5E1', '#E2E8F0'];
@@ -124,40 +125,86 @@ export default function FinanceiroView() {
   const formatCurrency = (val: number) => `R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
     return (
-      <div className="flex flex-col gap-6 md:gap-10 text-left">
-        <section className="relative flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
-          <div>
-            <h1 className="text-3xl sm:text-4xl font-display font-bold text-[#111111] mb-2 tracking-tight">Financeiro</h1>
-            <p className="text-[#64748B] text-base sm:text-lg font-medium tracking-wide">Saúde financeira, receitas e custos de infraestrutura.</p>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            <button className="bg-[#FFFFFF] text-[#111111] px-5 py-3 rounded-[14px] font-bold text-sm tracking-wide border border-[#0F172A0F] hover:bg-[#FAFAFA] transition-all flex items-center justify-center gap-2">
-              Exportar Relatório
-            </button>
-            <button onClick={() => setIsModalOpen(true)} className="bg-[#111111] text-white px-6 py-3 rounded-[14px] font-bold text-sm tracking-wide shadow-[0_4px_14px_rgba(0,0,0,0.15)] hover:bg-black transition-all flex items-center justify-center gap-2">
-              Novo Lançamento
-            </button>
-          </div>
-        </section>
+      <div className="w-full mx-auto pb-12 flex flex-col gap-10 animate-in fade-in duration-500 relative text-left px-4 sm:px-6 lg:px-10">
+        <StandardHeader 
+          title="Financeiro"
+          subtitle="Saúde financeira, receitas e custos de infraestrutura do ecossistema."
+          actions={[
+            {
+              label: 'Exportar',
+              onClick: () => {},
+              variant: 'secondary'
+            },
+            {
+              label: 'Novo Lançamento',
+              icon: Plus,
+              onClick: () => setIsModalOpen(true),
+              variant: 'primary'
+            }
+          ]}
+        />
       
       {/* Metric Cards */}
       <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
-        <MetricCard title="Receita Mensal" value={formatCurrency(revenueMensal)} sub="Lançamentos pagos" icon={DollarSign} />
-        <MetricCard title="Receita Anual" value={formatCurrency(revenueAnual)} sub={`Ano Atual (${new Date().getFullYear()})`} icon={TrendingUp} />
-        <MetricCard title="Custos Mensais" value={formatCurrency(custoMensal)} sub="Infraestrutura, APIs, etc." icon={CreditCard} />
-        <MetricCard title="Pipeline Projetos" value={formatCurrency(projetoRevenue)} sub="Receita em andamento" icon={Layers} />
-        <MetricCard title="Lucro Líquido" value={formatCurrency(lucroEstimado)} sub="Mês atual" icon={ArrowUpRight} />
+        <MetricCard 
+          title="Receita Mensal" 
+          value={formatCurrency(revenueMensal)} 
+          sub="Lançamentos pagos" 
+          icon={DollarSign} 
+          trend="+12%" 
+          trendUp={true}
+          bg="bg-emerald-50/50"
+          color="text-emerald-600"
+        />
+        <MetricCard 
+          title="Receita Anual" 
+          value={formatCurrency(revenueAnual)} 
+          sub={`Ano Atual (${new Date().getFullYear()})`} 
+          icon={TrendingUp} 
+          trend="+8%" 
+          trendUp={true}
+          bg="bg-indigo-50/50"
+          color="text-indigo-600"
+        />
+        <MetricCard 
+          title="Custos Mensais" 
+          value={formatCurrency(custoMensal)} 
+          sub="Infraestrutura, APIs, etc." 
+          icon={CreditCard} 
+          trend="-2%" 
+          trendUp={false}
+          bg="bg-rose-50/50"
+          color="text-rose-600"
+        />
+        <MetricCard 
+          title="Pipeline Projetos" 
+          value={formatCurrency(projetoRevenue)} 
+          sub="Receita em andamento" 
+          icon={Layers} 
+          bg="bg-slate-100/60"
+          color="text-slate-600"
+        />
+        <MetricCard 
+          title="Lucro Líquido" 
+          value={formatCurrency(lucroEstimado)} 
+          sub="Mês atual" 
+          icon={ArrowUpRight} 
+          trend="+15%" 
+          trendUp={true}
+          bg="bg-blue-50/50"
+          color="text-blue-600"
+        />
       </section>
 
       {/* Main Charts Area */}
       <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         
         {/* Receita por Mês - Chart */}
-        <div className="xl:col-span-2 bg-[#FFFFFF] rounded-[24px] border border-[#0F172A0F] shadow-[0_2px_12px_rgba(0,0,0,0.02)] p-6 flex flex-col gap-6">
+        <div className="xl:col-span-2 bg-white rounded-[24px] border border-[#0F172A08] shadow-[0_4px_24px_rgba(0,0,0,0.01)] p-6 sm:p-8 flex flex-col gap-6">
           <div className="flex justify-between items-center">
-            <h3 className="text-sm font-bold uppercase text-[#64748B] tracking-widest">Fluxo de Caixa (Receita Mês a Mês)</h3>
+            <h3 className="text-xs font-bold uppercase text-[#64748B] tracking-widest">Fluxo de Caixa (Receita Mês a Mês)</h3>
           </div>
-          <div className="h-[300px] w-full">
+          <div className="h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartRevenueData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
@@ -181,8 +228,8 @@ export default function FinanceiroView() {
         </div>
 
         {/* Distribuição por Empresa - Chart */}
-        <div className="bg-[#FFFFFF] rounded-[24px] border border-[#0F172A0F] shadow-[0_2px_12px_rgba(0,0,0,0.02)] p-6 flex flex-col gap-6">
-          <h3 className="text-sm font-bold uppercase text-[#64748B] tracking-widest">Receitas por Empresa</h3>
+        <div className="bg-white rounded-[24px] border border-[#0F172A08] shadow-[0_4px_24px_rgba(0,0,0,0.01)] p-6 sm:p-8 flex flex-col gap-6">
+          <h3 className="text-xs font-bold uppercase text-[#64748B] tracking-widest">Receitas por Empresa</h3>
           {companyData.length > 0 ? (
             <>
               <div className="h-[250px] w-full flex items-center justify-center relative">
@@ -202,19 +249,25 @@ export default function FinanceiroView() {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <RechartsTooltip contentStyle={{ borderRadius: '12px', border: '1px solid #0F172A0F' }} formatter={(value: any) => formatCurrency(Number(value))} />
+                    <RechartsTooltip 
+                      contentStyle={{ borderRadius: '16px', border: '1px solid #0F172A0F', boxShadow: '0 8px 30px rgba(0,0,0,0.05)' }} 
+                      formatter={(value: any) => formatCurrency(Number(value))} 
+                    />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <span className="text-2xl font-bold text-[#111111]">100%</span>
+                  <div className="flex flex-col items-center">
+                    <span className="text-2xl font-bold text-[#111111]">100%</span>
+                    <span className="text-[10px] font-bold text-[#64748B] uppercase">Total</span>
+                  </div>
                 </div>
               </div>
-              <div className="flex flex-col gap-2 mt-auto">
+              <div className="flex flex-col gap-3 mt-auto">
                 {companyData.map((item, idx) => (
-                  <div key={item.name} className="flex justify-between items-center text-sm">
+                  <div key={item.name} className="flex justify-between items-center text-xs group cursor-default">
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
-                      <span className="font-medium text-[#475569]">{item.name}</span>
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
+                      <span className="font-bold text-[#475569] group-hover:text-[#111111] transition-colors">{item.name}</span>
                     </div>
                     <span className="font-bold text-[#111111]">{item.percentage}%</span>
                   </div>
@@ -222,70 +275,88 @@ export default function FinanceiroView() {
               </div>
             </>
           ) : (
-             <div className="flex-1 flex items-center justify-center text-sm text-[#64748B]">Nenhuma receita registrada.</div>
+             <div className="flex-1 flex items-center justify-center text-xs font-medium text-[#64748B]">Nenhuma receita registrada.</div>
           )}
         </div>
       </section>
 
       {/* Transactions Table */}
-      <section className="bg-[#FFFFFF] rounded-[24px] border border-[#0F172A0F] shadow-[0_2px_12px_rgba(0,0,0,0.02)] overflow-hidden flex flex-col text-left">
-        <div className="px-6 py-5 border-b border-[#0F172A0F] flex justify-between items-center bg-[#FAFAFA]">
-          <h3 className="text-sm font-bold uppercase text-[#64748B] tracking-widest">Últimas Transações</h3>
+      <section className="flex flex-col gap-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-display font-bold text-[#111111] flex items-center gap-2">
+            <CreditCard size={20} className="text-[#111111]" /> Últimas Transações
+          </h2>
+          <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider bg-slate-50 border border-[#0F172A08] px-3 py-1 rounded-full">
+            {tableData.length} registros
+          </span>
         </div>
-        <div className="overflow-x-auto -mx-0">
-          <table className="w-full text-left border-collapse min-w-[700px]">
-            <thead>
-              <tr className="border-b border-[#0F172A0F]">
-                <th className="px-6 py-4 text-xs font-bold uppercase text-[#94A3B8] tracking-wider whitespace-nowrap">Data</th>
-                <th className="px-6 py-4 text-xs font-bold uppercase text-[#94A3B8] tracking-wider">Descrição</th>
-                <th className="px-6 py-4 text-xs font-bold uppercase text-[#94A3B8] tracking-wider">Categoria</th>
-                <th className="px-6 py-4 text-xs font-bold uppercase text-[#94A3B8] tracking-wider">Empresa</th>
-                <th className="px-6 py-4 text-xs font-bold uppercase text-[#94A3B8] tracking-wider">Recorrente</th>
-                <th className="px-6 py-4 text-xs font-bold uppercase text-[#94A3B8] tracking-wider">Vencimento</th>
-                <th className="px-6 py-4 text-xs font-bold uppercase text-[#94A3B8] tracking-wider text-right">Valor</th>
-              </tr>
-            </thead>
-            <tbody className="text-[13px] sm:text-sm">
-              {tableData.length > 0 ? tableData.map((row) => {
-                const isPositive = row.type === 'RECEITA';
-                return (
-                  <tr 
-                    key={row.id} 
-                    className="border-b border-[#0F172A0F] last:border-0 hover:bg-[#FAFAFA]/50 transition-colors group cursor-pointer"
-                    onClick={() => handleEditClick(row)}
-                  >
-                    <td className="px-6 py-4 font-medium text-[#64748B] whitespace-nowrap">
-                      {new Date(row.date || Date.now()).toLocaleDateString('pt-BR')}
-                    </td>
-                    <td className="px-6 py-4 font-semibold text-[#111111]">
-                      <div className="flex items-center gap-2">
-                        <span className="truncate max-w-[200px]">{row.description}</span>
-                        <button className="opacity-100 sm:opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-[#E2E8F0] text-[#64748B] transition-all">
-                           <Edit3 size={12} />
-                        </button>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-[10px] uppercase font-bold px-2 py-1 bg-[#F1F5F9] text-[#64748B] rounded-md">{row.category}</span>
-                    </td>
-                    <td className="px-6 py-4 font-medium text-[#475569]">{row.company || '-'}</td>
-                    <td className="px-6 py-4 font-medium text-[#475569]">{row.isRecurrent ? 'Sim' : 'Não'}</td>
-                    <td className="px-6 py-4 font-medium text-[#475569]">
-                      {row.dueDate ? new Date(row.dueDate).toLocaleDateString('pt-BR') : '-'}
-                    </td>
-                    <td className={`px-6 py-4 font-bold text-right flex justify-end items-center gap-1 whitespace-nowrap ${isPositive ? 'text-green-600' : 'text-red-500'}`}>
-                      {isPositive ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                      {formatCurrency(Number(row.amount))}
+
+        <div className="bg-white rounded-[32px] border border-[#0F172A08] shadow-[0_8px_30px_rgb(0,0,0,0.01)] overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[700px]">
+              <thead>
+                <tr className="bg-[#FAFAFA] border-b border-[#0F172A08]">
+                  <th className="px-6 py-5 text-[10px] font-bold uppercase text-[#64748B] tracking-widest whitespace-nowrap">Data</th>
+                  <th className="px-6 py-5 text-[10px] font-bold uppercase text-[#64748B] tracking-widest">Descrição</th>
+                  <th className="px-6 py-5 text-[10px] font-bold uppercase text-[#64748B] tracking-widest">Categoria</th>
+                  <th className="px-6 py-5 text-[10px] font-bold uppercase text-[#64748B] tracking-widest">Empresa</th>
+                  <th className="px-6 py-5 text-[10px] font-bold uppercase text-[#64748B] tracking-widest text-right">Valor</th>
+                  <th className="px-6 py-5 text-[10px] font-bold uppercase text-[#64748B] tracking-widest text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#0F172A05]">
+                {tableData.length > 0 ? tableData.map((row) => {
+                  const isPositive = row.type === 'RECEITA';
+                  return (
+                    <tr 
+                      key={row.id} 
+                      className="group hover:bg-[#FAFAFA] transition-all cursor-pointer"
+                      onClick={() => handleEditClick(row)}
+                    >
+                      <td className="px-6 py-5">
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-[#111111]">{new Date(row.date || Date.now()).toLocaleDateString('pt-BR')}</span>
+                          <span className="text-[10px] text-[#64748B] font-medium tracking-tight">Efetivado</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center border border-[#0F172A05] ${isPositive ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                            {isPositive ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                          </div>
+                          <span className="text-xs font-bold text-[#111111] truncate max-w-[200px]">{row.description}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider bg-slate-50 border border-[#0F172A08] px-2.5 py-1 rounded-lg">
+                          {row.category || 'Geral'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className="text-xs font-bold text-[#475569]">{row.company || '-'}</span>
+                      </td>
+                      <td className="px-6 py-5 text-right">
+                        <span className={`text-sm font-bold tracking-tight ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          {isPositive ? '+' : '-'} {formatCurrency(Number(row.amount))}
+                        </span>
+                      </td>
+                      <td className="px-6 py-5 text-center">
+                        <span className="inline-flex items-center gap-1 bg-[#10B981]/10 text-[#10B981] font-bold px-2.5 py-1 rounded-full text-[10px] uppercase border border-[#10B981]/20">
+                          Liquidado
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                }) : (
+                  <tr>
+                    <td colSpan={6} className="py-20 text-center text-xs font-bold text-[#64748B] uppercase tracking-widest">
+                      Nenhum lançamento encontrado
                     </td>
                   </tr>
-                );
-              }) : (
-                <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-sm font-medium text-[#64748B]">Nenhuma transação financeira encontrada.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 

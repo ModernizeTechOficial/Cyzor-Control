@@ -3,7 +3,8 @@ import ProductDetailsModal from './ProductDetailsModal';
 import NewProductModal from './NewProductModal';
 import { useAuth } from '../context/AuthContext';
 
-import ProductHeader from './produtos/ProductHeader';
+import StandardHeader from './layout/StandardHeader';
+import { Plus } from 'lucide-react';
 import ProductStats from './produtos/ProductStats';
 import ProductFilters from './produtos/ProductFilters';
 import ProductGrid from './produtos/ProductGrid';
@@ -126,8 +127,19 @@ export default function ProdutosView() {
   };
 
   return (
-    <div className="w-full max-w-[1400px] mx-auto pb-12 flex flex-col gap-8 animate-in fade-in duration-500 relative">
-      <ProductHeader onNewProduct={() => setIsNewModalOpen(true)} />
+    <div className="w-full mx-auto pb-12 flex flex-col gap-10 animate-in fade-in duration-500 relative px-4 sm:px-6 lg:px-10">
+      <StandardHeader 
+        title="Produtos"
+        subtitle="Gerencie o portfólio de softwares, plataformas e soluções digitais do ecossistema."
+        actions={[
+          {
+            label: 'Novo Produto',
+            icon: Plus,
+            onClick: () => setIsNewModalOpen(true),
+            variant: 'primary'
+          }
+        ]}
+      />
       
       <ProductStats 
         totalProducts={products.length}

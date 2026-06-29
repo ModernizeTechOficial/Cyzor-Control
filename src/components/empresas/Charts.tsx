@@ -17,7 +17,7 @@ export default function Charts() {
   };
 
   return (
-    <div className="bg-white border border-[#0F172A08] rounded-[32px] p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.01)] relative overflow-hidden group">
+    <div className="bg-white border border-[#0F172A08] rounded-[24px] p-6 sm:p-8 shadow-[0_4px_24px_rgba(0,0,0,0.01)] relative overflow-hidden group">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[#FAFAFA] border border-[#0F172A05] flex items-center justify-center">

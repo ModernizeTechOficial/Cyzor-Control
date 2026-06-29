@@ -457,7 +457,7 @@ export default function SecPerfilGeral({ section }: { section: string }) {
 
           <div className="flex flex-col gap-6">
             <h3 className="text-sm font-bold uppercase text-[#111111] tracking-widest border-b border-[#0F172A0F] pb-3">Autenticação de Conta</h3>
-            <div className="grid grid-cols-1 gap-4 max-w-xl">
+            <div className="grid grid-cols-1 gap-4 w-full">
               <button onClick={() => alert("As instruções de redefinição de segurança foram disparadas para seu email cadastrado.")} className="flex items-center justify-between p-4 bg-[#FFFFFF] border border-[#0F172A0F] rounded-[16px] hover:bg-[#FAFAFA] transition-colors cursor-pointer text-left">
                 <div className="flex flex-col">
                   <span className="font-bold text-[#111111]">Alterar Senha do Sistema</span>

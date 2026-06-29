@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import StandardHeader from './layout/StandardHeader';
 import { 
   Plus, 
   Trash2, 
@@ -303,39 +304,23 @@ export default function GoogleKeepView() {
   const otherNotes = useMemo(() => filteredNotes.filter(n => !n.isPinned), [filteredNotes]);
 
   return (
-    <div className="flex flex-col gap-6 md:gap-8 min-h-screen">
+    <div className="flex flex-col gap-10 min-h-screen px-4 sm:px-6 lg:px-10 pb-12">
       
       {/* 1. Header & Quick View Switcher */}
-      <section className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-neutral-100 pb-5">
-        <div>
-          <h1 className="text-3xl font-display font-extrabold text-[#111111] leading-tight flex items-center gap-2.5">
-            <span className="p-2 bg-amber-50 rounded-xl text-amber-500 max-w-[42px] max-h-[42px] flex items-center justify-center">💡</span> Caderno de Notas
-          </h1>
-          <p className="text-[#64748B] text-sm font-medium tracking-wide mt-1">
-            Capture pensamentos, monte listas de tarefas e organize ideias de forma ágil em cartões inteligentes.
-          </p>
-        </div>
-
-        {/* View Switcher */}
-        <div className="flex items-center gap-3 justify-end">
-          <div className="flex items-center bg-neutral-100 p-1 rounded-xl">
-            <button 
-              onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-400 hover:text-neutral-700'}`}
-              title="Visualização em Grade"
-            >
-              <Grid size={15} />
-            </button>
-            <button 
-              onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-400 hover:text-neutral-700'}`}
-              title="Visualização em Lista"
-            >
-              <List size={15} />
-            </button>
-          </div>
-        </div>
-      </section>
+      <div className="flex flex-col gap-8">
+        <StandardHeader 
+          title="Caderno de Notas"
+          subtitle="Capture pensamentos, monte listas de tarefas e organize ideias de forma ágil em cartões inteligentes."
+          actions={[
+            {
+              label: 'Visualização',
+              icon: viewMode === 'grid' ? Grid : List,
+              onClick: () => setViewMode(viewMode === 'grid' ? 'list' : 'grid'),
+              variant: 'secondary'
+            }
+          ]}
+        />
+      </div>
 
       {/* 2. Google Keep Core Split: Labels sidebar and main Notes area */}
       <div className="flex flex-col lg:flex-row gap-6 md:gap-8 items-stretch">

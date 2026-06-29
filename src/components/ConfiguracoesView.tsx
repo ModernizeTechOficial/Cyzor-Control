@@ -3,14 +3,16 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { 
   Settings, Layout, User, Building2, Users, Shield, BotMessageSquare, 
   Link as LinkIcon, DollarSign, Bell, Paintbrush, Lock, Database, Server,
-  CreditCard
+  CreditCard, Mail
 } from 'lucide-react';
+import StandardHeader from './layout/StandardHeader';
 
 // Live interactive settings submodules
 import SecWorkspace from './settings/SecWorkspace';
 import SecAssinatura from './settings/SecAssinatura';
 import SecPerfilGeral from './settings/SecPerfilGeral';
 import SecAdminModulos from './settings/SecAdminModulos';
+import SecEmails from './settings/SecEmails';
 
 const SECTIONS = [
   { id: 'workspace', label: 'Workspace', icon: Layout },
@@ -24,6 +26,7 @@ const SECTIONS = [
   { id: 'integracoes', label: 'Integrações', icon: LinkIcon },
   { id: 'financeiro', label: 'Financeiro', icon: DollarSign },
   { id: 'notificacoes', label: 'Notificações', icon: Bell },
+  { id: 'emails', label: 'E-mails', icon: Mail },
   { id: 'aparencia', label: 'Aparência', icon: Paintbrush },
   { id: 'seguranca', label: 'Segurança', icon: Lock },
   { id: 'backup', label: 'Backup', icon: Database },
@@ -69,6 +72,9 @@ export default function ConfiguracoesView() {
     if (activeSection === 'assinatura') {
       return <SecAssinatura currentPlan={currentPlan} onUpgrade={handleUpgradePlan} />;
     }
+    if (activeSection === 'emails') {
+      return <SecEmails />;
+    }
     
     // Admin list components
     if (['empresas', 'usuarios', 'permissoes', 'ia', 'integracoes', 'financeiro'].includes(activeSection)) {
@@ -80,12 +86,12 @@ export default function ConfiguracoesView() {
   };
 
   return (
-    <div className="flex flex-col gap-6 h-[calc(100vh-100px)]">
+    <div className="flex flex-col gap-10 h-full px-4 sm:px-6 lg:px-10">
       {/* Header */}
-      <section className="flex-shrink-0">
-        <h1 className="text-4xl font-display font-bold text-[#111111] mb-2 tracking-tight">Configurações</h1>
-        <p className="text-[#64748B] text-lg font-medium tracking-wide">Gerencie todo o comportamento, operação e personalização da plataforma.</p>
-      </section>
+      <StandardHeader 
+        title="Configurações"
+        subtitle="Gerencie todo o comportamento, operação e personalização da plataforma."
+      />
 
       <div className="flex flex-col md:flex-row gap-6 md:gap-8 flex-1 min-h-0">
         
@@ -109,7 +115,7 @@ export default function ConfiguracoesView() {
 
         {/* Content Area */}
         <div className="flex-1 bg-[#FFFFFF] border border-[#0F172A0F] rounded-[24px] p-8 overflow-y-auto custom-scrollbar shadow-sm text-left">
-          <div className="max-w-4xl">
+          <div className="w-full">
             {renderSettingsSection()}
           </div>
         </div>

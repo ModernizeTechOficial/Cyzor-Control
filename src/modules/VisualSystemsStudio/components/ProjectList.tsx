@@ -1,5 +1,6 @@
-import { Plus, Workflow, Trash2, Calendar, User, Database, Globe, Layout, Layers } from 'lucide-react';
+import { Plus, Workflow, Trash2, Calendar, User, Database, Globe, Layout, Layers, GitBranch } from 'lucide-react';
 import { Flow, SystemType } from '../types';
+import StandardHeader from '../../../components/layout/StandardHeader';
 
 interface ProjectListProps {
   flows: Flow[];
@@ -27,32 +28,18 @@ export default function ProjectList({ flows, onCreateFlow, onSelectFlow, onDelet
   };
 
   return (
-    <div className="flex-1 p-8 bg-[#FAFAFA] overflow-y-auto custom-scrollbar">
-      <div className="max-w-6xl mx-auto">
-        <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8 mb-16">
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-500/10 rounded-xl">
-                <Layers size={24} className="text-blue-600" />
-              </div>
-              <h1 className="text-4xl font-black text-[#111111] tracking-tighter">Visual Systems Studio</h1>
-            </div>
-            <p className="text-[#64748B] text-sm font-medium ml-1">Arquitete sistemas, modele dados e simule APIs em um ambiente visual premium.</p>
-          </div>
-          
-          <div className="flex flex-wrap gap-2">
-            {projectTypes.map((pt) => (
-              <button 
-                key={pt.type}
-                onClick={() => onCreateFlow(pt.type)}
-                className="flex items-center gap-2.5 bg-white border border-[#0F172A0F] text-[#111111] px-5 py-3 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-[#FAFAFA] hover:border-[#111111]/10 transition-all active:scale-95 group shadow-sm"
-              >
-                <pt.icon size={16} className="text-blue-600 group-hover:scale-110 transition-transform" />
-                {pt.label}
-              </button>
-            ))}
-          </div>
-        </header>
+    <div className="flex-1 p-4 sm:p-6 lg:p-10 bg-[#FAFAFA] overflow-y-auto custom-scrollbar flex flex-col gap-10">
+      <div className="w-full flex flex-col gap-10">
+        <StandardHeader 
+          title="Visual Systems Studio"
+          subtitle="Arquitete sistemas, modele dados e simule APIs em um ambiente visual premium."
+          actions={projectTypes.map(pt => ({
+            label: pt.label,
+            icon: pt.icon,
+            onClick: () => onCreateFlow(pt.type),
+            variant: 'secondary'
+          }))}
+        />
 
         {flows.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-32 border border-dashed border-[#0F172A0F] rounded-[40px] bg-white shadow-sm">

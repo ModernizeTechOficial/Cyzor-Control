@@ -3,10 +3,12 @@ import {
   GitBranch, Plus, Search, Sparkles, TrendingUp, Users, 
   ChevronRight, Calendar, Star, MessageSquare, Send, Check, Settings, 
   RefreshCw, Layers, Shield, DollarSign, Clock, AlertCircle, X,
-  Filter, ArrowUpRight, CheckSquare, ChevronLeft, LogIn, User
+  Filter, ArrowUpRight, CheckSquare, ChevronLeft, LogIn, User, CheckCircle2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { motion, AnimatePresence } from 'framer-motion';
+import StandardHeader from './layout/StandardHeader';
+import MetricCard from './MetricCard';
 import { showSuccess, showError } from '../lib/alerts';
 import ProjectDetailsModal from './ProjectDetailsModal';
 import NewProjectModal from './NewProjectModal';
@@ -349,29 +351,47 @@ export default function ProjetosView() {
       if (d.title.toLowerCase().includes(q)) matches.push({ type: 'documento', label: `Doc: ${d.title}`, data: d });
     });
 
-    return matches.slice(0, 6);
+    return matches;
   };
 
   return (
-    <div className="min-h-screen bg-white text-neutral-900 font-sans selection:bg-neutral-900 selection:text-white">
+    <div className="w-full mx-auto pb-12 flex flex-col gap-10 animate-in fade-in duration-500 relative text-left px-4 sm:px-6 lg:px-10">
       
-      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━
-          TOP NAVBAR & GLOBAL INPUT
-          ━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <header className="border-b border-neutral-100 py-4 px-4 sm:px-8 flex flex-col lg:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-2.5 w-full lg:w-auto">
-          <div className="w-8 h-8 rounded-lg bg-neutral-950 flex items-center justify-center font-bold text-white text-xs">
-            C
-          </div>
-          <div className="text-left">
-            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest leading-none">Plataforma</p>
-            <h1 className="text-xs font-black text-neutral-900 mt-1 uppercase tracking-wider">Cyzor Workspace</h1>
-          </div>
-        </div>
+      <StandardHeader 
+        title="Projetos"
+        subtitle="Gerencie e controle todo o ciclo operacional estratégico de seus projetos e squads."
+        actions={[
+          {
+            label: 'Launcher',
+            icon: GitBranch,
+            onClick: () => { setWizardType('menu'); setIsCommandOpen(true); },
+            variant: 'secondary'
+          },
+          {
+            label: 'Olimpo AI',
+            icon: Sparkles,
+            onClick: () => setIsAiAssistantOpen(true),
+            variant: 'secondary'
+          },
+          {
+            label: 'Sync',
+            icon: RefreshCw,
+            onClick: syncPlatformData,
+            variant: 'secondary'
+          },
+          {
+            label: 'Novo Projeto',
+            icon: Plus,
+            onClick: () => setIsModalOpen(true),
+            variant: 'primary'
+          }
+        ]}
+      />
 
-        {/* Dynamic Global Autocomplete */}
-        <div className="relative w-full lg:max-w-md">
-          <div className="flex items-center bg-[#FAFAFA] border border-neutral-200/50 hover:border-neutral-300 rounded-xl px-3 py-1.5 transition-all text-xs focus-within:bg-white focus-within:border-neutral-900">
+      {/* Dynamic Global Autocomplete inside layout */}
+      {searchQuery && (
+        <div className="relative w-full max-w-xl mx-auto -mt-4">
+          <div className="flex items-center bg-white border border-neutral-200/50 hover:border-neutral-300 rounded-xl px-3 py-1.5 transition-all text-xs focus-within:ring-2 focus-within:ring-black/5">
             <Search size={14} className="text-neutral-400 mr-2" />
             <input 
               type="text" 
@@ -380,144 +400,79 @@ export default function ProjetosView() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="bg-transparent border-none outline-none w-full font-medium placeholder:text-neutral-400"
             />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="text-[10px] text-neutral-400 hover:text-neutral-900 font-black">X</button>
-            )}
+            <button onClick={() => setSearchQuery('')} className="text-[10px] text-neutral-400 hover:text-neutral-900 font-black">X</button>
           </div>
 
           <AnimatePresence>
-            {searchQuery && (
-              <motion.div 
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 4 }}
-                className="absolute left-0 mt-1.5 w-full bg-white border border-neutral-100 rounded-xl shadow-[0_12px_24px_rgba(0,0,0,0.06)] z-50 overflow-hidden text-left"
-              >
-                <div className="p-2 border-b border-neutral-100 bg-neutral-50/50 text-[9px] font-black tracking-wider text-neutral-400 uppercase">
-                  Resultados da Varredura
-                </div>
-                <div className="p-1 max-h-60 overflow-y-auto">
-                  {getSmartSearchResults().length > 0 ? (
-                    getSmartSearchResults().map((res, i) => (
-                      <button
-                        key={i}
-                        onClick={() => {
-                          if (res.type === 'projeto') setSelectedProject(res.data);
-                          setSearchQuery('');
-                        }}
-                        className="w-full p-2.5 hover:bg-neutral-50 rounded-lg text-xs font-bold text-left flex items-center justify-between cursor-pointer transition-colors"
-                      >
-                        <span className="truncate">{res.label}</span>
-                        <ChevronRight size={12} className="text-neutral-400 flex-shrink-0" />
-                      </button>
-                    ))
-                  ) : (
-                    <p className="p-3 text-xs font-medium text-neutral-400 text-center">Nenhum resultado para "{searchQuery}"</p>
-                  )}
-                </div>
-              </motion.div>
-            )}
+            <motion.div 
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 4 }}
+              className="absolute left-0 mt-1.5 w-full bg-white border border-neutral-100 rounded-xl shadow-[0_12px_24px_rgba(0,0,0,0.06)] z-50 overflow-hidden text-left"
+            >
+              <div className="p-2 border-b border-neutral-100 bg-neutral-50/50 text-[9px] font-black tracking-wider text-neutral-400 uppercase">
+                Resultados da Varredura
+              </div>
+              <div className="p-1 max-h-60 overflow-y-auto">
+                {getSmartSearchResults().length > 0 ? (
+                  getSmartSearchResults().map((res, i) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        if (res.type === 'projeto') setSelectedProject(res.data);
+                        setSearchQuery('');
+                      }}
+                      className="w-full p-2.5 hover:bg-neutral-50 rounded-lg text-xs font-bold text-left flex items-center justify-between cursor-pointer transition-colors"
+                    >
+                      <span className="truncate">{res.label}</span>
+                      <ChevronRight size={12} className="text-neutral-400 flex-shrink-0" />
+                    </button>
+                  ))
+                ) : (
+                  <p className="p-3 text-xs font-medium text-neutral-400 text-center">Nenhum resultado para "{searchQuery}"</p>
+                )}
+              </div>
+            </motion.div>
           </AnimatePresence>
         </div>
-
-        {/* Global Toolbar */}
-        <div className="flex items-center gap-2.5 w-full md:w-auto justify-end">
-          <button 
-            onClick={() => { setWizardType('menu'); setIsCommandOpen(true); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#FAFAFA] hover:bg-neutral-100 border border-neutral-200/50 text-neutral-800 rounded-lg text-[11px] font-bold transition-all cursor-pointer"
-          >
-            <span className="bg-white px-1.5 py-0.5 rounded border text-neutral-400 text-[9px]">⌘K</span>
-            Launcher
-          </button>
-          
-          <button 
-            onClick={() => setIsAiAssistantOpen(true)}
-            className="flex items-center gap-1 px-3 py-1.5 bg-neutral-900 border border-neutral-950 text-white rounded-lg text-[11px] font-semibold tracking-wide hover:bg-black transition-all cursor-pointer shadow-sm"
-          >
-            <Sparkles size={11} className="text-amber-400" />
-            Olimpo AI
-          </button>
-        </div>
-      </header>
+      )}
 
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━
-          PREMIUM TITLE BAR & CORE CONTROLS
+          STYLISH KPI CARDS
           ━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <section className="px-4 sm:px-8 pt-8 pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-left">
-        <div>
-          <h2 className="text-2xl sm:text-2xl font-black text-neutral-950 tracking-tight">Projetos</h2>
-          <p className="text-xs text-neutral-500 font-medium mt-1">Gerencie e controle todo o ciclo operacional estratégico.</p>
-        </div>
-
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <button 
-            onClick={() => setIsModalOpen(true)}
-            className="flex-1 sm:flex-none px-4 py-2 bg-neutral-950 hover:bg-neutral-900 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2"
-          >
-            <Plus size={14} />
-            Novo Projeto
-          </button>
-
-          <button 
-            onClick={syncPlatformData} 
-            disabled={isSyncing}
-            className="p-2 border border-neutral-200/50 hover:bg-neutral-50 rounded-xl transition-all cursor-pointer text-neutral-500 hover:text-neutral-950"
-            title="Sincronizar dados operacionais"
-          >
-            <RefreshCw size={14} className={isSyncing ? "animate-spin" : ""} />
-          </button>
-        </div>
-      </section>
-
-      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━
-          STYLISH COMPACT KPI ROW (STRIP)
-          ━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <section className="px-6 sm:px-8">
-        <div className="bg-neutral-50/50 border border-neutral-200/40 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-y-3 gap-x-6 text-left">
-          
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-neutral-900 rounded-full" />
-            <span className="text-xs font-semibold text-neutral-500">Projetos Ativos:</span>
-            <strong className="text-xs font-black text-neutral-900">{activeCount}</strong>
-          </div>
-
-          <div className="h-4 w-px bg-neutral-200 hidden sm:block" />
-
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-red-400 rounded-full" />
-            <span className="text-xs font-semibold text-neutral-500">Em Risco:</span>
-            <strong className={`text-xs font-black ${riskProjects.length > 0 ? 'text-red-600' : 'text-neutral-900'}`}>
-              {riskProjects.length}
-            </strong>
-          </div>
-
-          <div className="h-4 w-px bg-neutral-200 hidden sm:block" />
-
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-            <span className="text-xs font-semibold text-neutral-500">Concluídos:</span>
-            <strong className="text-xs font-black text-neutral-900">{finishedCount}</strong>
-          </div>
-
-          <div className="h-4 w-px bg-neutral-200 hidden sm:block" />
-
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-neutral-900/40 rounded-full" />
-            <span className="text-xs font-semibold text-neutral-500">Equipe Alocada:</span>
-            <strong className="text-xs font-black text-neutral-900">{members.length || 8}</strong>
-          </div>
-
-          <div className="h-4 w-px bg-neutral-200 hidden sm:block" />
-
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-emerald-500/70 rounded-full" />
-            <span className="text-xs font-semibold text-neutral-500">Receita Acumulada:</span>
-            <strong className="text-xs font-black text-neutral-900">
-              R$ {totalRevenue.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
-            </strong>
-          </div>
-
-        </div>
+      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        <MetricCard 
+          title="Projetos Ativos"
+          value={activeCount}
+          icon={Layers}
+          color="text-neutral-900"
+          bg="bg-neutral-50/50"
+        />
+        <MetricCard 
+          title="Em Risco"
+          value={riskProjects.length}
+          trend={riskProjects.length > 0 ? "Requer atenção" : "Estável"}
+          trendUp={riskProjects.length === 0}
+          icon={AlertCircle}
+          color="text-rose-600"
+          bg="bg-rose-50/50"
+        />
+        <MetricCard 
+          title="Concluídos"
+          value={finishedCount}
+          trend="+12%"
+          trendUp={true}
+          icon={CheckCircle2}
+          color="text-emerald-600"
+          bg="bg-emerald-50/50"
+        />
+        <MetricCard 
+          title="Receita Acumulada"
+          value={`R$ ${totalRevenue.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`}
+          icon={DollarSign}
+          color="text-emerald-600"
+          bg="bg-emerald-50/50"
+        />
       </section>
 
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━

@@ -1,26 +1,77 @@
-export default function MetricCard({ title, value, sub, icon: Icon }: { title: string, value: string, sub?: string, icon: any }) {
-    return (
-      <div className="bg-[#FFFFFF] border border-[#0F172A0F] rounded-[24px] sm:rounded-[30px] p-5 sm:p-8 flex flex-col justify-between min-h-[160px] sm:min-h-[180px] shadow-[0_4px_24px_rgba(0,0,0,0.02)] transition-all hover:shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:-translate-y-1 relative overflow-hidden group text-left">
-        <div className="absolute top-0 right-0 p-4 sm:p-6 opacity-[0.03] transform group-hover:scale-110 transition-transform duration-500 pointer-events-none">
-          <Icon size={80} className="text-[#111111]" strokeWidth={1} />
+import React from 'react';
+import { TrendingUp, TrendingDown } from 'lucide-react';
+import { motion } from 'motion/react';
+
+interface MetricCardProps {
+  title: string;
+  value: string | number;
+  sub?: string;
+  icon: React.ElementType;
+  trend?: string;
+  trendUp?: boolean;
+  color?: string;
+  bg?: string;
+  sparklinePath?: string;
+  onClick?: () => void;
+}
+
+export default function MetricCard({ 
+  title, 
+  value, 
+  sub, 
+  icon: Icon, 
+  trend, 
+  trendUp = true, 
+  color = 'text-[#111111]', 
+  bg = 'bg-slate-100/60',
+  sparklinePath,
+  onClick
+}: MetricCardProps) {
+  return (
+    <motion.div
+      whileHover={onClick ? { y: -4, scale: 1.01 } : {}}
+      onClick={onClick}
+      className={`bg-white border border-[#0F172A08] rounded-[24px] p-6 flex flex-col justify-between min-h-[160px] shadow-[0_4px_24px_rgba(0,0,0,0.01)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.03)] transition-all group relative overflow-hidden text-left ${onClick ? 'cursor-pointer' : ''}`}
+    >
+      {/* Subtle Gradient Background */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#FAFAFA] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-bl-[100px]" />
+      
+      <div className="flex justify-between items-start relative z-10">
+        <div className={`w-12 h-12 rounded-2xl ${bg} border border-[#0F172A05] flex items-center justify-center group-hover:scale-110 transition-transform duration-500`}>
+          <Icon size={22} className={color} />
         </div>
         
-        <div className="flex justify-between items-start relative z-10">
-          <span className="text-[10px] sm:text-[11px] font-bold text-[#64748B] uppercase tracking-widest">{title}</span>
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-[16px] sm:rounded-[20px] bg-[#FAFAFA] border border-[#0F172A0F] flex items-center justify-center">
-            <Icon size={16} className="text-[#111111]" />
+        {trend && (
+          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide ${trendUp ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'}`}>
+            {trendUp ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+            {trend}
           </div>
-        </div>
-        
-        <div className="flex items-end justify-between relative z-10 mt-4 sm:mt-6">
-          <span className="text-2xl sm:text-4xl font-bold text-[#111111] tracking-tight">{value}</span>
-          {sub && (
-            <div className="flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-[#111111] bg-[#FAFAFA] border border-[#0F172A0F] px-2 py-1 sm:py-1.5 rounded-[12px]">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#111111]"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-              {sub}
-            </div>
-          )}
-        </div>
+        )}
+
+        {!trend && sparklinePath && (
+          <div className="w-16 h-8 flex items-center justify-center overflow-hidden opacity-80 group-hover:opacity-100 transition-opacity">
+            <svg className="w-full h-full text-slate-300 group-hover:text-[#111111] transition-colors" viewBox="0 0 80 20" fill="none">
+              <path
+                d={sparklinePath}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+        )}
       </div>
-    );
-  }
+      
+      <div className="mt-6 relative z-10">
+        <h3 className="text-[#64748B] text-[10px] font-bold uppercase tracking-widest mb-1">{title}</h3>
+        <div className="flex items-baseline gap-2">
+          <span className="text-3xl font-display font-bold text-[#111111] tracking-tight">{value}</span>
+        </div>
+        {sub && <p className="text-[#64748B] text-[13px] font-medium mt-2">{sub}</p>}
+      </div>
+    </motion.div>
+  );
+}
+

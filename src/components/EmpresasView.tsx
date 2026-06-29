@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import CompanyModal from './CompanyModal';
 import { useAuth } from '../context/AuthContext.tsx';
-import CompanyHeader from './empresas/CompanyHeader';
+import StandardHeader from './layout/StandardHeader';
+import { Plus } from 'lucide-react';
 import CompanyStats from './empresas/CompanyStats';
 import CompanyFilters from './empresas/CompanyFilters';
 import CompanyTable from './empresas/CompanyTable';
@@ -105,10 +106,19 @@ export default function EmpresasView() {
   };
 
   return (
-    <div className="w-full max-w-[1400px] mx-auto pb-12 flex flex-col gap-8 animate-in fade-in duration-500 relative">
+    <div className="w-full mx-auto pb-12 flex flex-col gap-10 animate-in fade-in duration-500 relative px-4 sm:px-6 lg:px-10">
       
-      <CompanyHeader 
-        onNewCompany={() => { setEditingCompany(null); setIsModalOpen(true); }} 
+      <StandardHeader 
+        title="Empresas"
+        subtitle="Gerencie todas as empresas, projetos, clientes e indicadores em um único lugar."
+        actions={[
+          {
+            label: 'Nova Empresa',
+            icon: Plus,
+            onClick: () => { setEditingCompany(null); setIsModalOpen(true); },
+            variant: 'primary'
+          }
+        ]}
       />
 
       <CompanyStats 

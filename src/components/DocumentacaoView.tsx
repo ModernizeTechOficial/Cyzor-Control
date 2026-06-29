@@ -55,6 +55,7 @@ import CodeEditorProfessional from './CodeEditorProfessional';
 import LocalPdfViewerModal from './LocalPdfViewerModal';
 import LocalImageViewerModal from './LocalImageViewerModal';
 import { useAuth } from '../context/AuthContext';
+import StandardHeader from './layout/StandardHeader';
 import { 
   fetchGoogleDriveFiles, 
   uploadFileToGoogleDrive, 
@@ -641,16 +642,16 @@ export default function DocumentacaoView() {
   );
 
   return (
-    <div className="flex flex-col gap-8 h-full">
+    <div className="flex flex-col gap-10 h-full animate-in fade-in duration-500 px-4 sm:px-6 lg:px-10">
       {/* Header, Switcher Tabs and Primary Actions */}
-      <section className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-[#DEE2E6]/60 pb-6">
-        <div className="text-left">
-          <h1 className="text-3xl sm:text-4xl font-display font-bold text-[#111111] mb-2 tracking-tight">Documentação</h1>
-          <p className="text-[#64748B] text-sm sm:text-base font-medium">Central de conhecimento híbrido: Workspace SaaS e Google Drive Cloud.</p>
-        </div>
+      <div className="flex flex-col gap-8">
+        <StandardHeader 
+          title="Documentação"
+          subtitle="Central de conhecimento híbrido: Workspace SaaS e Google Drive Cloud."
+        />
 
         {/* Tab Switcher - Match System Visual Theme */}
-        <div className="flex bg-[#F1F3F5] p-1 rounded-2xl border border-[#DEE2E6]/50 shrink-0 self-start w-full sm:w-auto">
+        <div className="flex bg-[#F1F3F5]/50 p-1 rounded-2xl border border-[#0F172A05] shrink-0 self-start w-full sm:w-auto">
           <button
             type="button"
             onClick={() => setActiveTab('local')}
@@ -677,7 +678,7 @@ export default function DocumentacaoView() {
             Google Drive
           </button>
         </div>
-      </section>
+      </div>
 
       {/* 1. DOCUMENTOS DO WORKSPACE (LOCAL SAAS MODE) */}
       {activeTab === 'local' && (

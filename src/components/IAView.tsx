@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { BotMessageSquare, Send, Sparkles, AlertTriangle, TrendingUp, Compass, Clock, Database, CheckCircle2 } from 'lucide-react';
+import { BotMessageSquare, Send, Sparkles, AlertTriangle, TrendingUp, Compass, Clock, Database, CheckCircle2, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
 import Markdown from 'react-markdown';
+import StandardHeader from './layout/StandardHeader';
 
 const SUGGESTIONS = [
   "Qual projeto devo priorizar?",
@@ -127,7 +128,21 @@ export default function IAView() {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 h-auto lg:h-[calc(100vh-100px)] text-left">
+    <div className="flex flex-col gap-10 h-full animate-in fade-in duration-500 px-4 sm:px-6 lg:px-10">
+      <StandardHeader 
+        title="IA Intelligence"
+        subtitle="Olimpo AI: Seu assistente de inteligência organizacional com acesso total ao ecossistema."
+        actions={[
+          {
+            label: 'Sincronizar',
+            icon: RefreshCw,
+            onClick: () => {},
+            variant: 'secondary'
+          }
+        ]}
+      />
+
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 h-auto lg:h-[calc(100vh-220px)] text-left">
       
       {/* Principal: Chat Interface */}
       <div className="flex-1 flex flex-col bg-[#FFFFFF] rounded-[24px] sm:rounded-[30px] border border-[#0F172A0F] shadow-[0_20px_60px_rgba(0,0,0,0.02)] overflow-hidden h-[600px] lg:h-full">
@@ -321,6 +336,7 @@ export default function IAView() {
 
         </div>
 
+      </div>
       </div>
     </div>
   );

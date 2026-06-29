@@ -7,7 +7,8 @@ export default function HomeWorkspaceStatus({
   projects = [],
   finance = [],
   agendaEvents = [],
-  metrics = { companies: 0, products: 0, projects: 0, clients: 124, revenue: 0, tasks: 0 }
+  metrics = { companies: 0, products: 0, projects: 0, clients: 124, revenue: 0, tasks: 0 },
+  clients = []
 }: {
   deploys?: any[];
   tasks?: any[];
@@ -15,6 +16,7 @@ export default function HomeWorkspaceStatus({
   finance?: any[];
   agendaEvents?: any[];
   metrics?: any;
+  clients?: any[];
 }) {
 
   // 1. Database records calculation for DB status
@@ -24,6 +26,7 @@ export default function HomeWorkspaceStatus({
     projects.length + 
     finance.length + 
     agendaEvents.length + 
+    clients.length +
     (metrics.companies || 0) + 
     (metrics.products || 0);
 

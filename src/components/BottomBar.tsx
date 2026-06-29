@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { 
   LayoutDashboard, GitBranch, DollarSign, BotMessageSquare, 
-  Menu, X, Building2, Package, Lightbulb, FileText, 
+  Menu, X, Building2, Users, Package, Lightbulb, FileText, 
   Calendar, StickyNote, Settings 
 } from 'lucide-react';
 import { View } from '../types';
@@ -26,6 +26,7 @@ export default function BottomBar({
   // The rest of the tabs grouped in "Mais"
   const moreTabs = [
     { id: 'empresas', label: 'Empresas', icon: Building2 },
+    { id: 'clientes', label: 'Clientes', icon: Users },
     { id: 'produtos', label: 'Produtos', icon: Package },
     { id: 'ideias', label: 'Ideias', icon: Lightbulb },
     { id: 'documentacao', label: 'Documentação', icon: FileText },
