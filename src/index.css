@@ -47,6 +47,10 @@ html.dark {
   filter: invert(1) hue-rotate(180deg);
 }
 
+html.dark .bg-white {
+  background-color: #d9d8dc !important;
+}
+
 html.dark img,
 html.dark video,
 html.dark .no-invert {

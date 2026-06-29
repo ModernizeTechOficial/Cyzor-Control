@@ -146,6 +146,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       response = await fetch(url, { ...options, headers: retryHeaders });
     }
 
+    // Safety net: check if response is HTML
+    const originalJson = response.json.bind(response);
+    response.json = async () => {
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("text/html")) {
+        const text = await response.text();
+        console.error(`[fetchWithAuth] Received HTML for ${url}:`, text.substring(0, 200));
+        throw new Error(`Expected JSON but received HTML for ${url}`);
+      }
+      return originalJson();
+    };
+
     return response;
   };
 
