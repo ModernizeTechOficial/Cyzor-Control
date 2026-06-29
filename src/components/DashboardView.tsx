@@ -13,46 +13,66 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
   const { activeWorkspace, fetchWithAuth } = useAuth();
   
   const [metrics, setMetrics] = useState({
-    companies: 12,
-    products: 45,
-    projects: 128,
-    clients: 842,
-    revenue: 84.5,
-    deploys: 24
+    companies: 0,
+    products: 0,
+    projects: 0,
+    clients: 124, // baseline
+    revenue: 0,
+    tasks: 0
   });
+  
+  const [projects, setProjects] = useState<any[]>([]);
+  const [deploys, setDeploys] = useState<any[]>([]);
+  const [finance, setFinance] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [members, setMembers] = useState<any[]>([]);
+  const [agendaEvents, setAgendaEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       if (!activeWorkspace) return;
       try {
-        const [compRes, prodRes, projRes, finRes, depRes] = await Promise.all([
+        const [compRes, prodRes, projRes, finRes, depRes, taskRes, memberRes, agendaRes] = await Promise.all([
           fetchWithAuth('/api/companies'),
           fetchWithAuth('/api/products'),
           fetchWithAuth('/api/projects'),
           fetchWithAuth('/api/finance'),
-          fetchWithAuth('/api/deploys')
+          fetchWithAuth('/api/deploys'),
+          fetchWithAuth('/api/tasks'),
+          fetchWithAuth('/api/workspace/members'),
+          fetchWithAuth('/api/agenda')
         ]);
 
-        const [companies, products, projectsData, finance, deploys] = await Promise.all([
+        const [companies, products, projectsData, financeData, deploysData, tasksData, membersData, agendaData] = await Promise.all([
           compRes.ok ? compRes.json() : [],
           prodRes.ok ? prodRes.json() : [],
           projRes.ok ? projRes.json() : [],
           finRes.ok ? finRes.json() : [],
-          depRes.ok ? depRes.json() : []
+          depRes.ok ? depRes.json() : [],
+          taskRes.ok ? taskRes.json() : [],
+          memberRes.ok ? memberRes.json() : [],
+          agendaRes.ok ? agendaRes.json() : []
         ]);
 
-        const totalRevenue = finance
+        setProjects(projectsData);
+        setDeploys(deploysData);
+        setFinance(financeData);
+        setTasks(tasksData);
+        setMembers(membersData);
+        setAgendaEvents(agendaData);
+
+        const totalRevenue = financeData
           .filter((f: any) => f.type === 'RECEITA')
           .reduce((sum: number, entry: any) => sum + Number(entry.amount), 0);
 
         setMetrics({
-          companies: companies.length || 12,
-          products: products.length || 45,
-          projects: projectsData.length || 128,
-          clients: 842, // baseline
-          revenue: totalRevenue ? Number((totalRevenue / 1000).toFixed(1)) : 84.5,
-          deploys: deploys.length || 24
+          companies: companies.length,
+          products: products.length,
+          projects: projectsData.length,
+          clients: Math.max(124, companies.length * 3 + 45), // estimate based on registered companies
+          revenue: Number(totalRevenue / 1000),
+          tasks: tasksData.length
         });
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
@@ -69,8 +89,8 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
       {/* Header, Visão Executiva do Ecossistema and Key Overview (Full Width) */}
       <div className="flex flex-col gap-8">
         <HomeHeader />
-        <HomeKPIs metrics={metrics} />
-        <HomeOverview metrics={metrics} />
+        <HomeKPIs metrics={metrics} setCurrentView={setCurrentView} />
+        <HomeOverview metrics={metrics} agendaEvents={agendaEvents} members={members} setCurrentView={setCurrentView} />
       </div>
 
       {/* Main Grid: Left Workspace & Analytics vs Right Timeline & Redundancy */}
@@ -78,19 +98,32 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
         {/* LEFT CONTAINER (8 cols) */}
         <div className="lg:col-span-8 flex flex-col gap-8">
           {/* Calendar and Operational Tasks */}
-          <HomeWorkspace projects={[]} />
+          <HomeWorkspace projects={projects} tasks={tasks} agendaEvents={agendaEvents} setCurrentView={setCurrentView} />
 
           {/* Business analytics - now occupying full width of the left flow */}
-          <HomeAnalytics />
+          <HomeAnalytics financeEntries={finance} />
         </div>
 
         {/* RIGHT SIDEBAR (4 cols) */}
         <div className="lg:col-span-4 flex flex-col gap-8">
           {/* Live Operational Log */}
-          <HomeTimeline />
+          <HomeTimeline 
+            deploys={deploys} 
+            tasks={tasks}
+            projects={projects}
+            finance={finance}
+            agendaEvents={agendaEvents}
+          />
 
           {/* Infrastructure & Redundancy */}
-          <HomeWorkspaceStatus />
+          <HomeWorkspaceStatus 
+            deploys={deploys}
+            tasks={tasks}
+            projects={projects}
+            finance={finance}
+            agendaEvents={agendaEvents}
+            metrics={metrics}
+          />
         </div>
       </div>
     </div>

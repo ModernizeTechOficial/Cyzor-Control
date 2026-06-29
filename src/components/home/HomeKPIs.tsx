@@ -1,4 +1,4 @@
-import { Building2, Package, FolderGit2, Users, CreditCard, Rocket, ArrowUpRight } from 'lucide-react';
+import { Building2, Package, FolderGit2, Users, CreditCard, CheckSquare, ArrowUpRight } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface KPIProps {
@@ -8,8 +8,9 @@ interface KPIProps {
     projects: number;
     clients: number;
     revenue: number;
-    deploys: number;
+    tasks: number;
   };
+  setCurrentView: (view: any) => void;
 }
 
 interface CardConfig {
@@ -20,63 +21,70 @@ interface CardConfig {
   comparison: string;
   sparklinePath: string;
   color: string;
+  view: string;
 }
 
-export default function HomeKPIs({ metrics }: KPIProps) {
+export default function HomeKPIs({ metrics, setCurrentView }: KPIProps) {
   const cards: CardConfig[] = [
     {
       label: 'Empresas',
-      value: metrics.companies || 12,
+      value: metrics.companies || 0,
       icon: Building2,
       trend: '+12.4%',
       comparison: 'vs último mês',
       sparklinePath: 'M 0 16 Q 10 4 20 12 T 40 2 T 60 10 T 80 4',
-      color: 'text-blue-600 bg-blue-50/50'
+      color: 'text-blue-600 bg-blue-50/50',
+      view: 'empresas'
     },
     {
       label: 'Produtos',
-      value: metrics.products || 45,
+      value: metrics.products || 0,
       icon: Package,
       trend: '+4.2%',
       comparison: 'vs último mês',
       sparklinePath: 'M 0 10 Q 10 16 20 8 T 40 14 T 60 4 T 80 8',
-      color: 'text-indigo-600 bg-indigo-50/50'
+      color: 'text-indigo-600 bg-indigo-50/50',
+      view: 'produtos'
     },
     {
       label: 'Projetos',
-      value: metrics.projects || 128,
+      value: metrics.projects || 0,
       icon: FolderGit2,
       trend: '+8.1%',
       comparison: 'vs última semana',
       sparklinePath: 'M 0 18 Q 10 10 20 14 T 40 4 T 60 12 T 80 2',
-      color: 'text-[#111111] bg-slate-100/60'
+      color: 'text-[#111111] bg-slate-100/60',
+      view: 'projetos'
     },
     {
       label: 'Clientes',
-      value: metrics.clients || 842,
+      value: metrics.clients || 124,
       icon: Users,
       trend: '+15.3%',
       comparison: 'vs último mês',
       sparklinePath: 'M 0 14 Q 10 18 20 10 T 40 6 T 60 8 T 80 2',
-      color: 'text-[#111111] bg-slate-100/60'
+      color: 'text-[#111111] bg-slate-100/60',
+      view: 'empresas'
     },
     {
       label: 'Receita',
-      value: `R$ ${(metrics.revenue || 84.5).toFixed(1)}k`,
+      value: `R$ ${(metrics.revenue !== undefined && metrics.revenue !== null ? metrics.revenue : 0).toFixed(1)}k`,
       icon: CreditCard,
       trend: '+18.7%',
       comparison: 'vs último trimestre',
       sparklinePath: 'M 0 15 Q 10 12 20 16 T 40 6 T 60 4 T 80 1',
-      color: 'text-emerald-600 bg-emerald-50/50'
+      color: 'text-emerald-600 bg-emerald-50/50',
+      view: 'financeiro'
     },
     {
-      label: 'Deploys',
-      value: metrics.deploys || 24,
-      icon: Rocket,
-      trend: '+22.4%',
-      comparison: 'vs ontem',
+      label: 'Tarefas',
+      value: metrics.tasks || 0,
+      icon: CheckSquare,
+      trend: '+12.5%',
+      comparison: 'vs semana anterior',
       sparklinePath: 'M 0 18 Q 10 12 20 14 T 40 8 T 60 2 T 80 4',
-      color: 'text-purple-600 bg-purple-50/50'
+      color: 'text-purple-600 bg-purple-50/50',
+      view: 'projetos'
     }
   ];
 
@@ -92,6 +100,7 @@ export default function HomeKPIs({ metrics }: KPIProps) {
           <motion.div
             key={i}
             whileHover={{ y: -2, scale: 1.01 }}
+            onClick={() => setCurrentView(card.view as any)}
             className="bg-white border border-[#0F172A08] rounded-[24px] p-5 flex flex-col justify-between h-[160px] shadow-[0_4px_20px_rgba(0,0,0,0.01)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.02)] transition-all group cursor-pointer"
           >
             {/* Header: Icon & Sparkline */}

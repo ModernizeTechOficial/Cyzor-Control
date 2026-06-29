@@ -15,6 +15,7 @@ export default function FinanceEntryModal({ isOpen, onClose, onSuccess, entry }:
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [type, setType] = useState('RECEITA');
+  const [status, setStatus] = useState('PENDENTE');
   const [category, setCategory] = useState('');
   const [companyId, setCompanyId] = useState('');
   const [projectId, setProjectId] = useState('');
@@ -32,6 +33,7 @@ export default function FinanceEntryModal({ isOpen, onClose, onSuccess, entry }:
         setDescription(entry.description || '');
         setAmount(entry.amount?.toString() || '');
         setType(entry.type || 'RECEITA');
+        setStatus(entry.status || 'PENDENTE');
         setCategory(entry.category || '');
         setCompanyId(entry.companyId?.toString() || '');
         setProjectId(entry.projectId?.toString() || '');
@@ -80,7 +82,7 @@ export default function FinanceEntryModal({ isOpen, onClose, onSuccess, entry }:
           isRecurrent,
           dueDate: dueDate ? new Date(dueDate).toISOString() : null,
           date: safeToISOString(entry?.date) || new Date().toISOString(),
-          status: entry?.status || 'PENDENTE'
+          status
         })
       });
       if (res.ok) {
@@ -122,6 +124,7 @@ export default function FinanceEntryModal({ isOpen, onClose, onSuccess, entry }:
     setAmount('');
     setCategory('');
     setType('RECEITA');
+    setStatus('PENDENTE');
     setCompanyId('');
     setProjectId('');
     setIsRecurrent(false);
@@ -162,7 +165,7 @@ export default function FinanceEntryModal({ isOpen, onClose, onSuccess, entry }:
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="flex flex-col gap-2 w-full">
               <label className="text-[11px] font-bold tracking-widest uppercase text-[#64748B] px-1">Valor (R$)</label>
               <div className="relative group">
@@ -175,6 +178,14 @@ export default function FinanceEntryModal({ isOpen, onClose, onSuccess, entry }:
               <select value={type} onChange={e => setType(e.target.value)} className="w-full bg-[#FFFFFF] border border-[#0F172A0F] rounded-[16px] py-3.5 px-4 outline-none focus:border-[#111111]/30 transition-all text-[#111111] font-medium appearance-none">
                 <option value="RECEITA">Receita (+)</option>
                 <option value="DESPESA">Despesa (-)</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-2 w-full">
+              <label className="text-[11px] font-bold tracking-widest uppercase text-[#64748B] px-1">Status</label>
+              <select value={status} onChange={e => setStatus(e.target.value)} className="w-full bg-[#FFFFFF] border border-[#0F172A0F] rounded-[16px] py-3.5 px-4 outline-none focus:border-[#111111]/30 transition-all text-[#111111] font-medium appearance-none">
+                <option value="PAGO">Pago</option>
+                <option value="PENDENTE">Pendente</option>
+                <option value="ATRASADO">Atrasado</option>
               </select>
             </div>
           </div>

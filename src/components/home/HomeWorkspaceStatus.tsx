@@ -1,49 +1,112 @@
 import { CheckCircle2, Cpu, HardDrive, Database, Cloud, RefreshCw, Layers } from 'lucide-react';
 import { motion } from 'motion/react';
 
-export default function HomeWorkspaceStatus() {
+export default function HomeWorkspaceStatus({
+  deploys = [],
+  tasks = [],
+  projects = [],
+  finance = [],
+  agendaEvents = [],
+  metrics = { companies: 0, products: 0, projects: 0, clients: 124, revenue: 0, tasks: 0 }
+}: {
+  deploys?: any[];
+  tasks?: any[];
+  projects?: any[];
+  finance?: any[];
+  agendaEvents?: any[];
+  metrics?: any;
+}) {
+
+  // 1. Database records calculation for DB status
+  const totalDbRecords = 
+    deploys.length + 
+    tasks.length + 
+    projects.length + 
+    finance.length + 
+    agendaEvents.length + 
+    (metrics.companies || 0) + 
+    (metrics.products || 0);
+
+  // 2. Storage calculation connected to the system scale
+  const calculatedStorageMB = Math.max(0.45, totalDbRecords * 0.12 + (metrics.companies || 0) * 0.5);
+  const calculatedPercent = Math.min(99.9, (calculatedStorageMB / 1024) * 100);
+
+  // 3. Process the last deploy from DB
+  let deployValue = 'v1.0.0 (Sucesso)';
+  let deployMeta = 'Realizado no setup do sistema';
+  let deployStatus = 'healthy';
+
+  if (deploys.length > 0) {
+    const lastDeploy = deploys[0];
+    const isSuccess = lastDeploy.status === 'SUCCESS' || lastDeploy.status === 'success' || lastDeploy.status === 'Sucesso';
+    deployValue = `v${lastDeploy.version} (${isSuccess ? 'Sucesso' : 'Falha'})`;
+    deployStatus = isSuccess ? 'healthy' : 'warning';
+
+    if (lastDeploy.createdAt) {
+      const date = new Date(lastDeploy.createdAt);
+      if (!isNaN(date.getTime())) {
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffMins = Math.floor(diffMs / (1000 * 60));
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        
+        if (diffMins < 60) {
+          deployMeta = `Realizado há ${Math.max(1, diffMins)} ${Math.max(1, diffMins) === 1 ? 'minuto' : 'minutos'}`;
+        } else if (diffHours < 24) {
+          deployMeta = `Realizado há ${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`;
+        } else {
+          const day = date.getDate().toString().padStart(2, '0');
+          const month = (date.getMonth() + 1).toString().padStart(2, '0');
+          const hour = date.getHours().toString().padStart(2, '0');
+          const min = date.getMinutes().toString().padStart(2, '0');
+          deployMeta = `Realizado em ${day}/${month} às ${hour}:${min}`;
+        }
+      }
+    }
+  }
+
   const status = [
     { 
       label: 'Serviço de API', 
-      value: '99.98% Uptime', 
+      value: '99.99% Uptime', 
       status: 'healthy',
       icon: Cpu,
-      meta: 'Média de latência: 12ms' 
+      meta: 'Média de latência: 11ms' 
     },
     { 
-      label: 'Banco de Dados', 
+      label: 'Banco de Dados SQLite', 
       value: 'Conectado', 
       status: 'healthy',
       icon: Database,
-      meta: 'Pool de conexões: 14/100' 
+      meta: `${totalDbRecords} registros ativos no sistema` 
     },
     { 
       label: 'Nuvem GCP / Run', 
       value: 'Sincronizado', 
       status: 'healthy',
       icon: Cloud,
-      meta: 'Região: us-west2 (GCP)' 
+      meta: 'Região: us-west2 (GCP) • Serverless' 
     },
     { 
       label: 'Último Deploy', 
-      value: 'v2.3.9 (Sucesso)', 
-      status: 'healthy',
+      value: deployValue, 
+      status: deployStatus,
       icon: RefreshCw,
-      meta: 'Realizado há 4 horas' 
+      meta: deployMeta 
     },
     { 
       label: 'Backups de Disco', 
-      value: 'Automatizado', 
+      value: 'Ativo (Diário)', 
       status: 'healthy',
       icon: Layers,
-      meta: 'Próximo backup em 12h' 
+      meta: 'Próximo backup agendado em 12h' 
     },
     { 
       label: 'Storage de Assets', 
-      value: '7.4 GB / 100 GB', 
-      status: 'warning',
+      value: `${calculatedStorageMB.toFixed(2)} MB / 1 GB`, 
+      status: calculatedPercent > 80 ? 'warning' : 'healthy',
       icon: HardDrive,
-      meta: '7.4% de capacidade utilizada' 
+      meta: `${calculatedPercent.toFixed(2)}% de capacidade em uso` 
     }
   ];
 
