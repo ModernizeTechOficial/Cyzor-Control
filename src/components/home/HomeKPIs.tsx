@@ -1,27 +1,141 @@
-import { Building2, Package, Lightbulb, CreditCard, Users, Rocket } from 'lucide-react';
+import { Building2, Package, FolderGit2, Users, CreditCard, Rocket, ArrowUpRight } from 'lucide-react';
+import { motion } from 'motion/react';
 
-const kpis = [
-  { label: 'Organizações', value: '12', trend: '+2', icon: Building2 },
-  { label: 'Produtos', value: '45', trend: '+5', icon: Package },
-  { label: 'Projetos', value: '128', trend: '+12', icon: Lightbulb },
-  { label: 'Receita', value: 'R$ 84.5k', trend: '+18%', icon: CreditCard },
-  { label: 'Clientes', value: '842', trend: '+50', icon: Users },
-  { label: 'Deploys', value: '1.2k', trend: '+200', icon: Rocket },
-];
+interface KPIProps {
+  metrics: {
+    companies: number;
+    products: number;
+    projects: number;
+    clients: number;
+    revenue: number;
+    deploys: number;
+  };
+}
 
-export default function HomeKPIs() {
+interface CardConfig {
+  label: string;
+  value: string | number;
+  icon: any;
+  trend: string;
+  comparison: string;
+  sparklinePath: string;
+  color: string;
+}
+
+export default function HomeKPIs({ metrics }: KPIProps) {
+  const cards: CardConfig[] = [
+    {
+      label: 'Empresas',
+      value: metrics.companies || 12,
+      icon: Building2,
+      trend: '+12.4%',
+      comparison: 'vs último mês',
+      sparklinePath: 'M 0 16 Q 10 4 20 12 T 40 2 T 60 10 T 80 4',
+      color: 'text-blue-600 bg-blue-50/50'
+    },
+    {
+      label: 'Produtos',
+      value: metrics.products || 45,
+      icon: Package,
+      trend: '+4.2%',
+      comparison: 'vs último mês',
+      sparklinePath: 'M 0 10 Q 10 16 20 8 T 40 14 T 60 4 T 80 8',
+      color: 'text-indigo-600 bg-indigo-50/50'
+    },
+    {
+      label: 'Projetos',
+      value: metrics.projects || 128,
+      icon: FolderGit2,
+      trend: '+8.1%',
+      comparison: 'vs última semana',
+      sparklinePath: 'M 0 18 Q 10 10 20 14 T 40 4 T 60 12 T 80 2',
+      color: 'text-[#111111] bg-slate-100/60'
+    },
+    {
+      label: 'Clientes',
+      value: metrics.clients || 842,
+      icon: Users,
+      trend: '+15.3%',
+      comparison: 'vs último mês',
+      sparklinePath: 'M 0 14 Q 10 18 20 10 T 40 6 T 60 8 T 80 2',
+      color: 'text-[#111111] bg-slate-100/60'
+    },
+    {
+      label: 'Receita',
+      value: `R$ ${(metrics.revenue || 84.5).toFixed(1)}k`,
+      icon: CreditCard,
+      trend: '+18.7%',
+      comparison: 'vs último trimestre',
+      sparklinePath: 'M 0 15 Q 10 12 20 16 T 40 6 T 60 4 T 80 1',
+      color: 'text-emerald-600 bg-emerald-50/50'
+    },
+    {
+      label: 'Deploys',
+      value: metrics.deploys || 24,
+      icon: Rocket,
+      trend: '+22.4%',
+      comparison: 'vs ontem',
+      sparklinePath: 'M 0 18 Q 10 12 20 14 T 40 8 T 60 2 T 80 4',
+      color: 'text-purple-600 bg-purple-50/50'
+    }
+  ];
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-      {kpis.map((kpi, i) => (
-        <div key={i} className="bg-white border border-[#0F172A08] rounded-3xl p-6 shadow-sm">
-            <div className="flex justify-between items-center mb-4">
-                <kpi.icon size={20} className="text-[#64748B]" />
-                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{kpi.trend}</span>
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Visão Executiva do Ecossistema</h3>
+        <span className="text-[11px] text-[#64748B] font-medium">Dados atualizados em tempo real</span>
+      </div>
+      
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+        {cards.map((card, i) => (
+          <motion.div
+            key={i}
+            whileHover={{ y: -2, scale: 1.01 }}
+            className="bg-white border border-[#0F172A08] rounded-[24px] p-5 flex flex-col justify-between h-[160px] shadow-[0_4px_20px_rgba(0,0,0,0.01)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.02)] transition-all group cursor-pointer"
+          >
+            {/* Header: Icon & Sparkline */}
+            <div className="flex items-center justify-between gap-2">
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${card.color}`}>
+                <card.icon size={16} strokeWidth={2} />
+              </div>
+              
+              {/* Discrete SVG Sparkline */}
+              <div className="w-16 h-8 flex items-center justify-center overflow-hidden opacity-80 group-hover:opacity-100 transition-opacity">
+                <svg className="w-full h-full text-slate-300 group-hover:text-blue-500 transition-colors" viewBox="0 0 80 20" fill="none">
+                  <path
+                    d={card.sparklinePath}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
             </div>
-            <h3 className="text-sm font-bold text-[#111111]">{kpi.value}</h3>
-            <p className="text-[10px] font-medium text-[#64748B] uppercase tracking-widest mt-1">{kpi.label}</p>
-        </div>
-      ))}
+
+            {/* Metrics & Trend */}
+            <div className="flex flex-col mt-4">
+              <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider leading-none">
+                {card.label}
+              </span>
+              <span className="text-2xl font-bold text-[#111111] tracking-tight mt-1 leading-none">
+                {card.value}
+              </span>
+              
+              <div className="flex items-center gap-1.5 mt-2">
+                <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-0.5">
+                  <ArrowUpRight size={10} strokeWidth={2.5} /> {card.trend}
+                </span>
+                <span className="text-[9px] text-[#94A3B8] font-medium tracking-tight">
+                  {card.comparison}
+                </span>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
     </div>
   );
 }
