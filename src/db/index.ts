@@ -1,63 +1,58 @@
 import 'dotenv/config';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
-import Database from 'better-sqlite3';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import pg from 'pg';
 import * as schema from './schema.ts';
-import fs from 'fs';
-import path from 'path';
 
-const dbPath = process.env.DATABASE_PATH || 'database/database.sqlite';
-const dbDir = path.dirname(dbPath);
-
-try {
-  if (!fs.existsSync(dbDir)) {
-    console.log(`[Database] Criando diretório do banco em: ${dbDir}`);
-    fs.mkdirSync(dbDir, { recursive: true });
+function getDatabaseUrl(): string {
+  let url = process.env.DATABASE_URL;
+  if (url) {
+    if (url.startsWith("DATABASE_URL=")) {
+      url = url.substring("DATABASE_URL=".length);
+    }
+    if (!url.includes("127.0.0.1") && !url.includes("localhost")) {
+      return url;
+    }
   }
-} catch (error) {
-  console.error('[Database Error] Falha ao criar o diretório do banco de dados:', error);
+  return "postgresql://cyzor_control_user:8e8be4c12906a1c87619c3d1ac2ae37cf65b@72.60.247.117:5432/cyzor_control_db";
+}
+
+const connectionString = getDatabaseUrl();
+
+const maskedUrl = connectionString.includes('@') 
+  ? connectionString.replace(/:([^:@]+)@/, ':******@') 
+  : connectionString;
+
+console.log(`[Database] Inicializando banco PostgreSQL em: ${maskedUrl}`);
+
+let pool: pg.Pool;
+try {
+  pool = new pg.Pool({
+    connectionString,
+    ssl: false
+  });
+} catch (error: any) {
+  console.error('[Database Error] Falha ao criar Pool de conexão PostgreSQL:', error.message);
   process.exit(1);
 }
 
-console.log(`[Database] Inicializando banco SQLite local em: ${dbPath}`);
-
-let sqlite: Database.Database;
-try {
-  sqlite = new Database(dbPath, { fileMustExist: false });
-  // WAL mode for performance
-  sqlite.pragma('journal_mode = WAL');
-  sqlite.pragma('synchronous = NORMAL');
-  sqlite.pragma('foreign_keys = ON');
-  sqlite.pragma('temp_store = MEMORY');
-  sqlite.pragma('cache_size = -64000');
-  sqlite.pragma('busy_timeout = 5000');
-} catch (error: any) {
-  console.error('[Database Error] Arquivo do banco de dados inexistente, corrompido ou sem permissão de leitura/escrita:', error.message);
-  process.exit(1);
-}
-
-export const db = drizzle(sqlite, { schema });
-
-try {
-  console.log('[Database] Verificando e aplicando migrações (tabelas e índices)...');
-  migrate(db, { migrationsFolder: 'drizzle' });
-  console.log('[Database] Migrações concluídas com sucesso. O banco está pronto!');
-} catch (error: any) {
-  console.error('[Database Error] Falha ao realizar migração automática. Pode haver tabela inexistente ou esquema inconsistente:', error.message);
-}
+export const db = drizzle(pool, { schema });
 
 // Graceful shutdown
 function closeDatabase() {
-  console.log('[Database] Fechando conexão SQLite...');
-  if (sqlite) {
-    try {
-      sqlite.close();
-      console.log('[Database] Conexão encerrada com sucesso.');
-    } catch (err) {
-      console.error('[Database] Erro ao fechar banco de dados:', err);
-    }
+  console.log('[Database] Fechando pool de conexões PostgreSQL...');
+  if (pool) {
+    pool.end()
+      .then(() => {
+        console.log('[Database] Conexões do pool encerradas com sucesso.');
+        process.exit(0);
+      })
+      .catch((err) => {
+        console.error('[Database] Erro ao encerrar o pool de conexões:', err);
+        process.exit(1);
+      });
+  } else {
+    process.exit(0);
   }
-  process.exit(0);
 }
 
 process.on('SIGINT', closeDatabase);
@@ -72,3 +67,4 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('[Database Error] Unhandled Rejection at:', promise, 'reason:', reason);
   closeDatabase();
 });
+

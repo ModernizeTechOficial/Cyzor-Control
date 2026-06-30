@@ -1,35 +1,42 @@
-import admin from 'firebase-admin';
+import { initializeApp, getApps } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
+import firebaseConfig from '../../firebase-applet-config.json';
 
 let initialized = false;
 
 function init() {
   if (!initialized) {
-    if (!admin.apps || admin.apps.length === 0) {
-      try {
-        admin.initializeApp({
-          credential: admin.credential.applicationDefault(),
+    try {
+      const apps = getApps();
+      if (apps.length === 0) {
+        initializeApp({
+          projectId: firebaseConfig.projectId,
         });
-        initialized = true;
-      } catch (error) {
-        console.warn("Firebase Admin SDK: Failed to initialize. Auth features may be unavailable.", error);
       }
-    } else {
       initialized = true;
+    } catch (error) {
+      console.warn("Firebase Admin SDK: Failed to initialize. Auth features may be unavailable.", error);
+      initialized = false;
     }
   }
 }
 
 export function getDb() {
   init();
-  return admin.apps.length > 0 ? admin.firestore() : {} as any;
-}
-
-export function getAuth() {
-  init();
-  return admin.apps.length > 0 ? admin.auth() : {} as any;
+  const apps = getApps();
+  if (apps.length > 0) {
+    const dbId = firebaseConfig.firestoreDatabaseId;
+    if (dbId && dbId !== "(default)") {
+      return getFirestore(apps[0], dbId);
+    }
+    return getFirestore(apps[0]);
+  }
+  return {} as any;
 }
 
 export function getAdminAuth() {
   init();
-  return admin.apps.length > 0 ? admin.auth() : {} as any;
+  const apps = getApps();
+  return apps.length > 0 ? getAuth(apps[0]) : null;
 }

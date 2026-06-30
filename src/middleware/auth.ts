@@ -19,7 +19,11 @@ export const requireAuth = async (
 
   const token = authHeader.split('Bearer ')[1];
   try {
-    const decodedToken = await getAdminAuth().verifyIdToken(token);
+    const authInstance = getAdminAuth();
+    if (!authInstance) {
+      throw new Error('Firebase Admin Auth not initialized');
+    }
+    const decodedToken = await authInstance.verifyIdToken(token);
     req.user = decodedToken;
     next();
   } catch (error: any) {
