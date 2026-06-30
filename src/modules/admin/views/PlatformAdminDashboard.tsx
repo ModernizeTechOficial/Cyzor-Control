@@ -36,7 +36,7 @@ export default function PlatformAdminDashboard() {
     { label: 'Total Tenants', value: metrics?.totalTenants || 0, icon: Building2, trend: '+12%', color: 'text-indigo-600', bg: 'bg-indigo-50' },
     { label: 'Total Users', value: metrics?.totalUsers || 0, icon: Users, trend: '+5%', color: 'text-blue-600', bg: 'bg-blue-50' },
     { label: 'Total Companies', value: metrics?.totalCompanies || 0, icon: Globe2, trend: '+8%', color: 'text-purple-600', bg: 'bg-purple-50' },
-    { label: 'Total Deploys', value: metrics?.totalDeploys || 0, icon: Server, trend: '+24%', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: 'Total Projects', value: metrics?.totalProjects || 0, icon: Server, trend: '+24%', color: 'text-emerald-600', bg: 'bg-emerald-50' },
   ];
 
   return (

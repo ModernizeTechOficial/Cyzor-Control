@@ -56,6 +56,9 @@ export default function CompanyModal({
       if (res.ok) {
         onSuccess?.();
         onClose();
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        alert(`Erro: ${errorData.error || res.statusText}`);
       }
     } catch(err) {
       console.error(err);

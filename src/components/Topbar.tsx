@@ -1,7 +1,8 @@
-import { Search, Bell, PanelLeftClose, PanelLeft, Sun, Moon, LogOut, User, CheckCircle2, AlertTriangle, Info, Clock } from 'lucide-react';
+import { Search, Bell, PanelLeftClose, PanelLeft, Sun, Moon, LogOut, User, CheckCircle2, AlertTriangle, Info, Clock, ShieldCheck } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useBranding } from '../hooks/useBranding.ts';
+import { View } from '../types.ts';
 
 function NotificationMenu() {
   const { fetchWithAuth, activeWorkspace } = useAuth();
@@ -175,8 +176,8 @@ function NotificationMenu() {
   );
 }
 
-function UserProfileMenu() {
-  const { user, logout } = useAuth();
+function UserProfileMenu({ setCurrentView }: { setCurrentView?: (view: View) => void }) {
+  const { user, dbUser, logout } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
 
   if (!user) return null;
@@ -205,6 +206,18 @@ function UserProfileMenu() {
               <span className="text-[10px] text-[#64748B] font-medium truncate">{user.email}</span>
             </div>
             
+            {dbUser?.isPlatformAdmin && setCurrentView && (
+              <button 
+                onClick={() => {
+                  setShowMenu(false);
+                  setCurrentView('admin');
+                }}
+                className="w-full flex items-center gap-2.5 text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 p-2.5 rounded-xl transition-all border border-transparent hover:border-indigo-100"
+              >
+                <ShieldCheck size={16} /> Painel Admin
+              </button>
+            )}
+            
             <button 
               onClick={() => {
                 setShowMenu(false);
@@ -221,7 +234,7 @@ function UserProfileMenu() {
   );
 }
 
-export default function Topbar({ isSidebarCollapsed, toggleSidebar }: { isSidebarCollapsed: boolean, toggleSidebar: () => void }) {
+export default function Topbar({ isSidebarCollapsed, toggleSidebar, setCurrentView }: { isSidebarCollapsed: boolean, toggleSidebar: () => void, setCurrentView?: (view: View) => void }) {
   const [isDark, setIsDark] = useState(false);
   const [time, setTime] = useState(new Date());
   const { activeWorkspace } = useAuth();
@@ -328,7 +341,7 @@ export default function Topbar({ isSidebarCollapsed, toggleSidebar }: { isSideba
              {isDark ? <Sun size={18} className="text-[#64748B] group-hover:text-[#111111] transition-colors" /> : <Moon size={18} className="text-[#64748B] group-hover:text-[#111111] transition-colors" />}
            </button>
            <NotificationMenu />
-           <UserProfileMenu />
+           <UserProfileMenu setCurrentView={setCurrentView} />
         </div>
       </div>
     </div>

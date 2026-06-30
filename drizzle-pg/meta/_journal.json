@@ -8,6 +8,13 @@
       "when": 1782845146360,
       "tag": "0000_shallow_hannibal_king",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1782856112809,
+      "tag": "0001_melted_hercules",
+      "breakpoints": true
     }
   ]
 }

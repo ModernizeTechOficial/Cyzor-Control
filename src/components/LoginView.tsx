@@ -31,7 +31,7 @@ export default function LoginView({ onLogin, onNavigate }: { onLogin: () => void
         }
         await loginWithEmail(email, password);
       }
-      onLogin();
+      // Redirect handled by App.tsx observer
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || 'Ocorreu um erro ao processar sua solicitação.');
@@ -45,7 +45,7 @@ export default function LoginView({ onLogin, onNavigate }: { onLogin: () => void
     setLoading(true);
     try {
       await loginWithGoogle();
-      onLogin();
+      // Redirect handled by App.tsx observer
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || 'Falha no login com Google.');

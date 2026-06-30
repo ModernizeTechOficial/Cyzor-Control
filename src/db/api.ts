@@ -141,12 +141,16 @@ apiRouter.get("/companies", async (req: AuthRequest, res) => {
 });
 apiRouter.post("/companies", async (req: AuthRequest, res) => {
   try {
+    console.log("POST /companies called", { workspaceId: req.workspaceId, body: req.body });
     const { name, cnpj, industry, size, website, status } = req.body;
     if (!name) {
       return res.status(400).json({ error: "Company name is required" });
     }
+    if (!req.workspaceId) {
+      return res.status(400).json({ error: "Workspace ID is missing" });
+    }
     const data = await db.insert(companies).values({
-      workspaceId: req.workspaceId!,
+      workspaceId: req.workspaceId,
       name,
       cnpj: cnpj || null,
       industry: industry || null,
@@ -157,7 +161,7 @@ apiRouter.post("/companies", async (req: AuthRequest, res) => {
     res.json(data[0]);
   } catch (error) {
     console.error("Error creating company:", error);
-    res.status(500).json({ error: "Failed to create company" });
+    res.status(500).json({ error: "Failed to create company", details: error.message });
   }
 });
 

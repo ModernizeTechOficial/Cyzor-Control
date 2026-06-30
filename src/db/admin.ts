@@ -32,6 +32,7 @@ adminRouter.get("/metrics", async (req: AuthRequest, res) => {
     const [tenantsCount] = await db.select({ value: count() }).from(tenants);
     const [usersCount] = await db.select({ value: count() }).from(users);
     const [companiesCount] = await db.select({ value: count() }).from(companies);
+    const [projectsCount] = await db.select({ value: count() }).from(projects);
     
     res.json({
       status: "success",
@@ -39,7 +40,7 @@ adminRouter.get("/metrics", async (req: AuthRequest, res) => {
         totalTenants: tenantsCount.value,
         totalUsers: usersCount.value,
         totalCompanies: companiesCount.value,
-        totalDeploys: 0,
+        totalProjects: projectsCount.value,
       }
     });
   } catch (error: any) {
