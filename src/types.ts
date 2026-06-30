@@ -1,1 +1,1 @@
-export type View = 'landing' | 'login' | 'dashboard' | 'empresas' | 'clientes' | 'produtos' | 'projetos' | 'ideias' | 'financeiro' | 'documentacao' | 'ia' | 'configuracoes' | 'agenda' | 'keep' | 'privacy' | 'terms' | 'flow-builder';
+export type View = 'landing' | 'login' | 'dashboard' | 'empresas' | 'clientes' | 'produtos' | 'projetos' | 'ideias' | 'financeiro' | 'documentacao' | 'ia' | 'configuracoes' | 'agenda' | 'keep' | 'privacy' | 'terms' | 'flow-builder' | 'admin' | 'admin-tenants' | 'admin-users' | 'admin-finance' | 'admin-infrastructure' | 'admin-logs';

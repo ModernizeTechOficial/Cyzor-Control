@@ -19,6 +19,7 @@ import LandingView from './components/LandingView';
 import AgendaPage from './agenda/pages/AgendaPage';
 import GoogleKeepView from './components/GoogleKeepView';
 import VisualSystemsStudioView from './modules/VisualSystemsStudio/VisualSystemsStudioView';
+import AdminLayout from './modules/admin/AdminLayout';
 import { View } from './types';
 import { useAuth } from './context/AuthContext.tsx';
 import { Sparkles } from 'lucide-react';
@@ -26,8 +27,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import HomeIntelligence from './components/home/HomeIntelligence';
 
 export default function App() {
-  const { user, loading } = useAuth();
-  const [currentView, setCurrentView] = useState<View>('landing');
+  const { user, dbUser, loading } = useAuth();
+  const [currentView, setCurrentView] = useState<View | 'admin'>('landing');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [isChatOpen, setIsChatOpen] = useState(false);
 
@@ -35,7 +36,11 @@ export default function App() {
     if (!loading) {
       if (user) {
         if (currentView === 'landing' || currentView === 'login' || currentView === 'privacy' || currentView === 'terms') {
-          setCurrentView('dashboard');
+          if (dbUser?.isPlatformAdmin) {
+            setCurrentView('admin');
+          } else {
+            setCurrentView('dashboard');
+          }
         }
       } else {
         if (currentView !== 'landing' && currentView !== 'login' && currentView !== 'privacy' && currentView !== 'terms') {
@@ -43,7 +48,7 @@ export default function App() {
         }
       }
     }
-  }, [user, loading, currentView]);
+  }, [user, dbUser, loading, currentView]);
 
   if (loading) {
     return (
@@ -70,6 +75,10 @@ export default function App() {
 
   if (currentView === 'terms') {
     return <TermsView onBack={() => setCurrentView('login')} />;
+  }
+
+  if (currentView.startsWith('admin')) {
+    return <AdminLayout currentView={currentView} setCurrentView={setCurrentView} />;
   }
 
   return (

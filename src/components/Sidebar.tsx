@@ -16,7 +16,7 @@ export default function Sidebar({
   currentView: View,
   setCurrentView: (view: View) => void
 }) {
-  const { activeWorkspace } = useAuth();
+  const { activeWorkspace, dbUser } = useAuth();
   const [currentPlan, setCurrentPlan] = useState('Pro');
   const { iconUrl, iconSize, appName } = useBranding();
 
@@ -86,6 +86,20 @@ export default function Sidebar({
         <NavItem icon={Workflow} label="Flow Builder" active={currentView === 'flow-builder'} onClick={() => setCurrentView('flow-builder')} isCollapsed={isCollapsed} toggleSidebar={toggleSidebar} />
         <NavItem icon={BotMessageSquare} label="IA Intelligence" active={currentView === 'ia'} onClick={() => setCurrentView('ia')} isCollapsed={isCollapsed} badge="5" toggleSidebar={toggleSidebar} />
         
+        {dbUser?.isPlatformAdmin && (
+          <div className="mt-4 pt-4 border-t border-[#0F172A05]">
+            <NavItem 
+              icon={ShieldCheck} 
+              label="Platform HQ" 
+              active={false} 
+              onClick={() => setCurrentView('admin')} 
+              isCollapsed={isCollapsed} 
+              toggleSidebar={toggleSidebar} 
+              className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+            />
+          </div>
+        )}
+
         <div className="mt-auto pt-6 border-t border-[#0F172A05]">
             <NavItem icon={Settings} label="Configurações" active={currentView === 'configuracoes'} onClick={() => setCurrentView('configuracoes')} isCollapsed={isCollapsed} toggleSidebar={toggleSidebar} />
         </div>

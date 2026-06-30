@@ -17,7 +17,11 @@ export const requireAuth = async (
     return res.status(401).json({ error: 'Unauthorized: Missing token' });
   }
 
-  const token = authHeader.split('Bearer ')[1];
+  const token = authHeader.split('Bearer ')[1]?.trim();
+  if (!token || token === 'null' || token === 'undefined') {
+    return res.status(401).json({ error: 'Unauthorized: Invalid token format' });
+  }
+
   try {
     const authInstance = getAdminAuth();
     if (!authInstance) {

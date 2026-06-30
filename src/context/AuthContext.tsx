@@ -13,6 +13,7 @@ import { auth, googleAuthProvider } from '../lib/firebase.ts';
 
 interface AuthContextType {
   user: User | null;
+  dbUser: any | null;
   loading: boolean;
   token: string | null;
   workspaces: any[];
@@ -42,6 +43,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [dbUser, setDbUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
   const [workspaces, setWorkspaces] = useState<any[]>([]);
@@ -75,6 +77,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!res.ok) {
         const errText = await res.text();
         throw new Error(`Backend synchronization failed: ${errText}`);
+      } else {
+        const syncData = await res.json();
+        setDbUser(syncData.user);
       }
 
       // Fetch user SaaS profile state from SQLite
@@ -126,10 +131,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(idToken);
     }
 
-    const headers = {
+    const headers: any = {
       ...options.headers,
-      'Authorization': `Bearer ${idToken}`
     };
+    if (idToken) {
+      headers['Authorization'] = `Bearer ${idToken}`;
+    }
 
     let response = await fetch(url, { ...options, headers });
 
@@ -367,6 +374,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user,
+      dbUser,
       loading,
       token,
       workspaces,

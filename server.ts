@@ -6,6 +6,7 @@ import { requireAuth, AuthRequest } from "./src/middleware/auth.ts";
 import { tenantMiddleware } from "./src/middleware/tenant.ts";
 import { getOrCreateUser, getUserSaaSState, updateUserActiveWorkspace, getUserWorkspaces } from "./src/db/queries.ts";
 import apiRouter from "./src/db/api.ts";
+import { adminRouter } from "./src/db/admin.ts";
 import { AIController } from "./src/ai/controllers/AIController.ts";
 
 async function startServer() {
@@ -102,6 +103,9 @@ async function startServer() {
 
   // Mount modular routes that require an active workspace
   app.use("/api", apiRouter);
+
+  // Mount admin routes
+  app.use("/api/admin", adminRouter);
 
   // AI Chat Interface
   app.post("/api/ai/chat", requireAuth, tenantMiddleware as any, AIController.chat);

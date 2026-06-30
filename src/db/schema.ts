@@ -27,6 +27,7 @@ export const users = pgTable('users', {
   activeTenantId: uuid('active_tenant_id'), // No hard FK to avoid migration locks
   phone: text('phone'),
   role: text('role'),
+  isPlatformAdmin: boolean('is_platform_admin').default(false),
   settings: jsonb('settings').default({}),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
