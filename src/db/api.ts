@@ -37,7 +37,7 @@ apiRouter.use(async (req: AuthRequest, res, next) => {
 
 import { processAIChat, generateProactiveInsights, getAIInstance } from './aiModel.ts';
 
-// --- AI CHAT ---
+/*
 apiRouter.post("/ai/chat", async (req: AuthRequest, res) => {
   try {
     const { prompt, history } = req.body;
@@ -51,6 +51,7 @@ apiRouter.post("/ai/chat", async (req: AuthRequest, res) => {
     res.status(500).json({ error: error.message || "Internal server error" });
   }
 });
+*/
 
 // --- AI INSIGHTS ---
 apiRouter.get("/ai/insights", async (req: AuthRequest, res) => {

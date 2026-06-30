@@ -240,6 +240,24 @@ export const aiMemories = sqliteTable('ai_memories', {
   wsIdx: index('ai_memories_ws_idx').on(t.workspaceId),
 }));
 
+// AI PROVIDERS
+export const aiProviders = sqliteTable('ai_providers', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(), // Gemini, Groq, etc.
+  enabled: integer('enabled', { mode: "boolean" }).default(true),
+  apiKey: text('api_key').notNull(),
+  baseUrl: text('base_url'),
+  defaultModel: text('default_model'),
+  priority: integer('priority').default(0),
+  timeout: integer('timeout').default(30000),
+  retryAttempts: integer('retry_attempts').default(3),
+  createdAt: integer('created_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
+  updatedAt: integer('updated_at', { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
+}, (t) => ({
+  wsIdx: index('ai_providers_ws_idx').on(t.workspaceId),
+}));
+
 // FINANCE ENTRIES
 export const financeEntries = sqliteTable('finance_entries', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -344,6 +362,7 @@ export const workspacesRelations = relations(workspaces, ({ one, many }) => ({
   notifications: many(notifications),
   agendaEvents: many(agendaEvents),
   flows: many(flows),
+  aiProviders: many(aiProviders),
 }));
 
 export const clientsRelations = relations(clients, ({ one }) => ({
@@ -354,6 +373,10 @@ export const clientsRelations = relations(clients, ({ one }) => ({
 export const flowsRelations = relations(flows, ({ one }) => ({
   workspace: one(workspaces, { fields: [flows.workspaceId], references: [workspaces.id] }),
   user: one(users, { fields: [flows.userUid], references: [users.uid] }),
+}));
+
+export const aiProvidersRelations = relations(aiProviders, ({ one }) => ({
+  workspace: one(workspaces, { fields: [aiProviders.workspaceId], references: [workspaces.id] }),
 }));
 
 export const agendaEventsRelations = relations(agendaEvents, ({ one }) => ({

@@ -5,6 +5,7 @@ import { createServer as createViteServer } from "vite";
 import { requireAuth, AuthRequest } from "./src/middleware/auth.ts";
 import { getOrCreateUser, getUserSaaSState, updateUserActiveWorkspace, getUserWorkspaces } from "./src/db/queries.ts";
 import apiRouter from "./src/db/api.ts";
+import { AIController } from "./src/ai/controllers/AIController.ts";
 
 async function startServer() {
   const app = express();
@@ -114,6 +115,9 @@ async function startServer() {
 
   // Mount modular routes that require an active workspace
   app.use("/api", apiRouter);
+
+  // AI Chat Interface
+  app.post("/api/ai/chat", requireAuth, AIController.chat);
 
   // AI Node Generation
   app.post("/api/flow-builder/generate-node", requireAuth, async (req: AuthRequest, res) => {

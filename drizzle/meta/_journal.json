@@ -29,6 +29,13 @@
       "when": 1782637300000,
       "tag": "0003_add_cargo_to_workspace_members",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1782809499872,
+      "tag": "0004_fine_apocalypse",
+      "breakpoints": true
     }
   ]
 }

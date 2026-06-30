@@ -10,18 +10,26 @@ function NotificationMenu() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchNotifications = async () => {
+    const fetchNotifications = async (retries = 3) => {
       if (!activeWorkspace) return;
       try {
         const res = await fetchWithAuth('/api/notifications');
         if (res.ok) {
           const data = await res.json();
           setNotifications(data);
+        } else if (retries > 0) {
+          console.warn(`Failed to fetch notifications, retrying in 2s... (${retries} retries left)`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          await fetchNotifications(retries - 1);
         }
       } catch (err) {
         console.error("Failed to fetch notifications:", err);
+        if (retries > 0) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          await fetchNotifications(retries - 1);
+        }
       } finally {
-        setLoading(false);
+        if (retries === 0) setLoading(false);
       }
     };
     fetchNotifications();
