@@ -3,6 +3,7 @@
   "appId": "1:923521322944:web:0456ad15a34b79ac3e4225",
   "apiKey": "AIzaSyA86MEbtCVHmdwWNlJBWCymvjFTxXRULAc",
   "authDomain": "gen-lang-client-0935154449.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-cyzorcontrol-0ae9331b-87ad-4caf-9e91-2f8bde3fbd46",
   "storageBucket": "gen-lang-client-0935154449.firebasestorage.app",
   "messagingSenderId": "923521322944",
   "measurementId": ""

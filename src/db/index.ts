@@ -50,8 +50,6 @@ try {
 function closeDatabase() {
   console.log('[Database] Fechando conexão SQLite...');
   if (sqlite) {
-    // If you need to finalize pending queries or transactions, better-sqlite3 handles it during close,
-    // though active transactions might roll back if not explicitly committed.
     try {
       sqlite.close();
       console.log('[Database] Conexão encerrada com sucesso.');
@@ -74,6 +72,3 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('[Database Error] Unhandled Rejection at:', promise, 'reason:', reason);
   closeDatabase();
 });
-
-
-

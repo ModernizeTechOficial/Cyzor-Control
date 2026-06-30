@@ -1,0 +1,28 @@
+{
+  "entities": {
+    "workspace": {
+      "title": "Workspace",
+      "description": "App workspace",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" }
+      }
+    },
+    "user": {
+      "title": "User",
+      "description": "Application User",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/workspaces/{workspaceId}": {
+      "schema": { "$ref": "#/entities/workspace" },
+      "description": "Workspace data"
+    }
+  }
+}

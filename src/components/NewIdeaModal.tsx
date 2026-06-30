@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { X, Lightbulb, Building2, AlignLeft, DollarSign, Target, Star } from 'lucide-react';
+import { X, Lightbulb, AlignLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
+import ModalContainer from './layout/ModalContainer.tsx';
 
 export default function NewIdeaModal({ isOpen, onClose, onSuccess }: { isOpen: boolean, onClose: () => void, onSuccess?: () => void }) {
   const { fetchWithAuth } = useAuth();
@@ -14,8 +15,6 @@ export default function NewIdeaModal({ isOpen, onClose, onSuccess }: { isOpen: b
     status: 'capturadas'
   });
   const [loading, setLoading] = useState(false);
-
-  if (!isOpen) return null;
 
   const handleSave = async () => {
     if (!formData.name) return;
@@ -50,8 +49,7 @@ export default function NewIdeaModal({ isOpen, onClose, onSuccess }: { isOpen: b
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#111111]/20 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#FFFFFF] w-full max-w-2xl rounded-[30px] border border-[#0F172A0F] shadow-[0_20px_60px_rgba(0,0,0,0.08)] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+    <ModalContainer isOpen={isOpen} onClose={onClose} maxWidth="max-w-2xl">
         
         {/* Header */}
         <div className="px-8 py-6 border-b border-[#0F172A0F] flex items-center justify-between bg-[#FFFFFF] relative">
@@ -87,7 +85,7 @@ export default function NewIdeaModal({ isOpen, onClose, onSuccess }: { isOpen: b
         </div>
 
         {/* Footer */}
-        <div className="px-8 py-5 border-t border-[#0F172A0F] bg-[#FAFAFA] flex justify-end gap-3 rounded-b-[30px]">
+        <div className="px-8 py-5 border-t border-[#0F172A0F] bg-[#FAFAFA] flex justify-end gap-3 rounded-b-[24px]">
           <button 
             onClick={onClose}
             className="px-6 py-3 rounded-[14px] text-sm font-bold text-[#111111] border border-[#0F172A0F] bg-[#FFFFFF] hover:bg-[#FAFAFA] transition-colors"
@@ -103,8 +101,7 @@ export default function NewIdeaModal({ isOpen, onClose, onSuccess }: { isOpen: b
           </button>
         </div>
         
-      </div>
-    </div>
+    </ModalContainer>
   );
 }
 

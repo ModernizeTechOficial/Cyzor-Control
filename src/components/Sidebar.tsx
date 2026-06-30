@@ -73,21 +73,21 @@ export default function Sidebar({
       </div>
       
       <div className="flex flex-col gap-1 w-full flex-1 overflow-y-auto overflow-x-hidden mt-2 px-1.5 custom-scrollbar">
-        <NavItem icon={LayoutDashboard} label="Dashboard" active={currentView === 'dashboard'} onClick={() => setCurrentView('dashboard')} isCollapsed={isCollapsed} />
-        <NavItem icon={Building2} label="Empresas" active={currentView === 'empresas'} onClick={() => setCurrentView('empresas')} isCollapsed={isCollapsed} />
-        <NavItem icon={Users} label="Clientes" active={currentView === 'clientes'} onClick={() => setCurrentView('clientes')} isCollapsed={isCollapsed} />
-        <NavItem icon={Package} label="Produtos" active={currentView === 'produtos'} onClick={() => setCurrentView('produtos')} isCollapsed={isCollapsed} />
-        <NavItem icon={GitBranch} label="Projetos" active={currentView === 'projetos'} onClick={() => setCurrentView('projetos')} isCollapsed={isCollapsed} badge="3" />
-        <NavItem icon={Lightbulb} label="Ideias" active={currentView === 'ideias'} onClick={() => setCurrentView('ideias')} isCollapsed={isCollapsed} />
-        <NavItem icon={FileText} label="Documentação" active={currentView === 'documentacao'} onClick={() => setCurrentView('documentacao')} isCollapsed={isCollapsed} />
-        <NavItem icon={DollarSign} label="Financeiro" active={currentView === 'financeiro'} onClick={() => setCurrentView('financeiro')} isCollapsed={isCollapsed} badge="2" />
-        <NavItem icon={Calendar} label="Agenda" active={currentView === 'agenda'} onClick={() => setCurrentView('agenda')} isCollapsed={isCollapsed} />
-        <NavItem icon={StickyNote} label="Google Keep" active={currentView === 'keep'} onClick={() => setCurrentView('keep')} isCollapsed={isCollapsed} />
-        <NavItem icon={Workflow} label="Flow Builder" active={currentView === 'flow-builder'} onClick={() => setCurrentView('flow-builder')} isCollapsed={isCollapsed} />
-        <NavItem icon={BotMessageSquare} label="IA Intelligence" active={currentView === 'ia'} onClick={() => setCurrentView('ia')} isCollapsed={isCollapsed} badge="5" />
+        <NavItem icon={LayoutDashboard} label="Dashboard" active={currentView === 'dashboard'} onClick={() => setCurrentView('dashboard')} isCollapsed={isCollapsed} toggleSidebar={toggleSidebar} />
+        <NavItem icon={Building2} label="Empresas" active={currentView === 'empresas'} onClick={() => setCurrentView('empresas')} isCollapsed={isCollapsed} toggleSidebar={toggleSidebar} />
+        <NavItem icon={Users} label="Clientes" active={currentView === 'clientes'} onClick={() => setCurrentView('clientes')} isCollapsed={isCollapsed} toggleSidebar={toggleSidebar} />
+        <NavItem icon={Package} label="Produtos" active={currentView === 'produtos'} onClick={() => setCurrentView('produtos')} isCollapsed={isCollapsed} toggleSidebar={toggleSidebar} />
+        <NavItem icon={GitBranch} label="Projetos" active={currentView === 'projetos'} onClick={() => setCurrentView('projetos')} isCollapsed={isCollapsed} badge="3" toggleSidebar={toggleSidebar} />
+        <NavItem icon={Lightbulb} label="Ideias" active={currentView === 'ideias'} onClick={() => setCurrentView('ideias')} isCollapsed={isCollapsed} toggleSidebar={toggleSidebar} />
+        <NavItem icon={FileText} label="Documentação" active={currentView === 'documentacao'} onClick={() => setCurrentView('documentacao')} isCollapsed={isCollapsed} toggleSidebar={toggleSidebar} />
+        <NavItem icon={DollarSign} label="Financeiro" active={currentView === 'financeiro'} onClick={() => setCurrentView('financeiro')} isCollapsed={isCollapsed} badge="2" toggleSidebar={toggleSidebar} />
+        <NavItem icon={Calendar} label="Agenda" active={currentView === 'agenda'} onClick={() => setCurrentView('agenda')} isCollapsed={isCollapsed} toggleSidebar={toggleSidebar} />
+        <NavItem icon={StickyNote} label="Google Keep" active={currentView === 'keep'} onClick={() => setCurrentView('keep')} isCollapsed={isCollapsed} toggleSidebar={toggleSidebar} />
+        <NavItem icon={Workflow} label="Flow Builder" active={currentView === 'flow-builder'} onClick={() => setCurrentView('flow-builder')} isCollapsed={isCollapsed} toggleSidebar={toggleSidebar} />
+        <NavItem icon={BotMessageSquare} label="IA Intelligence" active={currentView === 'ia'} onClick={() => setCurrentView('ia')} isCollapsed={isCollapsed} badge="5" toggleSidebar={toggleSidebar} />
         
         <div className="mt-auto pt-6 border-t border-[#0F172A05]">
-            <NavItem icon={Settings} label="Configurações" active={currentView === 'configuracoes'} onClick={() => setCurrentView('configuracoes')} isCollapsed={isCollapsed} />
+            <NavItem icon={Settings} label="Configurações" active={currentView === 'configuracoes'} onClick={() => setCurrentView('configuracoes')} isCollapsed={isCollapsed} toggleSidebar={toggleSidebar} />
         </div>
       </div>
       
@@ -112,9 +112,12 @@ export default function Sidebar({
 );
 }
 
-function NavItem({ icon: Icon, label, active, isCollapsed, className = "", onClick, badge }: { icon: any, label: string, active?: boolean, isCollapsed?: boolean, className?: string, onClick?: () => void, badge?: string }) {
+function NavItem({ icon: Icon, label, active, isCollapsed, className = "", onClick, badge, toggleSidebar }: { icon: any, label: string, active?: boolean, isCollapsed?: boolean, className?: string, onClick?: () => void, badge?: string, toggleSidebar?: () => void }) {
   return (
-    <button onClick={onClick} className={`relative w-full flex items-center rounded-2xl transition-all duration-300 group/item ${isCollapsed ? 'justify-center p-3.5' : 'gap-3.5 px-4 py-3'} ${className} ${active ? 'bg-[#111111] text-white shadow-[0_12px_24px_rgba(0,0,0,0.12)] z-10' : 'text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#111111]'}`}>
+    <button onClick={() => {
+      if (onClick) onClick();
+      if (toggleSidebar && !isCollapsed) toggleSidebar();
+    }} className={`relative w-full flex items-center rounded-2xl transition-all duration-300 group/item ${isCollapsed ? 'justify-center p-3.5' : 'gap-3.5 px-4 py-3'} ${className} ${active ? 'bg-[#111111] text-white shadow-[0_12px_24px_rgba(0,0,0,0.12)] z-10' : 'text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#111111]'}`}>
       <Icon size={18} className={`flex-shrink-0 ${active ? "text-white" : "text-[#64748B] group-hover/item:text-[#111111] transition-colors"}`} strokeWidth={active ? 2.5 : 2} />
       {!isCollapsed && (
         <div className="flex items-center justify-between flex-1">

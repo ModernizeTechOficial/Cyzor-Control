@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Building2, Package, Tag, DollarSign, Calendar, FileText } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { safeToISOString } from '../lib/dateUtils';
+import ModalContainer from './layout/ModalContainer.tsx';
 
 interface FinanceEntryModalProps {
   isOpen: boolean;
@@ -57,8 +58,6 @@ export default function FinanceEntryModal({ isOpen, onClose, onSuccess, entry }:
       console.error(err);
     }
   };
-
-  if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,9 +131,7 @@ export default function FinanceEntryModal({ isOpen, onClose, onSuccess, entry }:
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-[#111111]/20 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#FFFFFF] border border-[#0F172A0F] rounded-t-[24px] sm:rounded-[30px] w-full max-w-2xl shadow-[0_20px_60px_rgba(0,0,0,0.1)] overflow-hidden animate-in zoom-in-95 duration-200">
-        
+    <ModalContainer isOpen={isOpen} onClose={onClose} maxWidth="max-w-2xl">
         {/* Header */}
         <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-[#0F172A0F] flex items-center justify-between bg-[#FFFFFF] relative">
            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#111111]/10 to-transparent"></div>
@@ -156,7 +153,7 @@ export default function FinanceEntryModal({ isOpen, onClose, onSuccess, entry }:
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 sm:p-8 pb-10 flex flex-col gap-5 sm:gap-6 overflow-y-auto max-h-[calc(90vh-140px)] sm:max-h-[60vh]">
+        <form onSubmit={handleSubmit} className="p-6 sm:p-8 pb-10 flex flex-col gap-5 sm:gap-6 overflow-y-auto max-h-[calc(90vh-140px)]">
           <div className="flex flex-col gap-2 w-full">
             <label className="text-[11px] font-bold tracking-widest uppercase text-[#64748B] px-1">Descrição</label>
             <div className="relative group">
@@ -251,7 +248,6 @@ export default function FinanceEntryModal({ isOpen, onClose, onSuccess, entry }:
              </div>
           </div>
         </form>
-      </div>
-    </div>
+    </ModalContainer>
   );
 }
