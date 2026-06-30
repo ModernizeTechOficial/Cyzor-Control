@@ -3,6 +3,7 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { requireAuth, AuthRequest } from "./src/middleware/auth.ts";
+import { tenantMiddleware } from "./src/middleware/tenant.ts";
 import { getOrCreateUser, getUserSaaSState, updateUserActiveWorkspace, getUserWorkspaces } from "./src/db/queries.ts";
 import apiRouter from "./src/db/api.ts";
 import { AIController } from "./src/ai/controllers/AIController.ts";
@@ -29,29 +30,15 @@ async function startServer() {
   // API Route: Extended Database Healthcheck
   app.get("/api/health/db", async (req, res) => {
     try {
-      const fs = require('fs');
-      const dbPath = process.env.DATABASE_PATH || 'database/database.sqlite';
-      const fileExists = fs.existsSync(dbPath);
-      let fileSizeInBytes = 0;
-      if (fileExists) {
-        fileSizeInBytes = fs.statSync(dbPath).size;
-      }
-      
       const { db } = require('./src/db/index.ts');
       const { sql } = require('drizzle-orm');
       
-      const journalMode = await db.get(sql`PRAGMA journal_mode`);
-      const foreignKeys = await db.get(sql`PRAGMA foreign_keys`);
-      const integrityCheck = await db.get(sql`PRAGMA integrity_check`);
-
+      const result = await db.execute(sql`SELECT version()`);
+      
       res.json({
         status: "ok",
-        database: "SQLite",
-        file_exists: fileExists,
-        size_bytes: fileSizeInBytes,
-        journal_mode: journalMode ? Object.values(journalMode)[0] : "unknown",
-        foreign_keys: foreignKeys ? Object.values(foreignKeys)[0] : "unknown",
-        integrity_check: integrityCheck ? Object.values(integrityCheck)[0] : "unknown"
+        database: "PostgreSQL",
+        version: result.rows[0]?.version || "unknown"
       });
     } catch (error: any) {
       res.status(500).json({
@@ -117,10 +104,10 @@ async function startServer() {
   app.use("/api", apiRouter);
 
   // AI Chat Interface
-  app.post("/api/ai/chat", requireAuth, AIController.chat);
+  app.post("/api/ai/chat", requireAuth, tenantMiddleware as any, AIController.chat);
 
   // AI Node Generation
-  app.post("/api/flow-builder/generate-node", requireAuth, async (req: AuthRequest, res) => {
+  app.post("/api/flow-builder/generate-node", requireAuth, tenantMiddleware as any, async (req: AuthRequest, res) => {
     try {
       const { prompt, context } = req.body;
       const { generateNodeDefinition } = await import("./src/lib/gemini.ts");

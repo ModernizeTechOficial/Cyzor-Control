@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { requireAuth, AuthRequest } from "../middleware/auth.ts";
+import { tenantMiddleware, TenantRequest } from "../middleware/tenant.ts";
 import { db } from "./index.ts";
 import { companies, clients, products, projects, tasks, ideas, documents, financeEntries, sprints, milestones, aiMemories, notifications, agendaEvents, users, workspaceMembers, workspaces, flows, notes, deploys } from "./schema.ts";
 import { eq, and, desc, sql, or, inArray } from "drizzle-orm";
@@ -13,27 +14,8 @@ apiRouter.use((req, res, next) => {
   next();
 });
 
-// Helper to get active workspace ID
-async function getActiveWorkspaceId(uid: string) {
-  const state = await getUserSaaSState(uid);
-  return state?.activeWorkspace?.id;
-}
-
 apiRouter.use(requireAuth);
-apiRouter.use(async (req: AuthRequest, res, next) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ error: "Unauthorized: No user found in request" });
-    }
-    const wsId = await getActiveWorkspaceId(req.user.uid);
-    if (!wsId) return res.status(403).json({ error: "No active workspace" });
-    req.workspaceId = wsId;
-    next();
-  } catch (error) {
-    console.error("Workspace resolution error:", error);
-    res.status(500).json({ error: "Error resolving workspace" });
-  }
-});
+apiRouter.use(tenantMiddleware as any);
 
 import { processAIChat, generateProactiveInsights, getAIInstance } from './aiModel.ts';
 
@@ -123,6 +105,27 @@ apiRouter.post("/gemini", async (req: AuthRequest, res) => {
     } else {
       res.status(500).json({ error: error.message || "Erro interno ao processar pela IA" });
     }
+  }
+});
+
+// --- TENANT INFO & AUDIT LOGS ---
+apiRouter.get("/tenant/info", async (req: AuthRequest, res) => {
+  try {
+    const { getTenantContext } = await import("./context.ts");
+    const context = getTenantContext();
+    res.json({ status: "success", tenant: context.tenant });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+apiRouter.get("/audit-logs", async (req: AuthRequest, res) => {
+  try {
+    const { auditLogRepository } = await import("./repositories.ts");
+    const logs = await auditLogRepository.findAll();
+    res.json(logs);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
 });
 

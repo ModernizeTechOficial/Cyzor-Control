@@ -91,22 +91,7 @@ export default function Sidebar({
         </div>
       </div>
       
-      <div className={`mt-6 pt-6 border-t border-[#0F172A08] w-full flex items-center cursor-pointer hover:bg-[#F8FAFC] rounded-3xl transition-all duration-300 group ${isCollapsed ? 'justify-center p-2' : 'gap-4 px-4 p-3'}`}>
-        <div className="relative">
-          <img 
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDwXDXg1KcX6TY_nnpByK4zlImijL4JDNtHoN9XN3T9dq_tZcudbqWHjzev0Aw2WyeiOpOEzJdhRD_AzC_4s9nK3O_s2r_MlMb3q0m9i683ZXuMBlVDWtCJr9Gsp9NsgmanSPnOoZpC6h2_PPyre2mt0LCtpGGrIKe4QKM0JrkxMXkrP9hkh3N8A0s9CXjqnxGXNgdFbKBE8aHzl4m_ivnii89mcRJm1sM5PlnnsosvDkFBYt_L58ZCBER132IVQQDtnWKcZUCbOJ0" 
-              alt="User" 
-              className="w-10 h-10 rounded-full border-2 border-white shadow-sm group-hover:scale-110 transition-transform duration-500"
-          />
-          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full shadow-sm" />
-        </div>
-        {!isCollapsed && (
-          <div className="flex flex-col overflow-hidden">
-            <span className="text-[14px] font-bold text-[#111111] truncate group-hover:text-blue-600 transition-colors tracking-tight">Admin User</span>
-            <span className="text-[10px] font-black text-[#64748B] uppercase tracking-[0.1em] opacity-60">Enterprise Tier</span>
-          </div>
-        )}
-      </div>
+
     </nav>
   </>
 );
