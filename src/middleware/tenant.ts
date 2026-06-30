@@ -46,9 +46,19 @@ export const tenantMiddleware = async (
     let tenantId = workspace?.tenantId;
     let tenantName = workspace?.name || 'My Tenant';
 
-    // Self-healing check: If the workspace somehow has no associated tenantId, create one dynamically!
-    if (!workspace || !tenantId) {
-      console.log(`[Tenant Middleware] Self-healing active: Workspace ${activeWorkspaceId} lacks tenant_id. Creating one...`);
+    // Fetch the full tenant details if tenantId is available
+    let tenant = null;
+    if (tenantId) {
+      const [t] = await db.select()
+        .from(schema.tenants)
+        .where(eq(schema.tenants.id, tenantId))
+        .limit(1);
+      tenant = t;
+    }
+
+    // Self-healing check: If the workspace lacks a tenantId, or the tenant doesn't exist, create one dynamically!
+    if (!workspace || !tenantId || !tenant) {
+      console.log(`[Tenant Middleware] Self-healing active: Workspace ${activeWorkspaceId} lacks tenant or tenant not found. Creating one...`);
       
       const slug = `workspace-${activeWorkspaceId}-${Date.now()}`;
       const [newTenant] = await db.insert(schema.tenants).values({
@@ -58,22 +68,13 @@ export const tenantMiddleware = async (
       }).returning();
 
       tenantId = newTenant.id;
+      tenant = newTenant;
 
       if (workspace) {
         await db.update(schema.workspaces)
           .set({ tenantId })
           .where(eq(schema.workspaces.id, activeWorkspaceId));
       }
-    }
-
-    // Fetch the full tenant details
-    const [tenant] = await db.select()
-      .from(schema.tenants)
-      .where(eq(schema.tenants.id, tenantId))
-      .limit(1);
-
-    if (!tenant) {
-      return res.status(404).json({ error: 'Tenant record not found in database' });
     }
 
     // 3. Ensure user belongs to this tenant (Association validation)
