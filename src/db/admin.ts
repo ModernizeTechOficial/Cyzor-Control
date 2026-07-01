@@ -366,6 +366,45 @@ adminRouter.post("/stripe/config", async (req: AuthRequest, res) => {
   }
 });
 
+adminRouter.post("/stripe/provision-webhook", async (req: AuthRequest, res) => {
+  try {
+    const { url } = req.body;
+    if (!url) return res.status(400).json({ error: 'Webhook URL is required' });
+
+    const stripe = await getStripe();
+    
+    // Create webhook endpoint in Stripe
+    const endpoint = await stripe.webhookEndpoints.create({
+      url,
+      enabled_events: [
+        'checkout.session.completed',
+        'customer.subscription.updated',
+        'customer.subscription.deleted',
+        'invoice.payment_succeeded',
+        'invoice.payment_failed',
+      ],
+    });
+
+    // Update DB with the new webhook secret
+    const existing = await db.select().from(stripeConfig).limit(1);
+    let result;
+    if (existing.length > 0) {
+      result = await db.update(stripeConfig).set({
+        webhookSecret: endpoint.secret,
+        updatedAt: new Date()
+      }).where(eq(stripeConfig.id, existing[0].id)).returning();
+    } else {
+      result = await db.insert(stripeConfig).values({
+        webhookSecret: endpoint.secret,
+      }).returning();
+    }
+    
+    res.json(result[0]);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 adminRouter.post("/stripe/sync-plan/:id", async (req: AuthRequest, res) => {
   try {
     const id = parseInt(req.params.id);

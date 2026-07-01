@@ -64,6 +64,28 @@ export function BillingAdminView() {
     setLoading(false);
   };
 
+  const provisionWebhook = async () => {
+    setLoading(true);
+    try {
+      const url = `${window.location.origin}/api/webhooks/stripe`;
+      const res = await fetchWithAuth('/api/admin/stripe/provision-webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+      if (res.ok) {
+        alert('Webhook provisionado com sucesso e Secret atualizado!');
+        loadConfig();
+      } else {
+        const data = await res.json();
+        alert(`Erro: ${data.error || 'Falha ao provisionar webhook'}`);
+      }
+    } catch (e) {
+      alert('Erro ao provisionar');
+    }
+    setLoading(false);
+  };
+
   const loadPlans = async () => {
     try {
       const res = await fetchWithAuth('/api/admin/plans');
@@ -138,6 +160,12 @@ export function BillingAdminView() {
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Webhook Secret (Signing Secret)</label>
             <input type="password" value={webhookSecret} onChange={e => setWebhookSecret(e.target.value)} className="w-full bg-gray-900 border border-gray-700 text-white rounded px-3 py-2" />
+            <div className="mt-2 flex justify-between items-center">
+              <span className="text-xs text-gray-500">Se não souber, você pode provisionar automaticamente no botão ao lado.</span>
+              <button type="button" onClick={provisionWebhook} disabled={loading} className="text-xs bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded font-medium flex items-center gap-1">
+                <RefreshCw size={12} /> Auto-Provisionar Webhook
+              </button>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Ambiente</label>
