@@ -598,9 +598,15 @@ export const plans = pgTable('plans', {
 
 export const stripeConfig = pgTable('stripe_config', {
   id: serial('id').primaryKey(),
-  publishableKey: text('publishable_key'),
+  publishableKey: text('publishable_key'), // Keep for backward compatibility/avoid push conflicts
   secretKey: text('secret_key'),
   webhookSecret: text('webhook_secret'),
+  testPublishableKey: text('test_publishable_key'),
+  testSecretKey: text('test_secret_key'),
+  testWebhookSecret: text('test_webhook_secret'),
+  livePublishableKey: text('live_publishable_key'),
+  liveSecretKey: text('live_secret_key'),
+  liveWebhookSecret: text('live_webhook_secret'),
   environment: text('environment').default('sandbox'), // sandbox, production
   updatedAt: timestamp('updated_at').defaultNow(),
 });

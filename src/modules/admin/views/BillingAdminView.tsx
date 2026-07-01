@@ -7,9 +7,12 @@ export function BillingAdminView() {
   const [activeTab, setActiveTab] = useState<'config' | 'plans' | 'subscriptions' | 'payments' | 'webhooks'>('config');
   
   // Config
-  const [publishableKey, setPublishableKey] = useState('');
-  const [secretKey, setSecretKey] = useState('');
-  const [webhookSecret, setWebhookSecret] = useState('');
+  const [testPublishableKey, setTestPublishableKey] = useState('');
+  const [testSecretKey, setTestSecretKey] = useState('');
+  const [testWebhookSecret, setTestWebhookSecret] = useState('');
+  const [livePublishableKey, setLivePublishableKey] = useState('');
+  const [liveSecretKey, setLiveSecretKey] = useState('');
+  const [liveWebhookSecret, setLiveWebhookSecret] = useState('');
   const [environment, setEnvironment] = useState('sandbox');
   
   // Data
@@ -37,9 +40,12 @@ export function BillingAdminView() {
       if (res.ok) {
         const data = await res.json();
         if (data) {
-          setPublishableKey(data.publishableKey || '');
-          setSecretKey(data.secretKey || '');
-          setWebhookSecret(data.webhookSecret || '');
+          setTestPublishableKey(data.testPublishableKey || '');
+          setTestSecretKey(data.testSecretKey || '');
+          setTestWebhookSecret(data.testWebhookSecret || '');
+          setLivePublishableKey(data.livePublishableKey || '');
+          setLiveSecretKey(data.liveSecretKey || '');
+          setLiveWebhookSecret(data.liveWebhookSecret || '');
           setEnvironment(data.environment || 'sandbox');
         }
       }
@@ -53,7 +59,11 @@ export function BillingAdminView() {
       const res = await fetchWithAuth('/api/admin/stripe/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ publishableKey, secretKey, webhookSecret, environment })
+        body: JSON.stringify({ 
+          testPublishableKey, testSecretKey, testWebhookSecret,
+          livePublishableKey, liveSecretKey, liveWebhookSecret,
+          environment 
+        })
       });
       if (res.ok) {
         alert('Configurações salvas!');
@@ -148,35 +158,89 @@ export function BillingAdminView() {
       </div>
 
       {activeTab === 'config' && (
-        <form onSubmit={saveConfig} className="bg-gray-800 border border-gray-700 rounded-lg p-6 max-w-2xl space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Stripe Publishable Key</label>
-            <input type="text" value={publishableKey} onChange={e => setPublishableKey(e.target.value)} className="w-full bg-gray-900 border border-gray-700 text-white rounded px-3 py-2" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Stripe Secret Key</label>
-            <input type="password" value={secretKey} onChange={e => setSecretKey(e.target.value)} className="w-full bg-gray-900 border border-gray-700 text-white rounded px-3 py-2" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Webhook Secret (Signing Secret)</label>
-            <input type="password" value={webhookSecret} onChange={e => setWebhookSecret(e.target.value)} className="w-full bg-gray-900 border border-gray-700 text-white rounded px-3 py-2" />
-            <div className="mt-2 flex justify-between items-center">
-              <span className="text-xs text-gray-500">Se não souber, você pode provisionar automaticamente no botão ao lado.</span>
-              <button type="button" onClick={provisionWebhook} disabled={loading} className="text-xs bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded font-medium flex items-center gap-1">
-                <RefreshCw size={12} /> Auto-Provisionar Webhook
-              </button>
+        <form onSubmit={saveConfig} className="max-w-4xl space-y-6">
+          {/* Active Environment Toggle */}
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-white">Ambiente Ativo</h3>
+                <p className="text-sm text-gray-400">Escolha qual ambiente o sistema deve usar para transações.</p>
+              </div>
+              <div className="flex bg-gray-900 p-1 rounded-lg border border-gray-700">
+                <button
+                  type="button"
+                  onClick={() => setEnvironment('sandbox')}
+                  className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${environment === 'sandbox' ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}
+                >
+                  Sandbox
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEnvironment('production')}
+                  className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${environment === 'production' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}
+                >
+                  Production
+                </button>
+              </div>
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Ambiente</label>
-            <select value={environment} onChange={e => setEnvironment(e.target.value)} className="w-full bg-gray-900 border border-gray-700 text-white rounded px-3 py-2">
-              <option value="sandbox">Sandbox (Test Mode)</option>
-              <option value="production">Production (Live Mode)</option>
-            </select>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Sandbox Config */}
+            <div className={`bg-gray-800 border rounded-lg p-6 space-y-4 transition-all ${environment === 'sandbox' ? 'border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'border-gray-700 opacity-60'}`}>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                <h3 className="font-bold text-white">Configuração Sandbox (Test)</h3>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider">Publishable Key</label>
+                <input type="text" value={testPublishableKey} onChange={e => setTestPublishableKey(e.target.value)} className="w-full bg-gray-900 border border-gray-700 text-white rounded px-3 py-2 text-sm" placeholder="pk_test_..." />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider">Secret Key</label>
+                <input type="password" value={testSecretKey} onChange={e => setTestSecretKey(e.target.value)} className="w-full bg-gray-900 border border-gray-700 text-white rounded px-3 py-2 text-sm" placeholder="sk_test_..." />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider">Webhook Secret</label>
+                <input type="password" value={testWebhookSecret} onChange={e => setTestWebhookSecret(e.target.value)} className="w-full bg-gray-900 border border-gray-700 text-white rounded px-3 py-2 text-sm" placeholder="whsec_..." />
+                {environment === 'sandbox' && (
+                  <button type="button" onClick={provisionWebhook} disabled={loading} className="mt-2 text-[10px] bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 border border-purple-600/30 px-2 py-1 rounded font-bold flex items-center gap-1 transition-all">
+                    <RefreshCw size={10} /> Auto-Provisionar Sandbox
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Production Config */}
+            <div className={`bg-gray-800 border rounded-lg p-6 space-y-4 transition-all ${environment === 'production' ? 'border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.1)]' : 'border-gray-700 opacity-60'}`}>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                <h3 className="font-bold text-white">Configuração Production (Live)</h3>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider">Publishable Key</label>
+                <input type="text" value={livePublishableKey} onChange={e => setLivePublishableKey(e.target.value)} className="w-full bg-gray-900 border border-gray-700 text-white rounded px-3 py-2 text-sm" placeholder="pk_live_..." />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider">Secret Key</label>
+                <input type="password" value={liveSecretKey} onChange={e => setLiveSecretKey(e.target.value)} className="w-full bg-gray-900 border border-gray-700 text-white rounded px-3 py-2 text-sm" placeholder="sk_live_..." />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider">Webhook Secret</label>
+                <input type="password" value={liveWebhookSecret} onChange={e => setLiveWebhookSecret(e.target.value)} className="w-full bg-gray-900 border border-gray-700 text-white rounded px-3 py-2 text-sm" placeholder="whsec_..." />
+                {environment === 'production' && (
+                  <button type="button" onClick={provisionWebhook} disabled={loading} className="mt-2 text-[10px] bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 border border-purple-600/30 px-2 py-1 rounded font-bold flex items-center gap-1 transition-all">
+                    <RefreshCw size={10} /> Auto-Provisionar Production
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="pt-4">
-            <button type="submit" disabled={loading} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium">
-              {loading ? 'Salvando...' : 'Salvar Configurações'}
+
+          <div className="flex justify-end pt-4">
+            <button type="submit" disabled={loading} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-blue-600/20 transition-all flex items-center gap-2">
+              {loading ? <RefreshCw className="animate-spin" size={18} /> : <Settings size={18} />}
+              Salvar Configurações Gerais
             </button>
           </div>
         </form>

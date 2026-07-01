@@ -347,17 +347,25 @@ adminRouter.get("/stripe/config", async (req: AuthRequest, res) => {
 
 adminRouter.post("/stripe/config", async (req: AuthRequest, res) => {
   try {
-    const { publishableKey, secretKey, webhookSecret, environment } = req.body;
+    const { 
+      testPublishableKey, testSecretKey, testWebhookSecret, 
+      livePublishableKey, liveSecretKey, liveWebhookSecret, 
+      environment 
+    } = req.body;
     const existing = await db.select().from(stripeConfig).limit(1);
     
     let result;
     if (existing.length > 0) {
       result = await db.update(stripeConfig).set({
-        publishableKey, secretKey, webhookSecret, environment, updatedAt: new Date()
+        testPublishableKey, testSecretKey, testWebhookSecret,
+        livePublishableKey, liveSecretKey, liveWebhookSecret,
+        environment, updatedAt: new Date()
       }).where(eq(stripeConfig.id, existing[0].id)).returning();
     } else {
       result = await db.insert(stripeConfig).values({
-        publishableKey, secretKey, webhookSecret, environment
+        testPublishableKey, testSecretKey, testWebhookSecret,
+        livePublishableKey, liveSecretKey, liveWebhookSecret,
+        environment
       }).returning();
     }
     res.json(result[0]);
@@ -385,19 +393,20 @@ adminRouter.post("/stripe/provision-webhook", async (req: AuthRequest, res) => {
       ],
     });
 
-    // Update DB with the new webhook secret
+    // Update DB with the new webhook secret based on current environment
     const existing = await db.select().from(stripeConfig).limit(1);
-    let result;
-    if (existing.length > 0) {
-      result = await db.update(stripeConfig).set({
-        webhookSecret: endpoint.secret,
-        updatedAt: new Date()
-      }).where(eq(stripeConfig.id, existing[0].id)).returning();
+    if (existing.length === 0) return res.status(400).json({ error: 'Config not found' });
+    
+    const isProd = existing[0].environment === 'production';
+    
+    const updateData: any = { updatedAt: new Date() };
+    if (isProd) {
+      updateData.liveWebhookSecret = endpoint.secret;
     } else {
-      result = await db.insert(stripeConfig).values({
-        webhookSecret: endpoint.secret,
-      }).returning();
+      updateData.testWebhookSecret = endpoint.secret;
     }
+    
+    const result = await db.update(stripeConfig).set(updateData).where(eq(stripeConfig.id, existing[0].id)).returning();
     
     res.json(result[0]);
   } catch (error: any) {

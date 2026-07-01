@@ -118,8 +118,15 @@ export const stripeWebhookRouter = Router();
 stripeWebhookRouter.post("/webhooks/stripe", async (req: any, res) => {
   try {
     const config = await getStripeConfig();
-    if (!config || !config.webhookSecret) {
-      return res.status(500).send("Webhook secret not configured");
+    if (!config) {
+      return res.status(500).send("Stripe config not found");
+    }
+
+    const isProd = config.environment === 'production';
+    const webhookSecret = isProd ? config.liveWebhookSecret : config.testWebhookSecret;
+
+    if (!webhookSecret) {
+      return res.status(500).send(`Stripe ${isProd ? 'Live' : 'Sandbox'} webhook secret not configured`);
     }
 
     const stripe = await getStripe();
@@ -130,7 +137,7 @@ stripeWebhookRouter.post("/webhooks/stripe", async (req: any, res) => {
       event = stripe.webhooks.constructEvent(
         req.rawBody,
         signature,
-        config.webhookSecret
+        webhookSecret
       );
     } catch (err: any) {
       console.error(`Webhook signature verification failed.`, err.message);

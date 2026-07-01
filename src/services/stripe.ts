@@ -2,21 +2,22 @@ import Stripe from 'stripe';
 import { db } from '../db/index.ts';
 import { stripeConfig } from '../db/schema.ts';
 
-let stripeInstance: Stripe | null = null;
-
 export const getStripe = async (): Promise<Stripe> => {
-  if (stripeInstance) return stripeInstance;
-
   const config = await db.select().from(stripeConfig).limit(1);
-  if (!config || config.length === 0 || !config[0].secretKey) {
-    throw new Error('Stripe configuration not found or incomplete');
+  if (!config || config.length === 0) {
+    throw new Error('Stripe configuration not found');
   }
 
-  stripeInstance = new Stripe(config[0].secretKey, {
-    apiVersion: '2025-01-27.acacia' as any, // specify whatever api version is stable
-  });
+  const isProd = config[0].environment === 'production';
+  const secretKey = isProd ? config[0].liveSecretKey : config[0].testSecretKey;
 
-  return stripeInstance;
+  if (!secretKey) {
+    throw new Error(`Stripe ${isProd ? 'Live' : 'Sandbox'} Secret Key is missing`);
+  }
+
+  return new Stripe(secretKey, {
+    apiVersion: '2025-01-27.acacia' as any,
+  });
 };
 
 export const getStripeConfig = async () => {
