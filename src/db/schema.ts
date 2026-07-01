@@ -575,3 +575,84 @@ export const tasksRelations = relations(tasks, ({ one }) => ({
   assignee: one(users, { fields: [tasks.assigneeUid], references: [users.uid] }),
   tenant: one(tenants, { fields: [tasks.tenantId], references: [tenants.id] }),
 }));
+
+// PLATFORM PLANS
+export const plans = pgTable('plans', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull().unique(), // e.g. Free, Pro, Enterprise
+  price: decimal('price').default('0.00'),
+  currency: text('currency').default('BRL'),
+  billingPeriod: text('billing_period').default('monthly'), // monthly, yearly
+  maxUsers: integer('max_users').default(1),
+  maxWorkspaces: integer('max_workspaces').default(1),
+  features: jsonb('features').default([]), // array of strings
+  isPopular: boolean('is_popular').default(false),
+  isActive: boolean('is_active').default(true),
+  stripeProductId: text('stripe_product_id'),
+  stripePriceId: text('stripe_price_id'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// --- STRIPE & BILLING ---
+
+export const stripeConfig = pgTable('stripe_config', {
+  id: serial('id').primaryKey(),
+  publishableKey: text('publishable_key'),
+  secretKey: text('secret_key'),
+  webhookSecret: text('webhook_secret'),
+  environment: text('environment').default('sandbox'), // sandbox, production
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const billingCustomers = pgTable('billing_customers', {
+  id: serial('id').primaryKey(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => users.uid, { onDelete: 'cascade' }),
+  stripeCustomerId: text('stripe_customer_id').notNull().unique(),
+  email: text('email').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (t) => ({
+  tenantIdx: index('billing_customers_tenant_idx').on(t.tenantId),
+  userIdx: index('billing_customers_user_idx').on(t.userId),
+}));
+
+export const billingSubscriptions = pgTable('billing_subscriptions', {
+  id: serial('id').primaryKey(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  planId: integer('plan_id').notNull().references(() => plans.id, { onDelete: 'cascade' }),
+  stripeSubscriptionId: text('stripe_subscription_id').notNull().unique(),
+  status: text('status').notNull(), // active, trialing, past_due, canceled, etc.
+  currentPeriodStart: timestamp('current_period_start'),
+  currentPeriodEnd: timestamp('current_period_end'),
+  cancelAtPeriodEnd: boolean('cancel_at_period_end').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (t) => ({
+  tenantIdx: index('billing_subs_tenant_idx').on(t.tenantId),
+}));
+
+export const billingPayments = pgTable('billing_payments', {
+  id: serial('id').primaryKey(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  stripeInvoiceId: text('stripe_invoice_id'),
+  stripePaymentIntentId: text('stripe_payment_intent_id'),
+  amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
+  currency: text('currency').default('BRL'),
+  status: text('status').notNull(), // succeeded, failed, pending
+  paymentMethod: text('payment_method'), // card, boleto, pix
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => ({
+  tenantIdx: index('billing_payments_tenant_idx').on(t.tenantId),
+}));
+
+export const billingWebhookEvents = pgTable('billing_webhook_events', {
+  id: serial('id').primaryKey(),
+  stripeEventId: text('stripe_event_id').notNull().unique(),
+  type: text('type').notNull(),
+  status: text('status').default('processed'), // processed, failed
+  payload: jsonb('payload').notNull(),
+  error: text('error'),
+  createdAt: timestamp('created_at').defaultNow(),
+});

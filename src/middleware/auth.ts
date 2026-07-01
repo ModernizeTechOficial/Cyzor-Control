@@ -5,6 +5,7 @@ import { DecodedIdToken } from 'firebase-admin/auth';
 export interface AuthRequest extends Request {
   user?: DecodedIdToken;
   workspaceId?: number;
+  tenantId?: string;
 }
 
 export const requireAuth = async (

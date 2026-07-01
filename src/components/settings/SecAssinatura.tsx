@@ -10,15 +10,30 @@ export default function SecAssinatura({ currentPlan, onUpgrade }: { currentPlan:
   // Dynamic system counts
   const [loading, setLoading] = useState(true);
   const [systemStats, setSystemStats] = useState({ companies: 0, projects: 0, products: 0, members: 1 });
+  const [availablePlans, setAvailablePlans] = useState<any[]>([]);
+  const [realInvoices, setRealInvoices] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchUsage = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const res = await fetchWithAuth('/api/workspace-settings');
+        const [res, planRes, invRes] = await Promise.all([
+          fetchWithAuth('/api/workspace-settings'),
+          fetchWithAuth('/api/plans'),
+          fetchWithAuth('/api/stripe/invoices')
+        ]);
+        
         if (res.ok) {
           const sData = await res.json();
           setSystemStats(sData.stats);
+        }
+        if (planRes.ok) {
+          const pData = await planRes.json();
+          setAvailablePlans(pData);
+        }
+        if (invRes.ok) {
+          const iData = await invRes.json();
+          setRealInvoices(iData);
         }
       } catch (err) {
         console.error(err);
@@ -26,21 +41,73 @@ export default function SecAssinatura({ currentPlan, onUpgrade }: { currentPlan:
         setLoading(false);
       }
     };
-    fetchUsage();
-  }, [currentPlan]);
+    fetchData();
+  }, [currentPlan, fetchWithAuth]);
 
-  const handleSelectPlan = (plan: string) => {
-    onUpgrade(plan);
-    setToast({ message: `Plano alterado com sucesso para ${plan}!`, type: 'success' });
+  const handleSelectPlan = async (plan: string) => {
+    try {
+      setLoading(true);
+      const res = await fetchWithAuth('/api/stripe/checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId: plan })
+      });
+      
+      const data = await res.json();
+      if (res.ok && data.url) {
+        window.location.href = data.url; // Redirect to Stripe
+      } else {
+        setToast({ message: data.error || 'Erro ao iniciar checkout', type: 'error' });
+      }
+    } catch (err) {
+      setToast({ message: 'Erro na conexão com o Stripe', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleManageBilling = async () => {
+    try {
+      setLoading(true);
+      const res = await fetchWithAuth('/api/stripe/portal-session', {
+        method: 'POST'
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        window.location.href = data.url;
+      } else {
+        setToast({ message: data.error || 'Erro ao acessar portal de faturamento', type: 'error' });
+      }
+    } catch (err) {
+      setToast({ message: 'Erro na conexão com o Stripe', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Limits layout calculations
   const compileLimits = () => {
-    const caps = {
-      Starter: { maxCompanies: 3, maxUsers: 1, maxIa: 100, labelCompanies: '3', labelUsers: '1', labelIa: '100' },
-      Pro: { maxCompanies: 10, maxUsers: 15, maxIa: 5000, labelCompanies: '10', labelUsers: '15', labelIa: '5.000' },
-      Enterprise: { maxCompanies: 9999, maxUsers: 9999, maxIa: 999999, labelCompanies: 'Ilimitado', labelUsers: 'Ilimitado', labelIa: 'Ilimitado' }
-    }[currentPlan as 'Starter' | 'Pro' | 'Enterprise'] || { maxCompanies: 10, maxUsers: 15, maxIa: 5000, labelCompanies: '10', labelUsers: '15', labelIa: '5.000' };
+    // Find limits based on DB plans if available, else fallback
+    const activeDbPlan = availablePlans.find(p => p.name === currentPlan);
+    
+    let caps = { maxCompanies: 10, maxUsers: 15, maxIa: 5000, labelCompanies: '10', labelUsers: '15', labelIa: '5.000' };
+    
+    if (activeDbPlan) {
+      caps = {
+        maxCompanies: activeDbPlan.maxWorkspaces * 3, // mock logic for companies
+        maxUsers: activeDbPlan.maxUsers,
+        maxIa: activeDbPlan.name === 'Starter' ? 100 : activeDbPlan.name === 'Enterprise' ? 999999 : 5000,
+        labelCompanies: activeDbPlan.maxWorkspaces > 100 ? 'Ilimitado' : String(activeDbPlan.maxWorkspaces * 3),
+        labelUsers: activeDbPlan.maxUsers > 1000 ? 'Ilimitado' : String(activeDbPlan.maxUsers),
+        labelIa: activeDbPlan.name === 'Starter' ? '100' : activeDbPlan.name === 'Enterprise' ? 'Ilimitado' : '5.000'
+      };
+    } else {
+      caps = {
+        Starter: { maxCompanies: 3, maxUsers: 1, maxIa: 100, labelCompanies: '3', labelUsers: '1', labelIa: '100' },
+        Pro: { maxCompanies: 10, maxUsers: 15, maxIa: 5000, labelCompanies: '10', labelUsers: '15', labelIa: '5.000' },
+        Enterprise: { maxCompanies: 9999, maxUsers: 9999, maxIa: 999999, labelCompanies: 'Ilimitado', labelUsers: 'Ilimitado', labelIa: 'Ilimitado' }
+      }[currentPlan as 'Starter' | 'Pro' | 'Enterprise'] || caps;
+    }
 
     const compUsage = systemStats.companies;
     const membUsage = systemStats.members;
@@ -81,9 +148,19 @@ export default function SecAssinatura({ currentPlan, onUpgrade }: { currentPlan:
     <div className="flex flex-col gap-10 animate-in fade-in slide-in-from-bottom-4 duration-300 relative">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      <div className="flex flex-col gap-2">
-        <h2 className="text-2xl font-display font-bold text-[#111111]">Faturamento e Assinatura</h2>
-        <p className="text-sm text-[#64748B] leading-relaxed">Gerencie seu plano SaaS, consulte o consumo de recursos e faça upgrade do seu limite operacional.</p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+        <div className="flex flex-col gap-2">
+          <h2 className="text-2xl font-display font-bold text-[#111111]">Faturamento e Assinatura</h2>
+          <p className="text-sm text-[#64748B] leading-relaxed">Gerencie seu plano SaaS, consulte o consumo de recursos e faça upgrade do seu limite operacional.</p>
+        </div>
+        <button 
+          onClick={handleManageBilling}
+          disabled={loading}
+          className="flex items-center gap-2 bg-[#111111] text-white px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-black transition-all shadow-sm"
+        >
+          <CreditCard size={14} />
+          Gerenciar Pagamento
+        </button>
       </div>
 
       {/* Dynamic Resource consumption limits */}
@@ -142,89 +219,52 @@ export default function SecAssinatura({ currentPlan, onUpgrade }: { currentPlan:
         <h3 className="text-sm font-bold uppercase text-[#111111] tracking-widest border-b border-[#0F172A0F] pb-3">Planos SaaS Disponíveis</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           
-          {/* Starter */}
-          <div className={`border rounded-[24px] p-6 flex flex-col justify-between relative overflow-hidden transition-all duration-300 ${currentPlan === 'Starter' ? 'bg-[#FAFAFA]/50 border-[#111111]/60 shadow-md ring-1 ring-[#111111]/20' : 'bg-[#FFFFFF] border-[#0F172A0F] hover:shadow-sm'}`}>
-            <div className="flex flex-col gap-4">
-              <div className="flex justify-between items-start">
-                <span className="text-xs font-bold uppercase tracking-widest text-[#64748B]">Starter</span>
-                {currentPlan === 'Starter' && <span className="text-[9px] font-bold bg-[#111111] text-white uppercase px-2 py-0.5 rounded tracking-wider flex items-center gap-1"><Check size={10} /> ATIVO</span>}
+          {availablePlans.length > 0 ? availablePlans.map(plan => {
+            const isActivePlan = currentPlan === plan.name;
+            return (
+              <div key={plan.id} className={`border rounded-[24px] p-6 flex flex-col justify-between relative overflow-hidden transition-all duration-300 ${isActivePlan ? 'bg-[#FAFAFA]/50 border-[#111111]/60 shadow-md ring-1 ring-[#111111]/20' : 'bg-[#FFFFFF] border-[#0F172A0F] hover:shadow-sm'}`}>
+                {plan.isPopular && (
+                  <div className="absolute top-0 right-0 bg-[#111111] text-white text-[9px] font-bold px-3 py-1 rounded-bl uppercase tracking-widest flex items-center gap-1">
+                    <Sparkles size={10} className="fill-white" /> Recomendado
+                  </div>
+                )}
+                <div className="flex flex-col gap-4">
+                  <div className="flex justify-between items-start mt-2">
+                    <span className="text-xs font-bold uppercase tracking-widest text-[#111111]">{plan.name}</span>
+                    {isActivePlan && <span className="text-[9px] font-bold bg-[#111111] text-white uppercase px-2 py-0.5 rounded tracking-wider flex items-center gap-1"><Check size={10} /> ATIVO</span>}
+                  </div>
+                  <div>
+                    <h4 className="text-3xl font-display font-bold text-[#111111]">{plan.currency === 'BRL' ? 'R$' : '$'}{plan.price} <span className="text-xs font-medium text-[#64748B]">/{plan.billingPeriod === 'monthly' ? 'mês' : 'ano'}</span></h4>
+                    <p className="text-xs text-[#64748B] mt-1.5 font-medium leading-relaxed">Plano {plan.name} com limites expandidos.</p>
+                  </div>
+                  <ul className="flex flex-col gap-2 pt-2 border-t border-[#0F172A0F]">
+                    <li className="flex items-center gap-2 text-xs font-bold text-[#111111]">
+                      <Check size={14} className="text-[#10B981]" /> 
+                      {plan.maxWorkspaces > 100 ? 'Workspaces Ilimitados' : `${plan.maxWorkspaces} Workspaces`}
+                    </li>
+                    <li className="flex items-center gap-2 text-xs font-bold text-[#111111]">
+                      <Check size={14} className="text-[#10B981]" /> 
+                      {plan.maxUsers > 1000 ? 'Membros Ilimitados' : `${plan.maxUsers} Membros`}
+                    </li>
+                    {plan.features?.map((f: string, i: number) => (
+                      <li key={i} className="flex items-center gap-2 text-xs font-bold text-[#111111]">
+                        <Check size={14} className="text-[#10B981]" /> {f}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <button 
+                  onClick={() => handleSelectPlan(plan.name)}
+                  disabled={isActivePlan}
+                  className={`w-full text-center py-3 rounded-[12px] text-xs font-bold mt-6 transition-all border ${isActivePlan ? 'bg-[#FAFAFA] border-[#0F172A0F] text-[#64748B] cursor-not-allowed' : 'bg-[#111111] text-white hover:bg-black'}`}
+                >
+                  {isActivePlan ? 'Plano Selecionado' : `Mudar para ${plan.name}`}
+                </button>
               </div>
-              <div>
-                <h4 className="text-3xl font-display font-bold text-[#111111]">$0 <span className="text-xs font-medium text-[#64748B]">/mês</span></h4>
-                <p className="text-xs text-[#64748B] mt-1.5 font-medium leading-relaxed">Perfeito para desenvolvedores e ideias isoladas em validação inicial.</p>
-              </div>
-              <ul className="flex flex-col gap-2 pt-2 border-t border-[#0F172A0F]">
-                <li className="flex items-center gap-2 text-xs font-bold text-[#111111]"><Check size={14} className="text-[#10B981]" /> 1 Workspace isolado</li>
-                <li className="flex items-center gap-2 text-xs font-bold text-[#111111]"><Check size={14} className="text-[#10B981]" /> Até 3 empresas</li>
-                <li className="flex items-center gap-2 text-xs font-bold text-[#111111]"><Check size={14} className="text-[#10B981]" /> 1 Assento de usuário</li>
-                <li className="flex items-center gap-2 text-xs font-bold text-[#64748B]/60"><Plus size={14} /> IA Limitada (100 tok)</li>
-              </ul>
-            </div>
-            <button 
-              onClick={() => handleSelectPlan('Starter')}
-              disabled={currentPlan === 'Starter'}
-              className={`w-full text-center py-3 rounded-[12px] text-xs font-bold mt-6 transition-all border ${currentPlan === 'Starter' ? 'bg-[#FAFAFA] border-[#0F172A0F] text-[#64748B] cursor-not-allowed' : 'bg-[#111111] text-white hover:bg-black'}`}
-            >
-              {currentPlan === 'Starter' ? 'Plano Selecionado' : 'Mudar para Free'}
-            </button>
-          </div>
-
-          {/* Pro */}
-          <div className={`border rounded-[24px] p-6 flex flex-col justify-between relative overflow-hidden transition-all duration-300 ${currentPlan === 'Pro' ? 'bg-[#FAFAFA]/50 border-[#111111]/60 shadow-md ring-1 ring-[#111111]/20' : 'bg-[#FFFFFF] border-[#0F172A0F] hover:shadow-sm'}`}>
-            <div className="absolute top-0 right-0 bg-[#111111] text-white text-[9px] font-bold px-3 py-1 rounded-bl uppercase tracking-widest flex items-center gap-1">
-              <Sparkles size={10} className="fill-white" /> Recomendado
-            </div>
-            <div className="flex flex-col gap-4">
-              <div className="flex justify-between items-start mt-2">
-                <span className="text-xs font-bold uppercase tracking-widest text-[#111111]">Profissional (Pro)</span>
-                {currentPlan === 'Pro' && <span className="text-[9px] font-bold bg-[#111111] text-white uppercase px-2 py-0.5 rounded tracking-wider flex items-center gap-1"><Check size={10} /> ATIVO</span>}
-              </div>
-              <div>
-                <h4 className="text-3xl font-display font-bold text-[#111111]">$49 <span className="text-xs font-medium text-[#64748B]">/mês</span></h4>
-                <p className="text-xs text-[#64748B] mt-1.5 font-medium leading-relaxed">Excelente para pequenas agências e estúdios digitais em expansão.</p>
-              </div>
-              <ul className="flex flex-col gap-2 pt-2 border-t border-[#0F172A0F]">
-                <li className="flex items-center gap-2 text-xs font-bold text-[#111111]"><Check size={14} className="text-[#10B981]" /> 5 Workspaces integrados</li>
-                <li className="flex items-center gap-2 text-xs font-bold text-[#111111]"><Check size={14} className="text-[#10B981]" /> Até 10 empresas</li>
-                <li className="flex items-center gap-2 text-xs font-bold text-[#111111]"><Check size={14} className="text-[#10B981]" /> 15 Colaboradores</li>
-                <li className="flex items-center gap-2 text-xs font-bold text-[#111111]"><Check size={14} className="text-[#10B981]" /> IA Pro (5.000 tokens)</li>
-              </ul>
-            </div>
-            <button 
-              onClick={() => handleSelectPlan('Pro')}
-              disabled={currentPlan === 'Pro'}
-              className={`w-full text-center py-3 rounded-[12px] text-xs font-bold mt-6 transition-all border ${currentPlan === 'Pro' ? 'bg-[#FAFAFA] border-[#0F172A0F] text-[#64748B] cursor-not-allowed' : 'bg-[#111111] text-white hover:bg-black'}`}
-            >
-              {currentPlan === 'Pro' ? 'Plano Selecionado' : 'Mudar para Pro'}
-            </button>
-          </div>
-
-          {/* Enterprise */}
-          <div className={`border rounded-[24px] p-6 flex flex-col justify-between relative overflow-hidden transition-all duration-300 ${currentPlan === 'Enterprise' ? 'bg-[#FAFAFA]/50 border-[#111111]/60 shadow-md ring-1 ring-[#111111]/20' : 'bg-[#FFFFFF] border-[#0F172A0F] hover:shadow-sm'}`}>
-            <div className="flex flex-col gap-4">
-              <div className="flex justify-between items-start">
-                <span className="text-xs font-bold uppercase tracking-widest text-[#64748B]">Enterprise</span>
-                {currentPlan === 'Enterprise' && <span className="text-[9px] font-bold bg-[#111111] text-white uppercase px-2 py-0.5 rounded tracking-wider flex items-center gap-1"><Check size={10} /> ATIVO</span>}
-              </div>
-              <div>
-                <h4 className="text-3xl font-display font-bold text-[#111111]">$149 <span className="text-xs font-medium text-[#64748B]">/mês</span></h4>
-                <p className="text-xs text-[#64748B] mt-1.5 font-medium leading-relaxed">Conexões avançadas e estrutura robusta para controle sem barreiras.</p>
-              </div>
-              <ul className="flex flex-col gap-2 pt-2 border-t border-[#0F172A0F]">
-                <li className="flex items-center gap-2 text-xs font-bold text-[#111111]"><Check size={14} className="text-[#10B981]" /> Workspaces Ilimitados</li>
-                <li className="flex items-center gap-2 text-xs font-bold text-[#111111]"><Check size={14} className="text-[#10B981]" /> Empresas Ilimitadas</li>
-                <li className="flex items-center gap-2 text-xs font-bold text-[#111111]"><Check size={14} className="text-[#10B981]" /> Membros Ilimitados</li>
-                <li className="flex items-center gap-2 text-xs font-bold text-[#111111]"><Check size={14} className="text-[#10B981]" /> IA Enterprise sem limites</li>
-              </ul>
-            </div>
-            <button 
-              onClick={() => handleSelectPlan('Enterprise')}
-              disabled={currentPlan === 'Enterprise'}
-              className={`w-full text-center py-3 rounded-[12px] text-xs font-bold mt-6 transition-all border ${currentPlan === 'Enterprise' ? 'bg-[#FAFAFA] border-[#0F172A0F] text-[#64748B] cursor-not-allowed' : 'bg-[#111111] text-white hover:bg-black'}`}
-            >
-              {currentPlan === 'Enterprise' ? 'Plano Selecionado' : 'Mudar para Enterprise'}
-            </button>
-          </div>
+            );
+          }) : (
+            <div className="col-span-1 md:col-span-3 text-center py-10 text-gray-400">Nenhum plano cadastrado no sistema.</div>
+          )}
 
         </div>
       </div>
@@ -244,13 +284,13 @@ export default function SecAssinatura({ currentPlan, onUpgrade }: { currentPlan:
               </tr>
             </thead>
             <tbody className="divide-y divide-[#0F172A0F]">
-              {invoices.map((f, idx) => (
+              {realInvoices.length > 0 ? realInvoices.map((f, idx) => (
                 <tr key={idx} className="hover:bg-[#F8FAFC]">
-                  <td className="px-6 py-4 font-mono text-xs font-bold text-[#111111]">{f.code}</td>
-                  <td className="px-6 py-4 text-xs font-bold text-[#64748B]">{f.due}</td>
-                  <td className="px-6 py-4 text-xs font-bold text-[#111111]">{f.amount}</td>
+                  <td className="px-6 py-4 font-mono text-xs font-bold text-[#111111]">{f.stripeInvoiceId || `#CY-${f.id}`}</td>
+                  <td className="px-6 py-4 text-xs font-bold text-[#64748B]">{new Date(f.createdAt).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 text-xs font-bold text-[#111111]">{f.currency?.toUpperCase()} {f.amount}</td>
                   <td className="px-6 py-4">
-                    <span className="text-[10px] font-bold px-2 py-1 bg-[#10B981]/10 text-[#10B981] rounded-md border border-[#10B981]/20">{f.status}</span>
+                    <span className={`text-[10px] font-bold px-2 py-1 rounded-md border ${f.status === 'succeeded' ? 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}`}>{f.status}</span>
                   </td>
                   <td className="px-6 py-4 flex justify-end">
                     <button className="flex items-center gap-1.5 p-2 bg-[#FAFAFA] hover:bg-[#F1F5F9] rounded-xl text-xs font-bold text-[#111111] border border-[#0F172A0F] transition-all">
@@ -258,7 +298,11 @@ export default function SecAssinatura({ currentPlan, onUpgrade }: { currentPlan:
                     </button>
                   </td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                  <td colSpan={5} className="px-6 py-10 text-center text-xs text-gray-400">Nenhuma fatura encontrada.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

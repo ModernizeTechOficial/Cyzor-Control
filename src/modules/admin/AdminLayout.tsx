@@ -7,6 +7,8 @@ import TenantsAdminView from './views/TenantsAdminView.tsx';
 import CompaniesAdminView from './views/CompaniesAdminView.tsx';
 import UsersAdminView from './views/UsersAdminView.tsx';
 import FinanceAdminView from './views/FinanceAdminView.tsx';
+import { PlansAdminView } from './views/PlansAdminView.tsx';
+import { BillingAdminView } from './views/BillingAdminView.tsx';
 import { useAuth } from '../../context/AuthContext.tsx';
 
 interface AdminLayoutProps {
@@ -67,6 +69,8 @@ export default function AdminLayout({ currentView, setCurrentView }: AdminLayout
           {currentView === 'admin-companies' && <CompaniesAdminView />}
           {currentView === 'admin-users' && <UsersAdminView />}
           {currentView === 'admin-finance' && <FinanceAdminView />}
+          {currentView === 'admin-plans' && <PlansAdminView />}
+          {currentView === 'admin-billing' && <BillingAdminView />}
           {/* add more admin views here */}
           {['admin-infrastructure', 'admin-logs'].includes(currentView as string) && (
             <div className="flex items-center justify-center h-64 border border-dashed border-gray-300 rounded-xl">

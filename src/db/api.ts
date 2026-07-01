@@ -46,6 +46,18 @@ apiRouter.get("/ai/insights", async (req: AuthRequest, res) => {
   }
 });
 
+apiRouter.get("/plans", async (req: AuthRequest, res) => {
+  try {
+    const { plans } = await import('./schema.ts');
+    const { desc } = await import('drizzle-orm');
+    const allPlans = await db.select().from(plans).where(eq(plans.isActive, true)).orderBy(desc(plans.createdAt));
+    res.json(allPlans);
+  } catch (error: any) {
+    console.error("Error fetching plans:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // --- AI MEMORY STATS ---
 apiRouter.get("/ai/memory-stats", async (req: AuthRequest, res) => {
   try {

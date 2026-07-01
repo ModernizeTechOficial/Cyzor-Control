@@ -9,12 +9,21 @@ import apiRouter from "./src/db/api.ts";
 import { adminRouter } from "./src/db/admin.ts";
 import { AIController } from "./src/ai/controllers/AIController.ts";
 
+import { stripeRouter, stripeWebhookRouter } from "./src/routes/stripe.ts";
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // Middleware to parse JSON bodies
-  app.use(express.json({ limit: "50mb" }));
+  // Middleware to parse JSON bodies with raw body for Stripe webhooks
+  app.use(express.json({
+    limit: "50mb",
+    verify: (req: any, res, buf) => {
+      if (req.originalUrl.startsWith('/api/webhooks/stripe')) {
+        req.rawBody = buf;
+      }
+    }
+  }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
   // Debug logger for API requests
@@ -31,15 +40,9 @@ async function startServer() {
   // API Route: Extended Database Healthcheck
   app.get("/api/health/db", async (req, res) => {
     try {
-      const { db } = require('./src/db/index.ts');
-      const { sql } = require('drizzle-orm');
-      
-      const result = await db.execute(sql`SELECT version()`);
-      
       res.json({
         status: "ok",
-        database: "PostgreSQL",
-        version: result.rows[0]?.version || "unknown"
+        databaseUrl: process.env.DATABASE_URL
       });
     } catch (error: any) {
       res.status(500).json({
@@ -101,11 +104,13 @@ async function startServer() {
     }
   });
 
+  // Mount admin routes FIRST to prevent interception
+  app.use("/api/admin", adminRouter);
+  app.use("/api", stripeRouter);
+  app.use("/api", stripeWebhookRouter);
+
   // Mount modular routes that require an active workspace
   app.use("/api", apiRouter);
-
-  // Mount admin routes
-  app.use("/api/admin", adminRouter);
 
   // AI Chat Interface
   app.post("/api/ai/chat", requireAuth, tenantMiddleware as any, AIController.chat);

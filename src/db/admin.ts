@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { requireAuth, AuthRequest } from "../middleware/auth.ts";
 import { db } from "./index.ts";
-import { tenants, users, companies, products, projects, userTenants, financeEntries, tasks, ideas, workspaces } from "./schema.ts";
+import { tenants, users, companies, products, projects, userTenants, financeEntries, tasks, ideas, workspaces, plans } from "./schema.ts";
 import { eq, sql, desc, count } from "drizzle-orm";
 
 export const adminRouter = Router();
@@ -10,12 +10,19 @@ export const adminRouter = Router();
 export const requirePlatformAdmin = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     if (!req.user) {
+      console.log("Admin Middleware: No req.user");
       return res.status(401).json({ error: "Unauthorized" });
     }
     const [userRecord] = await db.select().from(users).where(eq(users.uid, req.user.uid)).limit(1);
-    if (!userRecord || !userRecord.isPlatformAdmin) {
+    if (!userRecord) {
+      console.log("Admin Middleware: No userRecord found for uid:", req.user.uid);
       return res.status(403).json({ error: "Forbidden: Platform Admin only" });
     }
+    if (!userRecord.isPlatformAdmin) {
+      console.log("Admin Middleware: User is not platform admin:", req.user.uid);
+      return res.status(403).json({ error: "Forbidden: Platform Admin only" });
+    }
+    console.log("Admin Middleware: User IS platform admin, proceeding");
     next();
   } catch (error) {
     console.error("Admin middleware error:", error);
@@ -278,3 +285,152 @@ adminRouter.get("/finance", async (req: AuthRequest, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// --- PLANS ---
+adminRouter.get("/plans", async (req: AuthRequest, res) => {
+  try {
+    const allPlans = await db.select().from(plans).orderBy(desc(plans.createdAt));
+    res.json(allPlans);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+adminRouter.post("/plans", async (req: AuthRequest, res) => {
+  try {
+    const { name, price, currency, billingPeriod, maxUsers, maxWorkspaces, features, isPopular, isActive } = req.body;
+    const newPlan = await db.insert(plans).values({
+      name, price, currency, billingPeriod, maxUsers, maxWorkspaces, features, isPopular, isActive
+    }).returning();
+    res.json(newPlan[0]);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+adminRouter.put("/plans/:id", async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { name, price, currency, billingPeriod, maxUsers, maxWorkspaces, features, isPopular, isActive } = req.body;
+    const updated = await db.update(plans)
+      .set({ name, price, currency, billingPeriod, maxUsers, maxWorkspaces, features, isPopular, isActive, updatedAt: new Date() })
+      .where(eq(plans.id, id))
+      .returning();
+    res.json(updated[0]);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+adminRouter.delete("/plans/:id", async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    await db.delete(plans).where(eq(plans.id, id));
+    res.json({ success: true, message: "Plan deleted successfully" });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- STRIPE CONFIG ---
+import { stripeConfig, billingSubscriptions, billingPayments, billingWebhookEvents } from "./schema.ts";
+import { getStripe } from "../services/stripe.ts";
+
+adminRouter.get("/stripe/config", async (req: AuthRequest, res) => {
+  try {
+    const config = await db.select().from(stripeConfig).limit(1);
+    res.json(config[0] || null);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+adminRouter.post("/stripe/config", async (req: AuthRequest, res) => {
+  try {
+    const { publishableKey, secretKey, webhookSecret, environment } = req.body;
+    const existing = await db.select().from(stripeConfig).limit(1);
+    
+    let result;
+    if (existing.length > 0) {
+      result = await db.update(stripeConfig).set({
+        publishableKey, secretKey, webhookSecret, environment, updatedAt: new Date()
+      }).where(eq(stripeConfig.id, existing[0].id)).returning();
+    } else {
+      result = await db.insert(stripeConfig).values({
+        publishableKey, secretKey, webhookSecret, environment
+      }).returning();
+    }
+    res.json(result[0]);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+adminRouter.post("/stripe/sync-plan/:id", async (req: AuthRequest, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [plan] = await db.select().from(plans).where(eq(plans.id, id)).limit(1);
+    
+    if (!plan) return res.status(404).json({ error: 'Plan not found' });
+    
+    const stripe = await getStripe();
+    
+    let productId = plan.stripeProductId;
+    if (!productId) {
+      const product = await stripe.products.create({
+        name: plan.name,
+        description: `Cyzor Control - ${plan.name}`,
+      });
+      productId = product.id;
+    }
+    
+    let priceId = plan.stripePriceId;
+    if (!priceId) {
+      const price = await stripe.prices.create({
+        product: productId,
+        unit_amount: Math.round(Number(plan.price) * 100), // in cents
+        currency: plan.currency?.toLowerCase() || 'brl',
+        recurring: { interval: plan.billingPeriod === 'yearly' ? 'year' : 'month' },
+      });
+      priceId = price.id;
+    }
+    
+    const updated = await db.update(plans).set({
+      stripeProductId: productId,
+      stripePriceId: priceId,
+      updatedAt: new Date()
+    }).where(eq(plans.id, id)).returning();
+    
+    res.json(updated[0]);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+adminRouter.get("/stripe/subscriptions", async (req: AuthRequest, res) => {
+  try {
+    const subs = await db.select().from(billingSubscriptions).orderBy(desc(billingSubscriptions.createdAt));
+    res.json(subs);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+adminRouter.get("/stripe/payments", async (req: AuthRequest, res) => {
+  try {
+    const payments = await db.select().from(billingPayments).orderBy(desc(billingPayments.createdAt));
+    res.json(payments);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+adminRouter.get("/stripe/webhooks", async (req: AuthRequest, res) => {
+  try {
+    const events = await db.select().from(billingWebhookEvents).orderBy(desc(billingWebhookEvents.createdAt)).limit(100);
+    res.json(events);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
