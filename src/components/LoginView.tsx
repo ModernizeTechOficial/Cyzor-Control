@@ -79,7 +79,7 @@ export default function LoginView({ onLogin, onNavigate }: { onLogin: () => void
           </h1>
           
           <p className="text-lg text-gray-400 mb-10 max-w-lg leading-relaxed">
-            O Cyzor é um ERP moderno e seguro para gerenciar empresas, projetos, produtos e finanças corporativas. 
+            O {appName} é um ERP moderno e seguro para gerenciar empresas, projetos, produtos e finanças corporativas. 
             Uma plataforma unificada projetada para simplificar decisões executivas.
           </p>
 
@@ -108,7 +108,7 @@ export default function LoginView({ onLogin, onNavigate }: { onLogin: () => void
 
         <div className="relative z-10 mt-20">
           <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-            © {new Date().getFullYear()} CYZOR SYSTEMS
+            © {new Date().getFullYear()} {appName.toUpperCase()} SYSTEMS
           </p>
         </div>
       </div>

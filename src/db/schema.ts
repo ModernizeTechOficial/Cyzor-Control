@@ -28,6 +28,7 @@ export const users = pgTable('users', {
   phone: text('phone'),
   role: text('role'),
   isPlatformAdmin: boolean('is_platform_admin').default(false),
+  tourCompleted: boolean('tour_completed').default(false),
   settings: jsonb('settings').default({}),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
@@ -612,6 +613,14 @@ export const stripeConfig = pgTable('stripe_config', {
   liveSecretKey: text('live_secret_key'),
   liveWebhookSecret: text('live_webhook_secret'),
   environment: text('environment').default('sandbox'), // sandbox, production
+  
+  // Global Branding
+  globalLogoUrl: text('global_logo_url'),
+  globalIconUrl: text('global_icon_url'),
+  globalLogoSize: text('global_logo_size').default('40'),
+  globalIconSize: text('global_icon_size').default('20'),
+  globalAppName: text('global_app_name').default('CYZOR'),
+  
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 

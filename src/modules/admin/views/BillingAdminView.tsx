@@ -3,7 +3,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { Settings, RefreshCw, CreditCard, Clock, Activity, FileText } from 'lucide-react';
 
 export function BillingAdminView() {
-  const { user, fetchWithAuth } = useAuth();
+  const { user, fetchWithAuth, refreshBranding } = useAuth();
   const [activeTab, setActiveTab] = useState<'config' | 'plans' | 'subscriptions' | 'payments' | 'webhooks'>('config');
   
   // Config
@@ -14,6 +14,13 @@ export function BillingAdminView() {
   const [liveSecretKey, setLiveSecretKey] = useState('');
   const [liveWebhookSecret, setLiveWebhookSecret] = useState('');
   const [environment, setEnvironment] = useState('sandbox');
+  
+  // Global Branding
+  const [globalLogoUrl, setGlobalLogoUrl] = useState('');
+  const [globalIconUrl, setGlobalIconUrl] = useState('');
+  const [globalLogoSize, setGlobalLogoSize] = useState('40');
+  const [globalIconSize, setGlobalIconSize] = useState('20');
+  const [globalAppName, setGlobalAppName] = useState('CYZOR');
   
   // Data
   const [plans, setPlans] = useState<any[]>([]);
@@ -47,6 +54,11 @@ export function BillingAdminView() {
           setLiveSecretKey(data.liveSecretKey || '');
           setLiveWebhookSecret(data.liveWebhookSecret || '');
           setEnvironment(data.environment || 'sandbox');
+          setGlobalLogoUrl(data.globalLogoUrl || '');
+          setGlobalIconUrl(data.globalIconUrl || '');
+          setGlobalLogoSize(data.globalLogoSize || '40');
+          setGlobalIconSize(data.globalIconSize || '20');
+          setGlobalAppName(data.globalAppName || 'CYZOR');
         }
       }
     } catch (e) { console.error(e); }
@@ -62,11 +74,13 @@ export function BillingAdminView() {
         body: JSON.stringify({ 
           testPublishableKey, testSecretKey, testWebhookSecret,
           livePublishableKey, liveSecretKey, liveWebhookSecret,
-          environment 
+          environment,
+          globalLogoUrl, globalIconUrl, globalLogoSize, globalIconSize, globalAppName
         })
       });
       if (res.ok) {
         alert('Configurações salvas!');
+        await refreshBranding();
       }
     } catch (e) {
       alert('Erro ao salvar');
@@ -200,6 +214,50 @@ export function BillingAdminView() {
                 >
                   Production
                 </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Global Branding Section */}
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 space-y-6">
+            <div className="border-b border-gray-700 pb-4">
+              <h3 className="text-lg font-bold text-white">Identidade Visual Global</h3>
+              <p className="text-sm text-gray-400">Branding padrão do sistema para todos os workspaces que não possuem White Label (Pro).</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider">Nome do App Global</label>
+                  <input type="text" value={globalAppName} onChange={e => setGlobalAppName(e.target.value)} className="w-full bg-gray-900 border border-gray-700 text-white rounded px-3 py-2 text-sm" placeholder="CYZOR CONTROL" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider">Tamanho Logo</label>
+                    <input type="text" value={globalLogoSize} onChange={e => setGlobalLogoSize(e.target.value)} className="w-full bg-gray-900 border border-gray-700 text-white rounded px-3 py-2 text-sm" placeholder="40" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider">Tamanho Ícone</label>
+                    <input type="text" value={globalIconSize} onChange={e => setGlobalIconSize(e.target.value)} className="w-full bg-gray-900 border border-gray-700 text-white rounded px-3 py-2 text-sm" placeholder="20" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider">URL do Logo Global</label>
+                  <div className="flex gap-2">
+                    <input type="text" value={globalLogoUrl} onChange={e => setGlobalLogoUrl(e.target.value)} className="flex-1 bg-gray-900 border border-gray-700 text-white rounded px-3 py-2 text-sm" placeholder="https://..." />
+                    {globalLogoUrl && <img src={globalLogoUrl} alt="Preview" className="h-10 w-10 object-contain bg-white rounded p-1" />}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider">URL do Ícone Global</label>
+                  <div className="flex gap-2">
+                    <input type="text" value={globalIconUrl} onChange={e => setGlobalIconUrl(e.target.value)} className="flex-1 bg-gray-900 border border-gray-700 text-white rounded px-3 py-2 text-sm" placeholder="https://..." />
+                    {globalIconUrl && <img src={globalIconUrl} alt="Preview" className="h-10 w-10 object-contain bg-white rounded p-1" />}
+                  </div>
+                </div>
               </div>
             </div>
           </div>

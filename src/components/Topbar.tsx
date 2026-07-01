@@ -1,4 +1,4 @@
-import { Search, Bell, PanelLeftClose, PanelLeft, Sun, Moon, LogOut, User, CheckCircle2, AlertTriangle, Info, Clock, ShieldCheck } from 'lucide-react';
+import { Search, Bell, PanelLeftClose, PanelLeft, Sun, Moon, LogOut, User, CheckCircle2, AlertTriangle, Info, Clock, ShieldCheck, HelpCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useBranding } from '../hooks/useBranding.ts';
@@ -86,7 +86,7 @@ function NotificationMenu() {
   };
 
   return (
-    <div className="relative">
+    <div className="relative" id="notifications-btn">
       <button 
         onClick={() => setShowNotifications(!showNotifications)}
         className="relative w-10 h-10 rounded-[14px] bg-[#FFFFFF] border border-[#0F172A0F] flex items-center justify-center hover:bg-[#FAFAFA] transition-all shadow-[0_2px_8px_rgba(0,0,0,0.02)] text-[#111111]"
@@ -183,7 +183,7 @@ function UserProfileMenu({ setCurrentView }: { setCurrentView?: (view: View) => 
   if (!user) return null;
 
   return (
-    <div className="relative">
+    <div className="relative" id="user-profile-btn">
       <button 
         onClick={() => setShowMenu(!showMenu)}
         className="w-10 h-10 rounded-[14px] bg-[#FFFFFF] border border-[#0F172A0F] overflow-hidden flex items-center justify-center hover:bg-[#FAFAFA] transition-all shadow-[0_2px_8px_rgba(0,0,0,0.02)]"
@@ -238,6 +238,7 @@ export default function Topbar({ isSidebarCollapsed, toggleSidebar, setCurrentVi
   const [isDark, setIsDark] = useState(false);
   const [time, setTime] = useState(new Date());
   const { activeWorkspace } = useAuth();
+  const { appName } = useBranding();
   const [isOnline, setIsOnline] = useState(true);
 
   useEffect(() => {
@@ -287,15 +288,15 @@ export default function Topbar({ isSidebarCollapsed, toggleSidebar, setCurrentVi
         
         <div className="hidden lg:flex items-center gap-8 h-8 px-2">
            <div className="flex flex-col gap-0.5">
-              <span className="text-[9px] font-black text-[#64748B] uppercase tracking-[0.2em] opacity-40">Company</span>
-              <span className="text-[12px] font-bold text-[#111111] tracking-tight">Cyzor Group SA</span>
+              <span className="text-[9px] font-black text-[#64748B] uppercase tracking-[0.2em] opacity-40">Software</span>
+              <span className="text-[12px] font-bold text-[#111111] tracking-tight">{appName}</span>
            </div>
            <div className="w-px h-6 bg-[#0F172A08]" />
            <div className="flex flex-col gap-0.5">
-              <span className="text-[9px] font-black text-[#64748B] uppercase tracking-[0.2em] opacity-40">Workspace</span>
+              <span className="text-[9px] font-black text-[#64748B] uppercase tracking-[0.2em] opacity-40">Ambiente</span>
               <div className="flex items-center gap-2">
                  <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500'}`} />
-                 <span className="text-[12px] font-bold text-[#111111] tracking-tight">{activeWorkspace?.name || 'Main Operations'}</span>
+                 <span className="text-[12px] font-bold text-[#111111] tracking-tight">{activeWorkspace?.name || 'Geral'}</span>
               </div>
            </div>
         </div>
@@ -339,6 +340,14 @@ export default function Topbar({ isSidebarCollapsed, toggleSidebar, setCurrentVi
              className="w-10 h-10 rounded-2xl bg-white border border-[#0F172A08] flex items-center justify-center hover:bg-[#FAFAFA] hover:border-[#0F172A15] transition-all shadow-sm text-[#111111] group"
            >
              {isDark ? <Sun size={18} className="text-[#64748B] group-hover:text-[#111111] transition-colors" /> : <Moon size={18} className="text-[#64748B] group-hover:text-[#111111] transition-colors" />}
+           </button>
+           <button 
+             id="help-center-btn"
+             onClick={() => window.dispatchEvent(new Event('restart-tour'))}
+             className="w-10 h-10 rounded-2xl bg-white border border-[#0F172A08] flex items-center justify-center hover:bg-[#FAFAFA] hover:border-[#0F172A15] transition-all shadow-sm text-[#64748B] hover:text-[#111111] group"
+             title="Fazer Tour"
+           >
+             <HelpCircle size={18} />
            </button>
            <NotificationMenu />
            <UserProfileMenu setCurrentView={setCurrentView} />

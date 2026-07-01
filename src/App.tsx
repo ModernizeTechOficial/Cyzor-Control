@@ -25,12 +25,20 @@ import { useAuth } from './context/AuthContext.tsx';
 import { Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import HomeIntelligence from './components/home/HomeIntelligence';
+import ProductTour from './components/layout/ProductTour';
 
 export default function App() {
   const { user, dbUser, loading } = useAuth();
   const [currentView, setCurrentView] = useState<View | 'admin'>('landing');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [restartTour, setRestartTour] = useState(0);
+
+  useEffect(() => {
+    const handleRestartTour = () => setRestartTour(prev => prev + 1);
+    window.addEventListener('restart-tour', handleRestartTour);
+    return () => window.removeEventListener('restart-tour', handleRestartTour);
+  }, []);
 
   useEffect(() => {
     if (!loading) {
@@ -146,6 +154,10 @@ export default function App() {
           )}
         </motion.button>
       </div>
+
+      {user && !dbUser?.isPlatformAdmin && currentView === 'dashboard' && (
+        <ProductTour key={restartTour} forceStart={restartTour > 0} />
+      )}
     </div>
   );
 }

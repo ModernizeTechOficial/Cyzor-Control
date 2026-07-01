@@ -350,7 +350,8 @@ adminRouter.post("/stripe/config", async (req: AuthRequest, res) => {
     const { 
       testPublishableKey, testSecretKey, testWebhookSecret, 
       livePublishableKey, liveSecretKey, liveWebhookSecret, 
-      environment 
+      environment,
+      globalLogoUrl, globalIconUrl, globalLogoSize, globalIconSize, globalAppName
     } = req.body;
     const existing = await db.select().from(stripeConfig).limit(1);
     
@@ -359,13 +360,16 @@ adminRouter.post("/stripe/config", async (req: AuthRequest, res) => {
       result = await db.update(stripeConfig).set({
         testPublishableKey, testSecretKey, testWebhookSecret,
         livePublishableKey, liveSecretKey, liveWebhookSecret,
-        environment, updatedAt: new Date()
+        environment,
+        globalLogoUrl, globalIconUrl, globalLogoSize, globalIconSize, globalAppName,
+        updatedAt: new Date()
       }).where(eq(stripeConfig.id, existing[0].id)).returning();
     } else {
       result = await db.insert(stripeConfig).values({
         testPublishableKey, testSecretKey, testWebhookSecret,
         livePublishableKey, liveSecretKey, liveWebhookSecret,
-        environment
+        environment,
+        globalLogoUrl, globalIconUrl, globalLogoSize, globalIconSize, globalAppName
       }).returning();
     }
     res.json(result[0]);

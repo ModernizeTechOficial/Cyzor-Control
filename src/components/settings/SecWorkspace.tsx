@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext.tsx';
-import { Layout, Building2, Activity, Plus, Filter, Loader2, Sparkles, Upload } from 'lucide-react';
+import { Layout, Building2, Activity, Plus, Filter, Loader2, Sparkles, Upload, Lock } from 'lucide-react';
 import { MiniCard, WorkspaceItem, SelectField, BtnSave, Toast } from './SettingsHelpers';
 import AssetUploader from './AssetUploader';
+import { useBranding } from '../../hooks/useBranding';
 
 export default function SecWorkspace({ activeWorkspace, onSelect }: { activeWorkspace: string, onSelect: (name: string, id: number) => void }) {
   const { fetchWithAuth, user } = useAuth();
+  const { isWhiteLabelEnabled } = useBranding();
   
   const logoInputRef = useRef<HTMLInputElement>(null);
   const iconInputRef = useRef<HTMLInputElement>(null);
@@ -339,9 +341,23 @@ export default function SecWorkspace({ activeWorkspace, onSelect }: { activeWork
         </div>
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 relative">
         <h3 className="text-sm font-bold uppercase text-[#111111] tracking-widest border-b border-[#0F172A0F] pb-3">Configurações de Identidade</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        {!isWhiteLabelEnabled && (
+          <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-[2px] flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#0F172A0F] p-8 text-center animate-in fade-in zoom-in duration-300">
+            <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mb-3">
+              <Sparkles size={24} />
+            </div>
+            <h4 className="text-base font-bold text-[#111111] mb-1">Recurso de White Label</h4>
+            <p className="text-xs text-[#64748B] max-w-[300px] mb-4">Personalize o logo, ícones e nome da aplicação para seus clientes. Disponível apenas no plano Pro.</p>
+            <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition-all flex items-center gap-2">
+              <Activity size={14} /> Upgrade para Pro
+            </button>
+          </div>
+        )}
+
+        <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 ${!isWhiteLabelEnabled ? 'opacity-40 pointer-events-none grayscale-[0.5]' : ''}`}>
           <div className="flex flex-col gap-2">
             <label className="text-[10px] font-bold tracking-widest uppercase text-[#64748B]">Nome da Aplicação</label>
             <input type="text" value={workspaceName} onChange={(e) => setWorkspaceName(e.target.value)} className="w-full bg-[#FAFAFA] border border-[#0F172A0F] rounded-[16px] py-3.5 px-4 outline-none focus:border-[#111111]/30 text-[#111111] font-bold" />
@@ -351,7 +367,7 @@ export default function SecWorkspace({ activeWorkspace, onSelect }: { activeWork
           <AssetUploader label="Ícone (Light)" url={iconLightUrl} onChange={setIconLightUrl} size={iconLightSize} onSizeChange={setIconLightSize} onUpload={(f) => handleFileUpload(f, 'iconLight')} />
           <AssetUploader label="Ícone (Dark)" url={iconDarkUrl} onChange={setIconDarkUrl} size={iconDarkSize} onSizeChange={setIconDarkSize} onUpload={(f) => handleFileUpload(f, 'iconDark')} />
         </div>
-        <div className="flex justify-start mt-2">
+        <div className={`flex justify-start mt-2 ${!isWhiteLabelEnabled ? 'opacity-40 pointer-events-none' : ''}`}>
           <BtnSave label="Salvar Identidade" onClick={handleSaveWorkspace} loading={saving} />
         </div>
       </div>

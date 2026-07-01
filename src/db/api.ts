@@ -14,6 +14,33 @@ apiRouter.use((req, res, next) => {
   next();
 });
 
+apiRouter.get("/branding", async (req, res) => {
+  try {
+    const { stripeConfig } = await import('./schema.ts');
+    const config = await db.select().from(stripeConfig).limit(1);
+    if (config.length > 0) {
+      res.json({
+        globalLogoUrl: config[0].globalLogoUrl,
+        globalIconUrl: config[0].globalIconUrl,
+        globalLogoSize: config[0].globalLogoSize,
+        globalIconSize: config[0].globalIconSize,
+        globalAppName: config[0].globalAppName
+      });
+    } else {
+      res.json({
+        globalLogoUrl: null,
+        globalIconUrl: null,
+        globalLogoSize: '40',
+        globalIconSize: '20',
+        globalAppName: 'CYZOR'
+      });
+    }
+  } catch (error: any) {
+    console.error("Error fetching branding:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 apiRouter.use(requireAuth);
 
 apiRouter.get("/plans", async (req: AuthRequest, res) => {
@@ -24,6 +51,30 @@ apiRouter.get("/plans", async (req: AuthRequest, res) => {
     res.json(allPlans);
   } catch (error: any) {
     console.error("Error fetching plans:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+apiRouter.get("/user/profile", async (req: AuthRequest, res) => {
+  try {
+    const { users } = await import('./schema.ts');
+    const user = await db.select().from(users).where(eq(users.uid, req.user.uid)).limit(1);
+    if (user.length > 0) {
+      res.json(user[0]);
+    } else {
+      res.status(404).json({ error: "User not found" });
+    }
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+apiRouter.post("/user/complete-tour", async (req: AuthRequest, res) => {
+  try {
+    const { users } = await import('./schema.ts');
+    await db.update(users).set({ tourCompleted: true }).where(eq(users.uid, req.user.uid));
+    res.json({ success: true });
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });

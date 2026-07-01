@@ -18,6 +18,10 @@ interface AuthContextType {
   token: string | null;
   workspaces: any[];
   activeWorkspace: any;
+  tourCompleted: boolean;
+  setTourCompleted: (completed: boolean) => void;
+  globalBranding: any;
+  refreshBranding: () => Promise<void>;
   googleCalendarToken: string | null;
   googleDriveToken: string | null;
   googleTasksToken: string | null;
@@ -48,6 +52,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [workspaces, setWorkspaces] = useState<any[]>([]);
   const [activeWorkspace, setActiveWorkspace] = useState<any>(null);
+  const [tourCompleted, setTourCompleted] = useState<boolean>(true);
+  const [globalBranding, setGlobalBranding] = useState<any>(null);
   
   const [googleCalendarToken, setGoogleCalendarToken] = useState<string | null>(null);
   const [googleDriveToken, setGoogleDriveToken] = useState<string | null>(null);
@@ -107,6 +113,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (workRes.ok) {
         const wdata = await workRes.json();
         setWorkspaces(wdata.workspaces || []);
+        
+        // Find current user profile from DB to check tourCompleted
+        const userRes = await fetch('/api/user/profile', {
+          headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+        if (userRes.ok) {
+          const udata = await userRes.json();
+          setTourCompleted(udata.tourCompleted || false);
+        }
       }
       
       // Notify listeners in UI
@@ -193,6 +208,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Failed to update core state on SQLite:', err);
     }
   };
+
+  const refreshBranding = async () => {
+    try {
+      const res = await fetch('/api/branding');
+      if (res.ok) {
+        const data = await res.json();
+        setGlobalBranding(data);
+      }
+    } catch (e) {
+      console.error("Error refreshing branding:", e);
+    }
+  };
+
+  useEffect(() => {
+    refreshBranding();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -379,6 +410,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       token,
       workspaces,
       activeWorkspace,
+      tourCompleted,
+      setTourCompleted,
+      globalBranding,
+      refreshBranding,
       googleCalendarToken,
       googleDriveToken,
       googleTasksToken,

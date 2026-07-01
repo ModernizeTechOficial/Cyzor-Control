@@ -2,7 +2,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { useState, useEffect } from 'react';
 
 export function useBranding() {
-  const { activeWorkspace } = useAuth();
+  const { activeWorkspace, globalBranding } = useAuth();
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
@@ -14,17 +14,43 @@ export function useBranding() {
   }, []);
 
   const settings = activeWorkspace?.settings || {};
+  const plan = activeWorkspace?.plan || 'Free';
+  const isWhiteLabelEnabled = plan.toLowerCase() === 'pro' || plan.toLowerCase() === 'enterprise';
 
-  const logoUrl = isDarkMode ? (settings.logoDarkUrl || '/logo-dark.png') : (settings.logoLightUrl || '/logo-light.png');
-  const iconUrl = isDarkMode ? (settings.iconDarkUrl || '/icon-dark.png') : (settings.iconLightUrl || '/icon-light.png');
-  const logoSize = isDarkMode ? (settings.logoDarkSize || 40) : (settings.logoLightSize || 40);
-  const iconSize = isDarkMode ? (settings.iconDarkSize || 20) : (settings.iconLightSize || 20);
+  // Fallback values from globalBranding
+  const globalLogo = globalBranding?.globalLogoUrl || (isDarkMode ? '/logo-dark.png' : '/logo-light.png');
+  const globalIcon = globalBranding?.globalIconUrl || (isDarkMode ? '/icon-dark.png' : '/icon-light.png');
+  const globalLogoSize = globalBranding?.globalLogoSize || '40';
+  const globalIconSize = globalBranding?.globalIconSize || '20';
+  const globalAppName = globalBranding?.globalAppName || 'CYZOR';
+
+  // Logic: Only use custom branding if plan is Pro/Enterprise AND custom branding exists
+  const logoUrl = isWhiteLabelEnabled && (isDarkMode ? settings.logoDarkUrl : settings.logoLightUrl) 
+    ? (isDarkMode ? settings.logoDarkUrl : settings.logoLightUrl) 
+    : globalLogo;
+
+  const iconUrl = isWhiteLabelEnabled && (isDarkMode ? settings.iconDarkUrl : settings.iconLightUrl) 
+    ? (isDarkMode ? settings.iconDarkUrl : settings.iconLightUrl) 
+    : globalIcon;
+
+  const logoSize = isWhiteLabelEnabled && (isDarkMode ? settings.logoDarkSize : settings.logoLightSize) 
+    ? (isDarkMode ? settings.logoDarkSize : settings.logoLightSize) 
+    : globalLogoSize;
+
+  const iconSize = isWhiteLabelEnabled && (isDarkMode ? settings.iconDarkSize : settings.iconLightSize) 
+    ? (isDarkMode ? settings.iconDarkSize : settings.iconLightSize) 
+    : globalIconSize;
+
+  const appName = isWhiteLabelEnabled && settings.appName 
+    ? settings.appName 
+    : (activeWorkspace?.name || globalAppName);
 
   return {
     logoUrl,
     iconUrl,
     logoSize,
     iconSize,
-    appName: activeWorkspace?.name || 'CYZOR'
+    appName,
+    isWhiteLabelEnabled
   };
 }

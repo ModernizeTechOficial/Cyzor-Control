@@ -89,7 +89,7 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
   }, [activeWorkspace]);
 
   return (
-    <div className="w-full mx-auto pb-12 flex flex-col gap-10 animate-in fade-in duration-500 relative px-4 sm:px-6 lg:px-10">
+    <div id="main-dashboard" className="w-full mx-auto pb-12 flex flex-col gap-10 animate-in fade-in duration-500 relative px-4 sm:px-6 lg:px-10">
       {/* Header, Visão Executiva do Ecossistema and Key Overview (Full Width) */}
       <div className="flex flex-col gap-8">
         <HomeHeader />
