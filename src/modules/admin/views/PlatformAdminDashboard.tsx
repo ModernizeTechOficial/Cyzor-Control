@@ -90,59 +90,120 @@ export default function PlatformAdminDashboard({ metrics, loading, onRefresh }: 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 max-w-7xl mx-auto pb-10">
       
-      {/* 1. HERO DO DASHBOARD - WELCOME AREA */}
-      <div className="bg-white border border-[#ECECEF] rounded-[24px] p-6 shadow-[0_1px_3px_rgba(0,0,0,0.01)] relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
-        {/* Subtle decorative vector mesh overlay for high-end look */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[radial-gradient(ellipse_at_top_right,#EEF2FF_0%,transparent_70%)] pointer-events-none -z-10" />
+      {/* 1. HERO DO DASHBOARD - WELCOME AREA REDESIGN */}
+      <div className="bg-white border border-[#ECECEF] rounded-[24px] p-8 shadow-[0_1px_3px_rgba(0,0,0,0.01)] relative overflow-hidden transition-all duration-300">
+        {/* Premium subtle graphic layout element (Light ambient blur) */}
+        <div className="absolute top-0 right-0 w-80 h-80 bg-[radial-gradient(ellipse_at_top_right,#EEF2FF_0%,transparent_60%)] pointer-events-none -z-10" />
         
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-indigo-600 font-mono bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded-full select-none uppercase tracking-wider flex items-center gap-1.5 animate-pulse">
-              <Sparkles size={11} className="animate-spin text-indigo-600" />
-              Platform HQ Active
-            </span>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+          {/* Left Column: Core info and dynamic status grid */}
+          <div className="space-y-6 flex-1">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono font-bold tracking-widest text-zinc-400 uppercase">
+                  SYSTEM CORE
+                </span>
+                <span className="w-1.5 h-1.5 rounded-full bg-[#6366F1] animate-ping" />
+                <span className="text-[10px] font-bold text-zinc-500 font-mono flex items-center gap-1">
+                  PLATFORM HQ
+                </span>
+              </div>
+
+              <div>
+                <h1 className="text-3xl md:text-4xl font-extrabold text-zinc-950 tracking-tight leading-none mb-2">
+                  Bom dia, {user?.displayName || 'Diego'} 👋
+                </h1>
+                <p className="text-xs md:text-sm text-zinc-500 font-medium">
+                  Toda a sua infraestrutura cloud, automações de microsserviços e gateways estão operando normalmente.
+                </p>
+              </div>
+            </div>
+
+            {/* Premium Interactive Cockpit Grid - Vercel/Linear style */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
+              
+              {/* Status 1: Environment */}
+              <div className="bg-[#FAFAFB] border border-[#ECECEF] rounded-[16px] p-3 hover:border-zinc-300 transition-all group flex flex-col justify-between h-16">
+                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider font-mono">Environment</span>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <span className="text-[11px] font-bold text-zinc-950">Production HQ</span>
+                </div>
+              </div>
+
+              {/* Status 2: SaaS Tenants */}
+              <div className="bg-[#FAFAFB] border border-[#ECECEF] rounded-[16px] p-3 hover:border-zinc-300 transition-all group flex flex-col justify-between h-16">
+                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider font-mono">Workspaces</span>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <Building2 size={12} className="text-zinc-600" />
+                  <span className="text-[11px] font-bold text-zinc-950">{totalTenants} Active SaaS</span>
+                </div>
+              </div>
+
+              {/* Status 3: Uptime */}
+              <div className="bg-[#FAFAFB] border border-[#ECECEF] rounded-[16px] p-3 hover:border-zinc-300 transition-all group flex flex-col justify-between h-16">
+                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider font-mono">Uptime Monitor</span>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className="text-[11px] font-bold text-emerald-600 font-mono">99.99% Global</span>
+                </div>
+              </div>
+
+              {/* Status 4: Stripe Gate */}
+              <div className="bg-[#FAFAFB] border border-[#ECECEF] rounded-[16px] p-3 hover:border-zinc-300 transition-all group flex flex-col justify-between h-16">
+                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider font-mono">Stripe Gateway</span>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <CreditCard size={12} className="text-[#6366F1]" />
+                  <span className="text-[11px] font-bold text-zinc-950">Connected</span>
+                </div>
+              </div>
+
+              {/* Status 5: GitHub integrations */}
+              <div className="bg-[#FAFAFB] border border-[#ECECEF] rounded-[16px] p-3 hover:border-zinc-300 transition-all group flex flex-col justify-between h-16">
+                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider font-mono">Git Engine</span>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <GitBranch size={12} className="text-zinc-800" />
+                  <span className="text-[11px] font-bold text-zinc-950">Synced</span>
+                </div>
+              </div>
+
+              {/* Status 6: AI Assistant core */}
+              <div className="bg-[#FAFAFB] border border-[#ECECEF] rounded-[16px] p-3 hover:border-zinc-300 transition-all group flex flex-col justify-between h-16">
+                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider font-mono">AI Observers</span>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <Sparkles size={11} className="text-[#8B5CF6] animate-pulse" />
+                  <span className="text-[11px] font-bold text-zinc-950">Enabled</span>
+                </div>
+              </div>
+
+            </div>
           </div>
 
-          <div>
-            <h1 className="text-3xl font-extrabold text-zinc-950 tracking-tight leading-none mb-1">
-              Bom dia, {user?.displayName || 'Diego'} 👋
-            </h1>
-            <p className="text-sm text-zinc-500 font-medium">
-              Toda sua infraestrutura está funcionando normalmente.
-            </p>
-          </div>
+          {/* Right Column: Premium Active Latency Card and Resync Button */}
+          <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end justify-between lg:justify-center gap-4 border border-[#ECECEF] p-5 rounded-[20px] bg-[#FAFAFB] lg:min-w-[280px]">
+            <div className="space-y-1.5 text-left lg:text-right w-full">
+              <span className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest block font-mono">CYZOR CLOUD METRICS</span>
+              <div className="flex items-center lg:justify-end gap-2">
+                <span className="text-2xl font-black text-zinc-950 tracking-tight font-mono">42ms</span>
+                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.2 rounded">Global Avg</span>
+              </div>
+              <span className="text-[9px] text-zinc-400 font-medium block">Orquestrador AWS & GCP conectado com sucesso</span>
+            </div>
 
-          {/* Chips showing Core platform features */}
-          <div className="flex flex-wrap gap-2 pt-1.5">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-1 bg-zinc-950 text-white rounded-xl border border-zinc-900 shadow-sm">
-              ● Production
-            </span>
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-1 bg-[#FAFAFB] text-zinc-600 rounded-xl border border-[#ECECEF] shadow-sm">
-              {totalTenants} Active SaaS
-            </span>
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-100 shadow-sm">
-              99.99% Uptime
-            </span>
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100 shadow-sm flex items-center gap-1">
-              <CreditCard size={10} /> Stripe Connected
-            </span>
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-1 bg-zinc-50 text-zinc-700 rounded-xl border border-zinc-200 shadow-sm flex items-center gap-1">
-              <GitBranch size={10} /> GitHub Connected
-            </span>
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-1 bg-purple-50 text-purple-700 rounded-xl border border-purple-100 shadow-sm flex items-center gap-1">
-              <Sparkles size={10} /> AI Enabled
-            </span>
+            <div className="h-[1px] w-full bg-[#ECECEF] hidden lg:block" />
+
+            <button 
+              onClick={onRefresh}
+              disabled={loading}
+              className="px-4 py-2.5 bg-zinc-950 hover:bg-zinc-800 border border-zinc-900 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-sm shrink-0 active:scale-95 disabled:opacity-50 w-full"
+            >
+              <RefreshCw size={12} className={loading ? 'animate-spin text-indigo-400' : 'text-zinc-400'} />
+              <span>{loading ? 'Sincronizando...' : 'RESSINCRONIZAR INFRA'}</span>
+            </button>
           </div>
         </div>
-
-        <button 
-          onClick={onRefresh}
-          disabled={loading}
-          className="px-4 py-2.5 bg-[#FAFAFB] hover:bg-zinc-100 border border-[#ECECEF] text-zinc-700 hover:text-zinc-950 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm self-start md:self-center shrink-0 active:scale-95 disabled:opacity-50"
-        >
-          <RefreshCw size={12} className={loading ? 'animate-spin text-indigo-600' : 'text-zinc-500'} />
-          <span>{loading ? 'Sincronizando...' : 'RESSINCRONIZAR INFRA'}</span>
-        </button>
       </div>
 
       {/* 2. REUSABLE KPIs CARD BLOCK */}

@@ -1,6 +1,18 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, CheckCircle2, Rocket, ArrowRight, X, ShieldCheck, Zap } from 'lucide-react';
+import { 
+  Sparkles, 
+  ArrowRight, 
+  X, 
+  ShieldCheck, 
+  Zap, 
+  Layers, 
+  Cpu, 
+  Check, 
+  Lock, 
+  Activity,
+  UserCheck
+} from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useBranding } from '../../hooks/useBranding';
 
@@ -12,7 +24,7 @@ interface WelcomeModalProps {
 
 export default function WelcomeModal({ isOpen, onClose, onUpgrade }: WelcomeModalProps) {
   const { dbUser } = useAuth();
-  const { appName, logoUrl, logoSize } = useBranding();
+  const { appName, logoUrl } = useBranding();
   
   const currentPlan = dbUser?.currentPlan || 'free';
   const isPaid = currentPlan.toLowerCase() !== 'free';
@@ -20,155 +32,204 @@ export default function WelcomeModal({ isOpen, onClose, onUpgrade }: WelcomeModa
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4 md:p-6 overflow-y-auto">
+          {/* Deep blur overlay for maximum visual refinement */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-[#0F172A60] backdrop-blur-xl"
+            className="absolute inset-0 bg-zinc-950/40 backdrop-blur-md"
           />
           
+          {/* Main Card Canvas */}
           <motion.div
-            initial={{ scale: 0.95, opacity: 0, y: 30 }}
+            initial={{ scale: 0.97, opacity: 0, y: 15 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: 30 }}
-            className="relative w-full max-w-2xl bg-white rounded-[32px] shadow-[0_40px_100px_rgba(0,0,0,0.15)] border border-[#0F172A0F] overflow-hidden flex flex-col md:flex-row"
+            exit={{ scale: 0.97, opacity: 0, y: 15 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+            className="relative w-full max-w-2xl bg-white rounded-[32px] shadow-[0_32px_80px_-20px_rgba(0,0,0,0.12)] border border-[#ECECEF] overflow-hidden flex flex-col z-10"
           >
-            {/* Left Decorative Sidebar (Tech Style) */}
-            <div className="w-full md:w-48 bg-[#111111] p-8 flex flex-col items-center justify-between relative overflow-hidden">
-              <div className="absolute inset-0 opacity-10">
-                <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-500 via-transparent to-transparent"></div>
-                <div className="grid grid-cols-4 gap-1 p-4">
-                  {Array.from({ length: 16 }).map((_, i) => (
-                    <div key={i} className="w-1 h-1 bg-white rounded-full"></div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="relative z-10 flex flex-col items-center gap-6">
-                <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm border border-white/10 shadow-xl">
+            {/* Top Minimalist Header Bar */}
+            <div className="flex items-center justify-between px-8 pt-8 pb-4 border-b border-zinc-50">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-zinc-950 flex items-center justify-center border border-zinc-900 shadow-sm overflow-hidden select-none">
                   {logoUrl ? (
-                    <img src={logoUrl} alt="Logo" style={{ height: '32px' }} className="object-contain" />
+                    <img src={logoUrl} alt="Logo" className="w-5 h-5 object-contain" />
                   ) : (
-                    <span className="text-white font-black text-2xl uppercase">{appName.charAt(0)}</span>
+                    <span className="text-white font-extrabold text-xs tracking-tight">{appName.charAt(0)}</span>
                   )}
                 </div>
-                <div className="flex flex-col items-center gap-1">
-                  <div className="h-1 w-8 bg-blue-500 rounded-full"></div>
-                  <span className="text-[10px] font-mono text-white/40 uppercase tracking-[0.2em]">Cyzor_ID</span>
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black tracking-wider text-zinc-950 uppercase font-mono">{appName} SYSTEMS</span>
+                  <span className="text-[9px] text-zinc-400 font-medium">Console de Operações</span>
                 </div>
               </div>
 
-              <div className="relative z-10 flex flex-col gap-2 w-full">
-                <div className="h-[2px] w-full bg-white/5 rounded-full overflow-hidden">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: '70%' }}
-                    transition={{ duration: 1.5, ease: "easeOut" }}
-                    className="h-full bg-blue-500" 
-                  />
-                </div>
-                <span className="text-[8px] font-mono text-white/30 text-center uppercase tracking-widest">System_Sync_092</span>
+              <div className="flex items-center gap-3">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-[10px] font-bold text-emerald-700 font-mono uppercase tracking-wider select-none">
+                  <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                  Sessão Segura
+                </span>
+                
+                <button 
+                  onClick={onClose}
+                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-[#FAFAFB] hover:bg-zinc-100 text-zinc-400 hover:text-zinc-900 border border-[#ECECEF] transition-all"
+                  aria-label="Fechar"
+                >
+                  <X size={14} strokeWidth={2.5} />
+                </button>
               </div>
             </div>
 
-            {/* Main Content Area */}
-            <div className="flex-1 p-8 sm:p-12 bg-white relative">
-              <button 
-                onClick={onClose}
-                className="absolute top-6 right-6 w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100 text-gray-400 hover:text-gray-900 transition-all z-10 border border-gray-100"
-              >
-                <X size={20} />
-              </button>
-
-              <div className="text-left">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Bem-vindo à Central</span>
+            {/* Core Body Container */}
+            <div className="p-8 md:p-10 space-y-8">
+              
+              {/* Dynamic Personalized Hero */}
+              <div className="space-y-3">
+                <div className="inline-flex items-center gap-1.5 text-indigo-600">
+                  <Sparkles size={14} className="animate-pulse" />
+                  <span className="text-[10px] font-extrabold font-mono tracking-widest uppercase">Acesso Autorizado</span>
                 </div>
-
-                <h2 className="text-4xl font-black text-[#111111] mb-4 tracking-tighter leading-tight">
-                  Olá, <span className="text-blue-600">{dbUser?.displayName?.split(' ')[0] || 'Gestor'}</span>
-                </h2>
                 
-                <p className="text-[#64748B] mb-10 leading-relaxed font-medium text-lg max-w-sm">
-                  Seu ambiente operacional está pronto. Vamos elevar o nível da sua gestão estratégica.
-                </p>
+                <div>
+                  <h2 className="text-3xl md:text-4xl font-extrabold text-zinc-950 tracking-tight leading-none mb-2">
+                    Bem-vindo de volta, <span className="text-transparent bg-clip-text bg-gradient-to-r from-zinc-900 via-indigo-950 to-indigo-600">{dbUser?.displayName?.split(' ')[0] || 'Diego'}</span>
+                  </h2>
+                  <p className="text-sm text-zinc-500 font-medium leading-relaxed max-w-xl">
+                    Seu cockpit operacional de monitoramento, infraestrutura e finanças foi carregado. Suas chaves de segurança e microsserviços estão prontos para execução de alta performance.
+                  </p>
+                </div>
+              </div>
 
-                {/* Status Dashboard Panel */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
-                  <div className="p-5 rounded-2xl bg-[#FAFAFA] border border-[#0F172A0F] group hover:border-blue-500/20 transition-all">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="p-2 rounded-lg bg-white shadow-sm border border-gray-100">
-                        <Zap size={16} className={!isPaid ? "text-amber-500" : "text-blue-500"} />
-                      </div>
-                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider ${!isPaid ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
-                        {currentPlan.toUpperCase()}
-                      </span>
+              {/* Advanced System Overview Bento (Clean Grid) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                
+                {/* Bento Card 1: Subscription Tier status */}
+                <div className="bg-[#FAFAFB] border border-[#ECECEF] rounded-[24px] p-5 hover:border-zinc-300 transition-all flex flex-col justify-between h-40">
+                  <div className="flex items-center justify-between">
+                    <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center">
+                      <Zap size={16} className="text-indigo-600" />
                     </div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Status do Plano</p>
-                    <p className="text-sm font-bold text-[#111111]">
-                      {!isPaid ? 'Período de Teste Ativo' : 'Assinatura Pro Ativa'}
+                    <span className={`text-[9px] font-black tracking-widest uppercase px-2.5 py-1 rounded-xl font-mono ${isPaid ? 'bg-indigo-600 text-white' : 'bg-amber-100 text-amber-800'}`}>
+                      Plano {currentPlan}
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-1 mt-4">
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block font-mono">STATUS DA CONTA</span>
+                    <h3 className="text-sm font-bold text-zinc-950">
+                      {isPaid ? 'Assinatura Pro Corporativa Ativa' : 'Período de Testes Corporativo'}
+                    </h3>
+                    <p className="text-[11px] text-zinc-500 font-medium">
+                      {isPaid ? 'Acesso ilimitado e whitelabel ativado.' : 'Sua licença possui 14 dias de acesso completo.'}
                     </p>
                   </div>
+                </div>
 
-                  <div className="p-5 rounded-2xl bg-[#FAFAFA] border border-[#0F172A0F] group hover:border-blue-500/20 transition-all">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="p-2 rounded-lg bg-white shadow-sm border border-gray-100">
-                        <Rocket size={16} className="text-blue-500" />
-                      </div>
-                      <div className="flex -space-x-2">
-                        <div className="w-6 h-6 rounded-full border-2 border-white bg-blue-100"></div>
-                        <div className="w-6 h-6 rounded-full border-2 border-white bg-indigo-100"></div>
-                      </div>
+                {/* Bento Card 2: Security Credentials */}
+                <div className="bg-[#FAFAFB] border border-[#ECECEF] rounded-[24px] p-5 hover:border-zinc-300 transition-all flex flex-col justify-between h-40">
+                  <div className="flex items-center justify-between">
+                    <div className="w-9 h-9 rounded-xl bg-zinc-950/5 border border-zinc-950/10 flex items-center justify-center">
+                      <ShieldCheck size={16} className="text-zinc-900" />
                     </div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Acesso Global</p>
-                    <p className="text-sm font-bold text-[#111111]">Recursos Desbloqueados</p>
+                    <span className="text-[9px] font-black tracking-widest uppercase px-2.5 py-1 bg-zinc-900 text-white rounded-xl font-mono">
+                      E2E Encrypted
+                    </span>
+                  </div>
+
+                  <div className="space-y-1 mt-4">
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block font-mono">SEGURANÇA CORPORATIVA</span>
+                    <h3 className="text-sm font-bold text-zinc-950">Privacidade Blindada</h3>
+                    <p className="text-[11px] text-zinc-500 font-medium">
+                      Chaves de API ocultas no backend e dados blindados via Google Cloud Firebase.
+                    </p>
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-4 items-center">
-                  {!isPaid ? (
-                    <button
-                      onClick={onUpgrade}
-                      className="w-full sm:w-auto px-8 h-14 bg-[#111111] hover:bg-black text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl shadow-black/10 active:scale-[0.98]"
-                    >
-                      Ativar Plano Pro
-                      <ArrowRight size={18} />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={onClose}
-                      className="w-full sm:w-auto px-8 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl shadow-blue-600/20 active:scale-[0.98]"
-                    >
-                      Acessar Dashboard
-                      <ArrowRight size={18} />
-                    </button>
-                  )}
-                  
+                {/* Bento Card 3: Connected Integrations list */}
+                <div className="bg-[#FAFAFB] border border-[#ECECEF] rounded-[24px] p-5 hover:border-zinc-300 transition-all flex flex-col justify-between h-36 sm:col-span-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-9 h-9 rounded-xl bg-zinc-950/5 border border-zinc-950/10 flex items-center justify-center">
+                        <Layers size={16} className="text-zinc-900" />
+                      </div>
+                      <span className="text-xs font-bold text-zinc-950">Módulos Corporativos Sincronizados</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse" />
+                      <span className="text-[9px] font-bold text-zinc-500 font-mono uppercase tracking-wider">Sync OK</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                    <div className="flex items-center gap-1.5">
+                      <Check size={12} className="text-indigo-600 shrink-0" strokeWidth={3} />
+                      <span className="text-[10px] text-zinc-600 font-medium font-mono">Financeiro</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Check size={12} className="text-indigo-600 shrink-0" strokeWidth={3} />
+                      <span className="text-[10px] text-zinc-600 font-medium font-mono">IA CoPilot</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Check size={12} className="text-indigo-600 shrink-0" strokeWidth={3} />
+                      <span className="text-[10px] text-zinc-600 font-medium font-mono">Projetos</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Check size={12} className="text-indigo-600 shrink-0" strokeWidth={3} />
+                      <span className="text-[10px] text-zinc-600 font-medium font-mono">Workspaces</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Dynamic Action Call to Actions */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-4 border-t border-zinc-100">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-400 font-mono uppercase tracking-widest">
+                    <UserCheck size={12} className="text-zinc-400" />
+                    Identificação de Sessão
+                  </div>
+                  <span className="text-xs text-zinc-500 font-medium block">
+                    Conectado como <span className="text-zinc-950 font-semibold">{dbUser?.email}</span>
+                  </span>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2.5 shrink-0">
                   {!isPaid && (
                     <button
-                      onClick={onClose}
-                      className="w-full sm:w-auto px-8 h-14 rounded-2xl font-bold text-[#64748B] hover:text-[#111111] hover:bg-[#FAFAFA] transition-all flex items-center justify-center"
+                      onClick={onUpgrade}
+                      className="px-6 py-3 bg-zinc-950 hover:bg-zinc-800 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 text-center"
                     >
-                      Continuar no Trial
+                      ATIVAR PLANO PRO
                     </button>
                   )}
-                </div>
 
-                {!isPaid && (
-                  <div className="mt-8 pt-8 border-t border-gray-100 flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
-                      <Sparkles size={16} className="text-amber-500" />
-                    </div>
-                    <p className="text-[11px] text-[#94A3B8] font-medium leading-relaxed">
-                      Sua conta possui <span className="text-amber-600 font-bold">14 dias de acesso premium</span>. <br /> Experimente a inteligência artificial sem compromisso.
-                    </p>
-                  </div>
-                )}
+                  <button
+                    onClick={onClose}
+                    className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/15 active:scale-95"
+                  >
+                    <span>ACESSAR COCKPIT</span>
+                    <ArrowRight size={14} />
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Premium Cryptographic Footer Bar */}
+            <div className="bg-[#FAFAFB] border-t border-[#ECECEF] px-8 py-3.5 flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Lock size={10} className="text-zinc-400" />
+                <span className="text-[9px] font-mono text-zinc-400 tracking-wider uppercase font-semibold">CYZOR_ENCRYPTION_LAYER_ACTIVE</span>
+              </div>
+              <div className="flex items-center gap-1.5 font-mono text-[9px] text-zinc-400">
+                <Activity size={10} className="text-emerald-500 animate-pulse" />
+                <span>SERVER: ONLINE</span>
               </div>
             </div>
+
           </motion.div>
         </div>
       )}

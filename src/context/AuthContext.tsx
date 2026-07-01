@@ -385,6 +385,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setGoogleKeepToken(null);
       localStorage.removeItem('active_workspace');
       localStorage.removeItem('saas_current_plan');
+      sessionStorage.removeItem('welcome_modal_shown');
       window.dispatchEvent(new Event('workspaceChanged'));
     } catch (error) {
       console.error('Sign-Out failed:', error);

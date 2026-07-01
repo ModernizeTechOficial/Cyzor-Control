@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   LayoutDashboard, 
   Building2, 
@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { View } from '../../../types.ts';
 import { useAuth } from '../../../context/AuthContext.tsx';
+import { useEvents } from '../../../context/EventContext.tsx';
+import EventDrawer from '../../../components/layout/EventDrawer.tsx';
 
 interface AdminSidebarProps {
   isCollapsed: boolean;
@@ -27,6 +29,81 @@ interface AdminSidebarProps {
 
 export default function AdminSidebar({ isCollapsed, toggleSidebar, currentView, setCurrentView }: AdminSidebarProps) {
   const { logout, user } = useAuth();
+  const { getPulseState, getBadgeCount } = useEvents();
+
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<'deploys' | 'users' | 'billing' | 'infrastructure' | 'logs' | 'all'>('all');
+
+  const onOpenEvents = (category: typeof selectedCategory) => {
+    setSelectedCategory(category);
+    setDrawerOpen(true);
+  };
+
+  const renderStatusDot = (itemId: string) => {
+    const pulseColor = getPulseState(itemId);
+    let pulseClass = 'bg-emerald-500 border-emerald-400 animate-pulse-slow';
+    let titleText = 'Módulo saudável e monitorado em tempo real';
+
+    if (pulseColor === 'blue') {
+      pulseClass = 'bg-blue-500 border-blue-400 animate-pulse-soft';
+      titleText = 'Atividade recente detectada';
+    } else if (pulseColor === 'yellow') {
+      pulseClass = 'bg-amber-500 border-amber-400 animate-pulse-moderate';
+      titleText = 'Aviso pendente: Requer atenção';
+    } else if (pulseColor === 'red') {
+      pulseClass = 'bg-rose-500 border-rose-400 animate-pulse-intense';
+      titleText = 'Problema crítico detectado';
+    }
+
+    // Map itemId to Category
+    let category: typeof selectedCategory = 'all';
+    if (itemId === 'admin-tenants') category = 'deploys';
+    else if (itemId === 'admin-users') category = 'users';
+    else if (itemId === 'admin-finance' || itemId === 'admin-billing') category = 'billing';
+    else if (itemId === 'admin-infrastructure') category = 'infrastructure';
+    else if (itemId === 'admin-logs') category = 'logs';
+
+    return (
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          if (category !== 'all') {
+            onOpenEvents(category);
+          }
+        }}
+        title={`${titleText} (Clique para ver eventos)`}
+        className={`w-2 h-2 rounded-full ${pulseClass} shrink-0 cursor-pointer relative group/dot`}
+        aria-label={titleText}
+      >
+        <span className="absolute -inset-1 rounded-full opacity-0 group-hover/dot:opacity-100 transition-opacity bg-black/5" />
+      </button>
+    );
+  };
+
+  const renderBadgeCount = (itemId: string) => {
+    const count = getBadgeCount(itemId);
+    if (count === 0) return null;
+
+    let category: typeof selectedCategory = 'all';
+    if (itemId === 'admin-tenants') category = 'deploys';
+    else if (itemId === 'admin-users') category = 'users';
+    else if (itemId === 'admin-finance' || itemId === 'admin-billing') category = 'billing';
+    else if (itemId === 'admin-infrastructure') category = 'infrastructure';
+    else if (itemId === 'admin-logs') category = 'logs';
+
+    return (
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onOpenEvents(category);
+        }}
+        title={`Possui ${count} eventos recentes (Clique para expandir)`}
+        className="ml-1.5 px-2 py-0.5 text-[8px] font-extrabold font-mono bg-zinc-950 hover:bg-indigo-600 text-white rounded-full transition-all shrink-0 active:scale-90"
+      >
+        {count}
+      </button>
+    );
+  };
 
   const categories = [
     {
@@ -112,7 +189,7 @@ export default function AdminSidebar({ isCollapsed, toggleSidebar, currentView, 
                     key={item.id}
                     onClick={() => setCurrentView(item.id as View)}
                     title={isCollapsed ? item.label : ''}
-                    className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md transition-all group relative ${
+                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md transition-all group relative ${
                       isActive 
                         ? 'bg-zinc-200/60 text-zinc-950 font-medium' 
                         : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/25'
@@ -122,12 +199,18 @@ export default function AdminSidebar({ isCollapsed, toggleSidebar, currentView, 
                     
                     {!isCollapsed && (
                       <div className="flex items-center justify-between flex-1 min-w-0">
-                        <span className="text-[11px] tracking-tight whitespace-nowrap truncate">{item.label}</span>
-                        {item.isBeta && (
-                          <span className="text-[8px] font-semibold tracking-wider px-1 py-0.2 rounded bg-zinc-200/80 text-zinc-500 shrink-0 scale-90">
-                            Beta
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-[11px] tracking-tight whitespace-nowrap truncate">{item.label}</span>
+                          {renderStatusDot(item.id)}
+                        </div>
+                        <div className="flex items-center">
+                          {item.isBeta && (
+                            <span className="text-[8px] font-semibold tracking-wider px-1 py-0.2 rounded bg-zinc-200/80 text-zinc-500 shrink-0 scale-90">
+                              Beta
+                            </span>
+                          )}
+                          {renderBadgeCount(item.id)}
+                        </div>
                       </div>
                     )}
 
@@ -183,6 +266,13 @@ export default function AdminSidebar({ isCollapsed, toggleSidebar, currentView, 
           {!isCollapsed && <span className="text-[11px] font-bold">Desconectar</span>}
         </button>
       </div>
+
+      <EventDrawer
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        category={selectedCategory}
+        onNavigateToView={(view) => setCurrentView(view as any)}
+      />
     </aside>
   );
 }

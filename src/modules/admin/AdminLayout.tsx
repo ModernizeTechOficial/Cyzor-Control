@@ -12,6 +12,7 @@ import { PlansAdminView } from './views/PlansAdminView.tsx';
 import { BillingAdminView } from './views/BillingAdminView.tsx';
 import GlobalSettingsAdminView from './views/GlobalSettingsAdminView.tsx';
 import { useAuth } from '../../context/AuthContext.tsx';
+import WelcomeModal from '../../components/layout/WelcomeModal.tsx';
 
 interface AdminLayoutProps {
   currentView: View | string;
@@ -20,9 +21,21 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ currentView, setCurrentView }: AdminLayoutProps) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const { fetchWithAuth } = useAuth();
+  const { fetchWithAuth, user, loading } = useAuth();
   const [metrics, setMetrics] = useState<any>(null);
   const [loadingMetrics, setLoadingMetrics] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  useEffect(() => {
+    // Show welcome modal after login (once per session)
+    if (user && !loading && !sessionStorage.getItem('welcome_modal_shown')) {
+      const timer = setTimeout(() => {
+        setShowWelcome(true);
+        sessionStorage.setItem('welcome_modal_shown', 'true');
+      }, 1500); // Delay slightly for smoother experience
+      return () => clearTimeout(timer);
+    }
+  }, [user, loading]);
 
   const loadMetrics = useCallback(async () => {
     try {
@@ -102,6 +115,15 @@ export default function AdminLayout({ currentView, setCurrentView }: AdminLayout
           )}
         </main>
       </div>
+
+      <WelcomeModal 
+        isOpen={showWelcome} 
+        onClose={() => setShowWelcome(false)} 
+        onUpgrade={() => {
+          setShowWelcome(false);
+          setCurrentView('admin-plans');
+        }} 
+      />
     </div>
   );
 }
