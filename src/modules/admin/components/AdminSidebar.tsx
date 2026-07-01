@@ -129,7 +129,7 @@ export default function AdminSidebar({ isCollapsed, toggleSidebar, currentView, 
     {
       title: 'Platform',
       items: [
-        { id: 'admin', icon: LayoutDashboard, label: 'Platform HQ' },
+        { id: 'admin', icon: LayoutDashboard, label: 'Admin Cyzor' },
         { id: 'admin-tenants', icon: Server, label: 'SaaS Tenants' },
       ]
     },

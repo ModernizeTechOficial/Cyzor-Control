@@ -105,7 +105,7 @@ export default function PlatformAdminDashboard({ metrics, loading, onRefresh }: 
                 </span>
                 <span className="w-1.5 h-1.5 rounded-full bg-[#6366F1] animate-ping" />
                 <span className="text-[10px] font-bold text-zinc-500 font-mono flex items-center gap-1">
-                  PLATFORM HQ
+                  ADMIN CYZOR
                 </span>
               </div>
 
