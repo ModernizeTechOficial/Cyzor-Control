@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Cpu } from 'lucide-react';
 import { View } from '../../types.ts';
 import AdminSidebar from './components/AdminSidebar.tsx';
 import AdminTopbar from './components/AdminTopbar.tsx';
@@ -43,12 +44,10 @@ export default function AdminLayout({ currentView, setCurrentView }: AdminLayout
   }, [loadMetrics]);
 
   return (
-    <div className="min-h-screen bg-[#09090B] text-zinc-100 font-sans relative flex overflow-hidden">
-      {/* Immersive Cyber Mesh Grid & Neon Ambient Accents */}
+    <div className="min-h-screen bg-[#FFFFFF] text-zinc-800 font-sans relative flex overflow-hidden">
+      {/* Subtle, premium, light dot grid pattern */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f293708_1px,transparent_1px),linear-gradient(to_bottom,#1f293708_1px,transparent_1px)] bg-[size:24px_24px] opacity-40" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_800px_at_100%_200px,#4f46e50f,transparent)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_600px_at_0%_80%,#06b6d408,transparent)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(#E2E8F0_1px,transparent_1px)] [background-size:16px_16px] opacity-60" />
       </div>
 
       <AdminSidebar
@@ -65,7 +64,7 @@ export default function AdminLayout({ currentView, setCurrentView }: AdminLayout
           setCurrentView={setCurrentView}
         />
         
-        <main className="flex-1 overflow-y-auto pt-6 px-6 md:px-8 pb-16 w-full custom-dark-scrollbar">
+        <main className="flex-1 overflow-y-auto bg-[#FAFAFB] pt-6 px-6 md:px-8 pb-16 w-full scrollbar-thin scrollbar-thumb-zinc-200">
           {currentView === 'admin' && (
             <PlatformAdminDashboard 
               metrics={metrics} 
@@ -80,10 +79,25 @@ export default function AdminLayout({ currentView, setCurrentView }: AdminLayout
           {currentView === 'admin-plans' && <PlansAdminView />}
           {currentView === 'admin-billing' && <BillingAdminView />}
           {currentView === 'admin-settings' && <GlobalSettingsAdminView />}
-          {/* add more admin views here */}
-          {['admin-infrastructure', 'admin-logs'].includes(currentView as string) && (
-            <div className="flex items-center justify-center h-64 border border-dashed border-zinc-800 rounded-2xl bg-zinc-900/40">
-              <p className="text-zinc-500 font-medium">Módulo em construção</p>
+          
+          {/* Elegant placeholders for Beta modules */}
+          {['admin-infrastructure', 'admin-logs', 'dev-playground'].includes(currentView as string) && (
+            <div className="flex flex-col items-center justify-center min-h-[400px] border border-[#ECECEF] rounded-[24px] bg-white p-8 text-center shadow-sm">
+              <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 mb-4 border border-indigo-100">
+                <Cpu size={28} className="animate-pulse" />
+              </div>
+              <h3 className="text-base font-bold text-zinc-900 tracking-tight uppercase font-mono">Módulo em Integração Cloud</h3>
+              <p className="text-xs text-zinc-500 max-w-md mt-2 font-sans">
+                Este microsserviço Cyzor Core está em processo de provisionamento via cluster Kubernetes. A comunicação com os webhooks em tempo real e orquestradores de segurança estará disponível no próximo ciclo de deploys.
+              </p>
+              <div className="mt-6 flex gap-3">
+                <span className="text-[9px] font-bold uppercase tracking-wider px-2.5 py-1 bg-zinc-100 text-zinc-600 rounded-full border border-zinc-200">
+                  Uptime 100%
+                </span>
+                <span className="text-[9px] font-bold uppercase tracking-wider px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100">
+                  Staging Mode Active
+                </span>
+              </div>
             </div>
           )}
         </main>
