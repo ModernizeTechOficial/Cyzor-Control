@@ -619,13 +619,15 @@ export const billingCustomers = pgTable('billing_customers', {
   id: serial('id').primaryKey(),
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   userId: text('user_id').notNull().references(() => users.uid, { onDelete: 'cascade' }),
-  stripeCustomerId: text('stripe_customer_id').notNull().unique(),
+  stripeCustomerId: text('stripe_customer_id').notNull(),
+  environment: text('environment').default('sandbox'),
   email: text('email').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 }, (t) => ({
   tenantIdx: index('billing_customers_tenant_idx').on(t.tenantId),
   userIdx: index('billing_customers_user_idx').on(t.userId),
+  customerEnvIdx: index('billing_customers_env_idx').on(t.stripeCustomerId, t.environment),
 }));
 
 export const billingSubscriptions = pgTable('billing_subscriptions', {
@@ -633,6 +635,7 @@ export const billingSubscriptions = pgTable('billing_subscriptions', {
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   planId: integer('plan_id').notNull().references(() => plans.id, { onDelete: 'cascade' }),
   stripeSubscriptionId: text('stripe_subscription_id').notNull().unique(),
+  environment: text('environment').default('sandbox'),
   status: text('status').notNull(), // active, trialing, past_due, canceled, etc.
   currentPeriodStart: timestamp('current_period_start'),
   currentPeriodEnd: timestamp('current_period_end'),
@@ -648,6 +651,7 @@ export const billingPayments = pgTable('billing_payments', {
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   stripeInvoiceId: text('stripe_invoice_id'),
   stripePaymentIntentId: text('stripe_payment_intent_id'),
+  environment: text('environment').default('sandbox'),
   amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
   currency: text('currency').default('BRL'),
   status: text('status').notNull(), // succeeded, failed, pending
@@ -660,6 +664,7 @@ export const billingPayments = pgTable('billing_payments', {
 export const billingWebhookEvents = pgTable('billing_webhook_events', {
   id: serial('id').primaryKey(),
   stripeEventId: text('stripe_event_id').notNull().unique(),
+  environment: text('environment').default('sandbox'),
   type: text('type').notNull(),
   status: text('status').default('processed'), // processed, failed
   payload: jsonb('payload').notNull(),

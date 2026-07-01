@@ -31,10 +31,15 @@ stripeRouter.post("/stripe/checkout-session", requireAuth, tenantMiddleware, asy
     }
 
     const stripe = await getStripe();
+    const currentEnv = config?.environment || 'sandbox';
     
-    // Check if user is already a Stripe Customer for this tenant
+    // Check if user is already a Stripe Customer for this tenant and environment
     let [customer] = await db.select().from(billingCustomers).where(
-      and(eq(billingCustomers.tenantId, tenantId), eq(billingCustomers.userId, userId))
+      and(
+        eq(billingCustomers.tenantId, tenantId), 
+        eq(billingCustomers.userId, userId),
+        eq(billingCustomers.environment, currentEnv)
+      )
     ).limit(1);
 
     let stripeCustomerId = customer?.stripeCustomerId;
@@ -44,7 +49,7 @@ stripeRouter.post("/stripe/checkout-session", requireAuth, tenantMiddleware, asy
       const [userRec] = await db.select().from(users).where(eq(users.uid, userId)).limit(1);
       const newCustomer = await stripe.customers.create({
         email: userRec.email,
-        metadata: { tenantId, userId }
+        metadata: { tenantId, userId, environment: currentEnv }
       });
       stripeCustomerId = newCustomer.id;
       
@@ -53,6 +58,7 @@ stripeRouter.post("/stripe/checkout-session", requireAuth, tenantMiddleware, asy
         userId,
         stripeCustomerId,
         email: userRec.email,
+        environment: currentEnv
       });
     }
 
@@ -85,9 +91,15 @@ stripeRouter.post("/stripe/portal-session", requireAuth, tenantMiddleware, async
   try {
     const userId = req.user!.uid;
     const tenantId = req.tenantId!;
+    const config = await getStripeConfig();
+    const currentEnv = config?.environment || 'sandbox';
 
     const [customer] = await db.select().from(billingCustomers).where(
-      and(eq(billingCustomers.tenantId, tenantId), eq(billingCustomers.userId, userId))
+      and(
+        eq(billingCustomers.tenantId, tenantId), 
+        eq(billingCustomers.userId, userId),
+        eq(billingCustomers.environment, currentEnv)
+      )
     ).limit(1);
 
     if (!customer) {
@@ -163,6 +175,7 @@ stripeWebhookRouter.post("/webhooks/stripe", async (req: any, res) => {
 
     await db.insert(billingWebhookEvents).values({
       stripeEventId: event.id,
+      environment: isProd ? 'production' : 'sandbox',
       type: event.type,
       payload: event as any,
       status: 'pending'
@@ -185,6 +198,7 @@ stripeWebhookRouter.post("/webhooks/stripe", async (req: any, res) => {
                 tenantId,
                 planId,
                 stripeSubscriptionId: sub.id,
+                environment: isProd ? 'production' : 'sandbox',
                 status: sub.status,
                 currentPeriodStart: new Date(sub.current_period_start * 1000),
                 currentPeriodEnd: new Date(sub.current_period_end * 1000),
@@ -232,6 +246,7 @@ stripeWebhookRouter.post("/webhooks/stripe", async (req: any, res) => {
                 tenantId: subRecord.tenantId,
                 stripeInvoiceId: invoice.id,
                 stripePaymentIntentId: invoice.payment_intent as string,
+                environment: isProd ? 'production' : 'sandbox',
                 amount: (invoice.amount_paid / 100).toString() as any, // convert cents to standard
                 currency: invoice.currency,
                 status: 'succeeded',
