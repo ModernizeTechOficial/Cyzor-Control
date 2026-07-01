@@ -46,9 +46,9 @@ export function useBranding() {
     ? (isDarkMode ? settings.iconDarkSize : settings.iconLightSize) 
     : globalIconSize;
 
-  const appName = isWhiteLabelEnabled && settings.appName 
+  const appName = (isWhiteLabelEnabled && settings.appName) 
     ? settings.appName 
-    : (activeWorkspace?.name || globalAppName);
+    : globalAppName;
 
   return {
     logoUrl,

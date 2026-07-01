@@ -232,6 +232,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await syncWithCloudSQL(currentUser);
       } else {
         setToken(null);
+        setDbUser(null);
+        setActiveWorkspace(null);
+        setWorkspaces([]);
       }
       setLoading(false);
     });
@@ -372,6 +375,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     try {
       await signOut(auth);
+      setDbUser(null);
+      setActiveWorkspace(null);
+      setWorkspaces([]);
+      setToken(null);
       setGoogleCalendarToken(null);
       setGoogleDriveToken(null);
       setGoogleTasksToken(null);
