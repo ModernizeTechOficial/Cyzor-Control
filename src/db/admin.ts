@@ -334,7 +334,7 @@ adminRouter.delete("/plans/:id", async (req: AuthRequest, res) => {
 
 // --- STRIPE CONFIG ---
 import { stripeConfig, billingSubscriptions, billingPayments, billingWebhookEvents } from "./schema.ts";
-import { getStripe } from "../services/stripe.ts";
+import { getStripe, getStripeConfig } from "../services/stripe.ts";
 
 adminRouter.get("/stripe/config", async (req: AuthRequest, res) => {
   try {
