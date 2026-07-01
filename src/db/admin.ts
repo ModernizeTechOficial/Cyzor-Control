@@ -351,7 +351,7 @@ adminRouter.post("/stripe/config", async (req: AuthRequest, res) => {
       testPublishableKey, testSecretKey, testWebhookSecret, 
       livePublishableKey, liveSecretKey, liveWebhookSecret, 
       environment,
-      globalLogoUrl, globalIconUrl, globalLogoSize, globalIconSize, globalAppName
+      globalLogoUrl, globalIconUrl, loginHeroUrl, globalLogoSize, globalIconSize, globalAppName
     } = req.body;
     const existing = await db.select().from(stripeConfig).limit(1);
     
@@ -361,7 +361,7 @@ adminRouter.post("/stripe/config", async (req: AuthRequest, res) => {
         testPublishableKey, testSecretKey, testWebhookSecret,
         livePublishableKey, liveSecretKey, liveWebhookSecret,
         environment,
-        globalLogoUrl, globalIconUrl, globalLogoSize, globalIconSize, globalAppName,
+        globalLogoUrl, globalIconUrl, loginHeroUrl, globalLogoSize, globalIconSize, globalAppName,
         updatedAt: new Date()
       }).where(eq(stripeConfig.id, existing[0].id)).returning();
     } else {
@@ -369,7 +369,7 @@ adminRouter.post("/stripe/config", async (req: AuthRequest, res) => {
         testPublishableKey, testSecretKey, testWebhookSecret,
         livePublishableKey, liveSecretKey, liveWebhookSecret,
         environment,
-        globalLogoUrl, globalIconUrl, globalLogoSize, globalIconSize, globalAppName
+        globalLogoUrl, globalIconUrl, loginHeroUrl, globalLogoSize, globalIconSize, globalAppName
       }).returning();
     }
     res.json(result[0]);

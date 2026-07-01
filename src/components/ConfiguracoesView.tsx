@@ -34,33 +34,17 @@ const SECTIONS = [
 ];
 
 export default function ConfiguracoesView() {
-  const { updateSaaSBackend } = useAuth();
+  const { dbUser, activeWorkspace: authActiveWorkspace, updateSaaSBackend } = useAuth();
   
   const [activeSection, setActiveSection] = useState('workspace');
-  const [activeWorkspace, setActiveWorkspace] = useState('Global Hub');
-  const [currentPlan, setCurrentPlan] = useState('Pro');
-
-  useEffect(() => {
-    const loadSaaSStates = () => {
-      setActiveWorkspace(localStorage.getItem('active_workspace') || 'Global Hub');
-      setCurrentPlan(localStorage.getItem('saas_current_plan') || 'Pro');
-    };
-    loadSaaSStates();
-    window.addEventListener('workspaceChanged', loadSaaSStates);
-    return () => window.removeEventListener('workspaceChanged', loadSaaSStates);
-  }, []);
+  const activeWorkspace = authActiveWorkspace?.name || 'Global Hub';
+  const currentPlan = dbUser?.currentPlan || 'free';
 
   const handleSelectWorkspace = (name: string, id: number) => {
-    localStorage.setItem('active_workspace', name);
-    setActiveWorkspace(name);
-    window.dispatchEvent(new Event('workspaceChanged'));
     updateSaaSBackend(undefined, id).catch(console.error); // full live workspace update in sqlite backend
   };
 
   const handleUpgradePlan = (plan: string) => {
-    localStorage.setItem('saas_current_plan', plan);
-    setCurrentPlan(plan);
-    window.dispatchEvent(new Event('workspaceChanged'));
     updateSaaSBackend(plan, undefined).catch(console.error); // fully persists plan change in sqlite backend
   };
 

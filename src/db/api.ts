@@ -22,6 +22,7 @@ apiRouter.get("/branding", async (req, res) => {
       res.json({
         globalLogoUrl: config[0].globalLogoUrl,
         globalIconUrl: config[0].globalIconUrl,
+        loginHeroUrl: config[0].loginHeroUrl,
         globalLogoSize: config[0].globalLogoSize,
         globalIconSize: config[0].globalIconSize,
         globalAppName: config[0].globalAppName
@@ -30,6 +31,7 @@ apiRouter.get("/branding", async (req, res) => {
       res.json({
         globalLogoUrl: null,
         globalIconUrl: null,
+        loginHeroUrl: null,
         globalLogoSize: '40',
         globalIconSize: '20',
         globalAppName: 'CYZOR'

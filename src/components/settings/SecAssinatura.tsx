@@ -4,7 +4,7 @@ import { CreditCard, Sparkles, Check, Plus, Download, Loader2 } from 'lucide-rea
 import { Toast } from './SettingsHelpers';
 
 export default function SecAssinatura({ currentPlan, onUpgrade }: { currentPlan: string, onUpgrade: (plan: string) => void }) {
-  const { fetchWithAuth } = useAuth();
+  const { fetchWithAuth, dbUser } = useAuth();
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // Dynamic system counts
@@ -12,6 +12,17 @@ export default function SecAssinatura({ currentPlan, onUpgrade }: { currentPlan:
   const [systemStats, setSystemStats] = useState({ companies: 0, projects: 0, products: 0, members: 1 });
   const [availablePlans, setAvailablePlans] = useState<any[]>([]);
   const [realInvoices, setRealInvoices] = useState<any[]>([]);
+
+  const getTrialDaysLeft = () => {
+    if (!dbUser?.trialEndsAt) return null;
+    const ends = new Date(dbUser.trialEndsAt);
+    const now = new Date();
+    const diff = ends.getTime() - now.getTime();
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    return days > 0 ? days : 0;
+  };
+
+  const trialDaysLeft = getTrialDaysLeft();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -96,17 +107,17 @@ export default function SecAssinatura({ currentPlan, onUpgrade }: { currentPlan:
       caps = {
         maxCompanies: activeDbPlan.maxWorkspaces * 3, // mock logic for companies
         maxUsers: activeDbPlan.maxUsers,
-        maxIa: activeDbPlan.name === 'Starter' ? 100 : activeDbPlan.name === 'Enterprise' ? 999999 : 5000,
+        maxIa: activeDbPlan.name === 'free' ? 10 : activeDbPlan.name === 'Enterprise' ? 999999 : 5000,
         labelCompanies: activeDbPlan.maxWorkspaces > 100 ? 'Ilimitado' : String(activeDbPlan.maxWorkspaces * 3),
         labelUsers: activeDbPlan.maxUsers > 1000 ? 'Ilimitado' : String(activeDbPlan.maxUsers),
-        labelIa: activeDbPlan.name === 'Starter' ? '100' : activeDbPlan.name === 'Enterprise' ? 'Ilimitado' : '5.000'
+        labelIa: activeDbPlan.name === 'free' ? '10' : activeDbPlan.name === 'Enterprise' ? 'Ilimitado' : '5.000'
       };
     } else {
       caps = {
-        Starter: { maxCompanies: 3, maxUsers: 1, maxIa: 100, labelCompanies: '3', labelUsers: '1', labelIa: '100' },
+        free: { maxCompanies: 1, maxUsers: 1, maxIa: 10, labelCompanies: '1', labelUsers: '1', labelIa: '10' },
         Pro: { maxCompanies: 10, maxUsers: 15, maxIa: 5000, labelCompanies: '10', labelUsers: '15', labelIa: '5.000' },
         Enterprise: { maxCompanies: 9999, maxUsers: 9999, maxIa: 999999, labelCompanies: 'Ilimitado', labelUsers: 'Ilimitado', labelIa: 'Ilimitado' }
-      }[currentPlan as 'Starter' | 'Pro' | 'Enterprise'] || caps;
+      }[currentPlan as 'free' | 'Pro' | 'Enterprise'] || caps;
     }
 
     const compUsage = systemStats.companies;
@@ -114,12 +125,12 @@ export default function SecAssinatura({ currentPlan, onUpgrade }: { currentPlan:
 
     const compPercent = Math.min((compUsage / caps.maxCompanies) * 100, 100);
     const membPercent = Math.min((membUsage / caps.maxUsers) * 100, 100);
-    const iaPercent = currentPlan === 'Starter' ? 95 : currentPlan === 'Pro' ? 12 : 1; // logical mock for ia tokens quota usage
+    const iaPercent = currentPlan === 'free' ? 95 : currentPlan === 'Pro' ? 12 : 1; // logical mock for ia tokens quota usage
 
     return {
       companiesText: `${compUsage} / ${caps.labelCompanies}`,
       usersText: `${membUsage} / ${caps.labelUsers}`,
-      iaText: currentPlan === 'Starter' ? '95 / 100' : currentPlan === 'Pro' ? '612 / 5.000' : '2.450 / Ilimitado',
+      iaText: currentPlan === 'free' ? '9 / 10' : currentPlan === 'Pro' ? '612 / 5.000' : '2.450 / Ilimitado',
       compPercent,
       membPercent,
       iaPercent
@@ -130,9 +141,9 @@ export default function SecAssinatura({ currentPlan, onUpgrade }: { currentPlan:
 
   // Dynamic invoice lists
   const invoices = [
-    { code: '#CY-092', due: 'Hoje', amount: currentPlan === 'Starter' ? '$0.00' : currentPlan === 'Pro' ? '$49.00' : '$149.00', status: 'Pago' },
-    { code: '#CY-081', due: '20 Mai 2026', amount: currentPlan === 'Starter' ? '$0.00' : currentPlan === 'Pro' ? '$49.00' : '$149.00', status: 'Pago' },
-    { code: '#CY-070', due: '20 Abr 2026', amount: currentPlan === 'Starter' ? '$0.00' : currentPlan === 'Pro' ? '$49.00' : '$149.00', status: 'Pago' }
+    { code: '#CY-092', due: 'Hoje', amount: currentPlan === 'free' ? '$0.00' : currentPlan === 'Pro' ? '$49.00' : '$149.00', status: 'Pago' },
+    { code: '#CY-081', due: '20 Mai 2026', amount: currentPlan === 'free' ? '$0.00' : currentPlan === 'Pro' ? '$49.00' : '$149.00', status: 'Pago' },
+    { code: '#CY-070', due: '20 Abr 2026', amount: currentPlan === 'free' ? '$0.00' : currentPlan === 'Pro' ? '$49.00' : '$149.00', status: 'Pago' }
   ];
 
   if (loading) {

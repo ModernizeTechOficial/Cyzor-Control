@@ -1,6 +1,9 @@
 import { ArrowLeft, Shield } from 'lucide-react';
+import { useBranding } from '../hooks/useBranding.ts';
 
 export default function PrivacyView({ onBack }: { onBack: () => void }) {
+  const { appName } = useBranding();
+
   return (
     <div className="min-h-screen bg-[#FAFAFA] font-sans flex flex-col items-center py-12 px-4 sm:px-6">
       <div className="w-full max-w-3xl bg-white rounded-[30px] border border-[#0F172A0F] shadow-[0_8px_40px_rgba(0,0,0,0.04)] p-8 sm:p-12 relative overflow-hidden text-left">
@@ -28,7 +31,7 @@ export default function PrivacyView({ onBack }: { onBack: () => void }) {
 
         <div className="prose prose-slate max-w-none prose-h2:text-xl prose-h2:font-bold prose-h2:mt-10 prose-h2:mb-4 prose-p:text-neutral-600 prose-p:leading-relaxed prose-li:text-neutral-600">
           <p>
-            Na Cyzor Systems, levamos a privacidade e a segurança dos dados corporativos a sério. 
+            Na {appName} Systems, levamos a privacidade e a segurança dos dados corporativos a sério. 
             Esta Política de Privacidade explica como coletamos, usamos, divulgamos e protegemos suas informações 
             quando você usa nossa plataforma Central de Operações Executivas.
           </p>
@@ -50,7 +53,7 @@ export default function PrivacyView({ onBack }: { onBack: () => void }) {
             Utilizamos as informações coletadas para as seguintes finalidades operacionais e de melhoria:
           </p>
           <ul>
-            <li>Fornecer, manter e melhorar a Plataforma Cyzor.</li>
+            <li>Fornecer, manter e melhorar a Plataforma {appName}.</li>
             <li>Sincronizar seus dados com suas contas conectadas (Google Drive/Calendar), conforme solicitado por você.</li>
             <li>Processar transações e gerar relatórios executivos solicitados.</li>
             <li>Prevenir atividades fraudulentas ou não autorizadas e garantir a segurança do sistema.</li>
@@ -58,16 +61,16 @@ export default function PrivacyView({ onBack }: { onBack: () => void }) {
 
           <h2>3. Serviços de Terceiros e APIs do Google</h2>
           <p>
-            O uso das informações recebidas pelas APIs do Google por parte da Cyzor e a transferência 
+            O uso das informações recebidas pelas APIs do Google por parte da {appName} e a transferência 
             dessas informações para qualquer outro aplicativo obedecerão à <strong>Google API Services User Data Policy</strong>, 
-            incluindo os requisitos de Uso Limitado. A Cyzor acessará e processará seus dados do Google (como Drive, Keep e Calendar)
+            incluindo os requisitos de Uso Limitado. A {appName} acessará e processará seus dados do Google (como Drive, Keep e Calendar)
             estritamente para fornecer recursos visuais de produtividade dentro da plataforma, e não venderá ou compartilhará 
             esses dados para publicidade de terceiros.
           </p>
 
           <h2>4. Segurança e Armazenamento</h2>
           <p>
-            A Cyzor emprega infraestrutura local com SQLite para armazenar 
+            A {appName} emprega infraestrutura local com SQLite para armazenar 
             seus dados com criptografia em repouso e em trânsito. O acesso é restrito a sessões autenticadas 
             com protocolos avançados de autorização.
           </p>
@@ -82,7 +85,7 @@ export default function PrivacyView({ onBack }: { onBack: () => void }) {
           <h2>6. Contato</h2>
           <p>
             Se você tiver dúvidas sobre nossa Política de Privacidade, entre em contato conosco em: 
-            <strong> privacy@cyzor.com</strong>.
+            <strong> privacy@{appName.toLowerCase()}.com</strong>.
           </p>
         </div>
 

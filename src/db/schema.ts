@@ -22,13 +22,14 @@ export const users = pgTable('users', {
   email: text('email').notNull(),
   displayName: text('display_name'),
   photoUrl: text('photo_url'),
-  currentPlan: text('current_plan').default('Pro'),
+  currentPlan: text('current_plan').default('free'),
   activeWorkspaceId: integer('active_workspace_id'), // Will foreign key down below
   activeTenantId: uuid('active_tenant_id'), // No hard FK to avoid migration locks
   phone: text('phone'),
   role: text('role'),
   isPlatformAdmin: boolean('is_platform_admin').default(false),
   tourCompleted: boolean('tour_completed').default(false),
+  trialEndsAt: timestamp('trial_ends_at'),
   settings: jsonb('settings').default({}),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
@@ -617,6 +618,7 @@ export const stripeConfig = pgTable('stripe_config', {
   // Global Branding
   globalLogoUrl: text('global_logo_url'),
   globalIconUrl: text('global_icon_url'),
+  loginHeroUrl: text('login_hero_url'),
   globalLogoSize: text('global_logo_size').default('40'),
   globalIconSize: text('global_icon_size').default('20'),
   globalAppName: text('global_app_name').default('CYZOR'),

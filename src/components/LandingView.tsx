@@ -1,11 +1,14 @@
 import { motion } from 'motion/react';
 import { Sparkles, ArrowRight, ShieldCheck, Zap, Layers, RefreshCw, Cpu, Database, Cloud, HardDrive, Mail, Calendar, Check, Play, ChevronRight, CheckCircle2, Shield, GitBranch, Terminal } from 'lucide-react';
+import { useBranding } from '../hooks/useBranding.ts';
 
 interface LandingViewProps {
   onNavigate: (view: any) => void;
 }
 
 export default function LandingView({ onNavigate }: LandingViewProps) {
+  const { appName, logoUrl, logoSize } = useBranding();
+  
   return (
     <div className="relative min-h-screen bg-[#fdf8f8] text-[#1c1b1b] font-sans overflow-x-hidden selection:bg-black selection:text-white pb-1">
       {/* Background Grid Pattern */}
@@ -27,11 +30,15 @@ export default function LandingView({ onNavigate }: LandingViewProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center gap-3 group cursor-pointer">
-              <div className="w-10 h-10 bg-[#1c1b1b] rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg transition-transform group-hover:scale-105">
-                C
-              </div>
+              {logoUrl ? (
+                <img src={logoUrl} alt="Logo" style={{ height: `${logoSize}px` }} className="object-contain" />
+              ) : (
+                <div className="w-10 h-10 bg-[#1c1b1b] rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg transition-transform group-hover:scale-105">
+                  {appName.charAt(0)}
+                </div>
+              )}
               <span className="font-extrabold text-2xl tracking-tighter text-[#1c1b1b]">
-                Cyzor <span className="text-[#1c1b1b]/60 font-medium">Control</span>
+                {appName}
               </span>
             </div>
             
@@ -412,11 +419,15 @@ export default function LandingView({ onNavigate }: LandingViewProps) {
           <div className="grid md:grid-cols-4 gap-12 mb-20">
             <div className="col-span-2">
               <div className="flex items-center gap-3 mb-8">
-                <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center text-white font-bold text-xl">
-                  C
-                </div>
+                {logoUrl ? (
+                  <img src={logoUrl} alt="Logo" style={{ height: `${logoSize}px` }} className="object-contain" />
+                ) : (
+                  <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center text-white font-bold text-xl">
+                    {appName.charAt(0)}
+                  </div>
+                )}
                 <span className="font-extrabold text-2xl tracking-tighter">
-                  Cyzor <span className="text-black/60 font-medium">Control</span>
+                  {appName}
                 </span>
               </div>
               <p className="text-slate-500 max-w-sm font-medium">

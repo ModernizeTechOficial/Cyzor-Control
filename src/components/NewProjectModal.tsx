@@ -5,8 +5,8 @@ import { safeToISOString } from '../lib/dateUtils';
 import { showSuccess, showError } from '../lib/alerts';
 
 export default function NewProjectModal({ isOpen, onClose, onSuccess, initialStatus }: { isOpen: boolean, onClose: () => void, onSuccess?: () => void, initialStatus?: string }) {
-  const [currentPlan, setCurrentPlan] = useState('Pro');
-  const { fetchWithAuth, user } = useAuth();
+  const { fetchWithAuth, user, dbUser } = useAuth();
+  const currentPlan = dbUser?.currentPlan || 'free';
   
   const [formData, setFormData] = useState({
     name: '',
@@ -21,7 +21,6 @@ export default function NewProjectModal({ isOpen, onClose, onSuccess, initialSta
 
   useEffect(() => {
     if (isOpen) {
-      setCurrentPlan(localStorage.getItem('saas_current_plan') || 'Pro');
       fetchCompanies();
     }
   }, [isOpen]);
@@ -111,13 +110,13 @@ export default function NewProjectModal({ isOpen, onClose, onSuccess, initialSta
           </button>
         </div>
 
-        {/* SaaS Warning for Starter */}
-        {currentPlan === 'Starter' && (
+        {/* SaaS Warning for Free Plan */}
+        {currentPlan === 'free' && (
           <div className="mx-6 sm:mx-8 mt-4 sm:mt-6 p-4 bg-[#64748B]/5 border border-[#0F172A0F] rounded-[16px] flex items-start gap-3">
             <Sparkles size={16} className="text-[#111111] mt-0.5 flex-shrink-0" />
             <div className="flex flex-col gap-0.5 text-left">
-              <span className="text-xs font-bold text-[#111111]">Limite operacional do Plano Starter</span>
-              <span className="text-[11px] font-semibold text-[#64748B] leading-relaxed">Você está usando a versão Gratuita. Recursos de consolidação de múltiplos workspaces e IA estão operando de forma limitada.</span>
+              <span className="text-xs font-bold text-[#111111]">Limite operacional do Plano Free</span>
+              <span className="text-[11px] font-semibold text-[#64748B] leading-relaxed">Você está usando a versão de Teste. Recursos avançados de IA e White Label estão desativados.</span>
             </div>
           </div>
         )}

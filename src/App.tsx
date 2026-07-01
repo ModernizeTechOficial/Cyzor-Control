@@ -26,6 +26,7 @@ import { Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import HomeIntelligence from './components/home/HomeIntelligence';
 import ProductTour from './components/layout/ProductTour';
+import WelcomeModal from './components/layout/WelcomeModal';
 
 export default function App() {
   const { user, dbUser, loading } = useAuth();
@@ -33,6 +34,18 @@ export default function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [restartTour, setRestartTour] = useState(0);
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  useEffect(() => {
+    // Show welcome modal after login (once per session)
+    if (user && !loading && !sessionStorage.getItem('welcome_modal_shown')) {
+      const timer = setTimeout(() => {
+        setShowWelcome(true);
+        sessionStorage.setItem('welcome_modal_shown', 'true');
+      }, 1500); // Delay slightly for smoother experience
+      return () => clearTimeout(timer);
+    }
+  }, [user, loading]);
 
   useEffect(() => {
     const handleRestartTour = () => setRestartTour(prev => prev + 1);
@@ -158,6 +171,15 @@ export default function App() {
       {user && !dbUser?.isPlatformAdmin && currentView === 'dashboard' && (
         <ProductTour key={restartTour} forceStart={restartTour > 0} />
       )}
+
+      <WelcomeModal 
+        isOpen={showWelcome} 
+        onClose={() => setShowWelcome(false)} 
+        onUpgrade={() => {
+          setShowWelcome(false);
+          setCurrentView('configuracoes');
+        }} 
+      />
     </div>
   );
 }

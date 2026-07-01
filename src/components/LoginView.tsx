@@ -5,7 +5,7 @@ import { useBranding } from '../hooks/useBranding.ts';
 
 export default function LoginView({ onLogin, onNavigate }: { onLogin: () => void, onNavigate?: (view: any) => void }) {
   const { loginWithGoogle, loginWithEmail, registerWithEmail } = useAuth();
-  const { iconUrl, iconSize, appName } = useBranding();
+  const { iconUrl, iconSize, appName, loginHeroUrl } = useBranding();
   
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
@@ -58,19 +58,40 @@ export default function LoginView({ onLogin, onNavigate }: { onLogin: () => void
     <div className="min-h-screen flex flex-col md:flex-row bg-[#FAFAFA] font-sans">
       {/* Left Side - Application Info */}
       <div className="hidden md:flex md:w-1/2 bg-[#111111] text-white p-12 lg:p-20 flex-col justify-between relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-indigo-500/10 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3 pointer-events-none"></div>
-        
+        {/* Background Image with Premium Filter */}
+        <div className="absolute inset-0 z-0">
+          <img 
+            src={loginHeroUrl} 
+            alt="Hero Background" 
+            className="w-full h-full object-cover opacity-20 grayscale brightness-50 contrast-125"
+          />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#111111] via-[#111111]/70 to-transparent"></div>
+        </div>
+
         <div className="relative z-10">
-          <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center mb-8 backdrop-blur-sm border border-white/10">
+          <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center mb-8 backdrop-blur-sm border border-white/10 overflow-hidden">
             {iconUrl ? (
-              <img src={iconUrl} alt="Logo" width={iconSize} height={iconSize} />
+              <img 
+                src={iconUrl} 
+                alt="Logo" 
+                width={iconSize} 
+                height={iconSize} 
+                className="object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  const parent = e.currentTarget.parentElement;
+                  if (parent) {
+                    const placeholder = document.createElement('div');
+                    placeholder.className = "text-white font-bold text-xl";
+                    placeholder.innerText = appName.charAt(0);
+                    parent.appendChild(placeholder);
+                  }
+                }}
+              />
             ) : (
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M2 17L12 22L22 17" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M2 12L12 17L22 12" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              <div className="text-white font-bold text-xl uppercase">
+                {appName.charAt(0)}
+              </div>
             )}
           </div>
           
@@ -120,13 +141,30 @@ export default function LoginView({ onLogin, onNavigate }: { onLogin: () => void
           {/* Subtle Tech Pattern */}
           <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-transparent via-[#111111]/20 to-transparent"></div>
 
-          <div className="md:hidden w-14 h-14 rounded-2xl bg-[#111111] flex items-center justify-center mb-6 shadow-[0_4px_12px_rgba(0,0,0,0.15)]">
-            {/* CYZOR Monogram */}
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M2 17L12 22L22 17" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M2 12L12 17L22 12" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+          <div className="md:hidden w-14 h-14 rounded-2xl bg-[#111111] flex items-center justify-center mb-6 shadow-[0_4px_12px_rgba(0,0,0,0.15)] overflow-hidden">
+            {iconUrl ? (
+              <img 
+                src={iconUrl} 
+                alt="Logo" 
+                width={iconSize} 
+                height={iconSize} 
+                className="object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  const parent = e.currentTarget.parentElement;
+                  if (parent) {
+                    const placeholder = document.createElement('div');
+                    placeholder.className = "text-white font-bold text-xl";
+                    placeholder.innerText = appName.charAt(0);
+                    parent.appendChild(placeholder);
+                  }
+                }}
+              />
+            ) : (
+              <div className="text-white font-bold text-xl uppercase">
+                {appName.charAt(0)}
+              </div>
+            )}
           </div>
           
           <div className="text-center mb-8 w-full">

@@ -14,18 +14,22 @@ export async function getOrCreateUser(
     let [user] = await db.select().from(users).where(eq(users.uid, uid));
 
     if (!user) {
+      const trialEndsAt = new Date();
+      trialEndsAt.setDate(trialEndsAt.getDate() + 14);
+
       [user] = await db.insert(users).values({
         uid,
         email,
         displayName: displayName || null,
         photoUrl: photoUrl || null,
-        currentPlan: 'Pro',
+        currentPlan: 'free',
+        trialEndsAt: trialEndsAt
       }).returning();
 
       const [workspace] = await db.insert(workspaces).values({
         name: displayName ? `Workspace de ${displayName}` : 'Meu Workspace',
         ownerUid: uid,
-        plan: 'Pro',
+        plan: 'free',
       }).returning();
 
       await db.insert(workspaceMembers).values({

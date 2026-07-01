@@ -17,20 +17,19 @@ export default function Sidebar({
   setCurrentView: (view: View) => void
 }) {
   const { activeWorkspace, dbUser } = useAuth();
-  const [currentPlan, setCurrentPlan] = useState('Pro');
   const { iconUrl, iconSize, appName } = useBranding();
+  const currentPlan = dbUser?.currentPlan || 'free';
 
-  useEffect(() => {
-    const handlePlanUpdate = () => {
-      setCurrentPlan(localStorage.getItem('saas_current_plan') || 'Pro');
-    };
-    handlePlanUpdate();
-    window.addEventListener('workspaceChanged', handlePlanUpdate);
+  const getTrialDaysLeft = () => {
+    if (!dbUser?.trialEndsAt) return null;
+    const ends = new Date(dbUser.trialEndsAt);
+    const now = new Date();
+    const diff = ends.getTime() - now.getTime();
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    return days > 0 ? days : 0;
+  };
 
-    return () => {
-      window.removeEventListener('workspaceChanged', handlePlanUpdate);
-    };
-  }, []);
+  const trialDaysLeft = getTrialDaysLeft();
 
   return (
     <>
@@ -47,20 +46,35 @@ export default function Sidebar({
       <div className={`flex items-center mb-10 px-2 ${isCollapsed ? 'lg:justify-center' : 'gap-3'}`}>
         <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
           {iconUrl ? (
-            <img src={iconUrl} alt="Logo" width={iconSize} height={iconSize} />
+            <img 
+              src={iconUrl} 
+              alt="Logo" 
+              width={iconSize} 
+              height={iconSize} 
+              className="object-contain"
+              onError={(e) => {
+                // If image fails, replace with placeholder
+                e.currentTarget.style.display = 'none';
+                const parent = e.currentTarget.parentElement;
+                if (parent) {
+                  const placeholder = document.createElement('div');
+                  placeholder.className = "w-10 h-10 bg-[#111111] rounded-xl flex items-center justify-center text-white font-bold text-xl";
+                  placeholder.innerText = appName.charAt(0);
+                  parent.appendChild(placeholder);
+                }
+              }}
+            />
           ) : (
-            <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#111111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M2 17L12 22L22 17" stroke="#111111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M2 12L12 17L22 12" stroke="#111111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <div className="w-10 h-10 bg-[#111111] rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">
+              {appName.charAt(0)}
+            </div>
           )}
         </div>
         {!isCollapsed && (
           <div className="flex flex-col overflow-hidden">
             <div className="flex items-center gap-1.5">
               <span className="text-base font-bold text-[#111111] leading-tight tracking-wide whitespace-nowrap">{appName}</span>
-              <span className="bg-[#111111] text-white text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">{currentPlan}</span>
+              <span className={`text-white text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${currentPlan === 'free' ? 'bg-amber-500' : 'bg-[#111111]'}`}>{currentPlan}</span>
             </div>
             <div className="flex items-center gap-1 mt-1">
               <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
@@ -71,6 +85,26 @@ export default function Sidebar({
           </div>
         )}
       </div>
+
+      {!isCollapsed && currentPlan === 'free' && trialDaysLeft !== null && (
+        <div className="mb-6 px-2">
+          <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Teste Grátis</span>
+              <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full">{trialDaysLeft} dias</span>
+            </div>
+            <div className="h-1.5 w-full bg-amber-200/50 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-amber-500 rounded-full" 
+                style={{ width: `${(trialDaysLeft / 14) * 100}%` }}
+              />
+            </div>
+            <p className="text-[9px] text-amber-600/70 mt-2 font-medium leading-tight">
+              Aproveite todos os recursos. Restam {trialDaysLeft} dias para o fim do seu teste.
+            </p>
+          </div>
+        </div>
+      )}
       
       <div id="sidebar-nav" className="flex flex-col gap-1 w-full flex-1 overflow-y-auto overflow-x-hidden mt-2 px-1.5 custom-scrollbar">
         <NavItem icon={LayoutDashboard} label="Dashboard" active={currentView === 'dashboard'} onClick={() => setCurrentView('dashboard')} isCollapsed={isCollapsed} toggleSidebar={toggleSidebar} />
