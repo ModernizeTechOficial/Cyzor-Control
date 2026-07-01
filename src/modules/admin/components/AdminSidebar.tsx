@@ -64,19 +64,30 @@ export default function AdminSidebar({ isCollapsed, toggleSidebar, currentView, 
     else if (itemId === 'admin-logs') category = 'logs';
 
     return (
-      <button
+      <span
         onClick={(e) => {
           e.stopPropagation();
           if (category !== 'all') {
             onOpenEvents(category);
           }
         }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.stopPropagation();
+            e.preventDefault();
+            if (category !== 'all') {
+              onOpenEvents(category);
+            }
+          }
+        }}
         title={`${titleText} (Clique para ver eventos)`}
-        className={`w-2 h-2 rounded-full ${pulseClass} shrink-0 cursor-pointer relative group/dot`}
+        className={`w-2 h-2 rounded-full ${pulseClass} shrink-0 cursor-pointer relative group/dot inline-block`}
         aria-label={titleText}
+        role="button"
+        tabIndex={0}
       >
         <span className="absolute -inset-1 rounded-full opacity-0 group-hover/dot:opacity-100 transition-opacity bg-black/5" />
-      </button>
+      </span>
     );
   };
 
@@ -92,16 +103,25 @@ export default function AdminSidebar({ isCollapsed, toggleSidebar, currentView, 
     else if (itemId === 'admin-logs') category = 'logs';
 
     return (
-      <button
+      <span
         onClick={(e) => {
           e.stopPropagation();
           onOpenEvents(category);
         }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.stopPropagation();
+            e.preventDefault();
+            onOpenEvents(category);
+          }
+        }}
         title={`Possui ${count} eventos recentes (Clique para expandir)`}
-        className="ml-1.5 px-2 py-0.5 text-[8px] font-extrabold font-mono bg-zinc-950 hover:bg-indigo-600 text-white rounded-full transition-all shrink-0 active:scale-90"
+        className="ml-1.5 px-2 py-0.5 text-[8px] font-extrabold font-mono bg-zinc-950 hover:bg-indigo-600 text-white rounded-full transition-all shrink-0 active:scale-90 cursor-pointer inline-block"
+        role="button"
+        tabIndex={0}
       >
         {count}
-      </button>
+      </span>
     );
   };
 
