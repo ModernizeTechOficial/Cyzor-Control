@@ -15,36 +15,6 @@ apiRouter.use((req, res, next) => {
 });
 
 apiRouter.use(requireAuth);
-apiRouter.use(tenantMiddleware as any);
-
-import { processAIChat, generateProactiveInsights, getAIInstance } from './aiModel.ts';
-
-/*
-apiRouter.post("/ai/chat", async (req: AuthRequest, res) => {
-  try {
-    const { prompt, history } = req.body;
-    if (!prompt) {
-      return res.status(400).json({ error: "Prompt is required" });
-    }
-    const text = await processAIChat(prompt, req.workspaceId!, history || []);
-    res.json({ text });
-  } catch (error: any) {
-    console.error("Error in /api/ai/chat route:", error);
-    res.status(500).json({ error: error.message || "Internal server error" });
-  }
-});
-*/
-
-// --- AI INSIGHTS ---
-apiRouter.get("/ai/insights", async (req: AuthRequest, res) => {
-  try {
-    const insights = await generateProactiveInsights(req.workspaceId!);
-    res.json(insights);
-  } catch (error: any) {
-    console.error("Error in /api/ai/insights route:", error);
-    res.status(500).json({ error: "Failed to generate insights" });
-  }
-});
 
 apiRouter.get("/plans", async (req: AuthRequest, res) => {
   try {
@@ -55,6 +25,21 @@ apiRouter.get("/plans", async (req: AuthRequest, res) => {
   } catch (error: any) {
     console.error("Error fetching plans:", error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+apiRouter.use(tenantMiddleware as any);
+
+import { processAIChat, generateProactiveInsights, getAIInstance } from './aiModel.ts';
+
+// --- AI INSIGHTS ---
+apiRouter.get("/ai/insights", async (req: AuthRequest, res) => {
+  try {
+    const insights = await generateProactiveInsights(req.workspaceId!);
+    res.json(insights);
+  } catch (error: any) {
+    console.error("Error in /api/ai/insights route:", error);
+    res.status(500).json({ error: "Failed to generate insights" });
   }
 });
 

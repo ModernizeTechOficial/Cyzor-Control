@@ -28,11 +28,25 @@ export const tenantMiddleware = async (
     const userId = req.user.uid;
 
     // 1. Resolve active workspace ID from database
-    const state = await getUserSaaSState(userId);
-    const activeWorkspaceId = state?.activeWorkspace?.id;
+    let state = await getUserSaaSState(userId);
+    let activeWorkspaceId = state?.activeWorkspace?.id;
 
     if (!activeWorkspaceId) {
-      return res.status(403).json({ error: 'No active workspace resolved for this user' });
+      console.log(`[Tenant Middleware] No active workspace for user ${userId}. Attempting fallback...`);
+      // Fallback: Pick the first workspace the user belongs to
+      const userWorkspaces = await db.select({ workspaceId: schema.workspaceMembers.workspaceId })
+        .from(schema.workspaceMembers)
+        .where(eq(schema.workspaceMembers.userUid, userId))
+        .limit(1);
+      
+      if (userWorkspaces.length > 0) {
+        activeWorkspaceId = userWorkspaces[0].workspaceId;
+        console.log(`[Tenant Middleware] Falling back to workspace ${activeWorkspaceId} for user ${userId}`);
+        // Optionally update the user's active workspace in DB for next time
+        await db.update(schema.users).set({ activeWorkspaceId }).where(eq(schema.users.uid, userId));
+      } else {
+        return res.status(403).json({ error: 'No active workspace resolved for this user. Please create or join a workspace first.' });
+      }
     }
 
     req.workspaceId = activeWorkspaceId;

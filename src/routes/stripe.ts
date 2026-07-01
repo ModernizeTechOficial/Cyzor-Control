@@ -47,8 +47,14 @@ stripeRouter.post("/stripe/checkout-session", requireAuth, tenantMiddleware, asy
     if (!stripeCustomerId) {
       // Create Stripe customer
       const [userRec] = await db.select().from(users).where(eq(users.uid, userId)).limit(1);
+      const email = userRec?.email || req.user?.email;
+      
+      if (!email) {
+        return res.status(400).json({ error: 'User email not found. Please ensure your profile is complete.' });
+      }
+
       const newCustomer = await stripe.customers.create({
-        email: userRec.email,
+        email: email,
         metadata: { tenantId, userId, environment: currentEnv }
       });
       stripeCustomerId = newCustomer.id;
@@ -57,29 +63,65 @@ stripeRouter.post("/stripe/checkout-session", requireAuth, tenantMiddleware, asy
         tenantId,
         userId,
         stripeCustomerId,
-        email: userRec.email,
+        email: email,
         environment: currentEnv
       });
     }
 
     // Create Checkout Session
-    const session = await stripe.checkout.sessions.create({
-      customer: stripeCustomerId,
-      payment_method_types: ['card'],
-      line_items: [{
-        price: stripePriceId,
-        quantity: 1,
-      }],
-      mode: 'subscription',
-      success_url: `${req.headers.origin}/settings?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.origin}/settings`,
-      metadata: { tenantId, userId, planId: plan.id.toString() },
-      subscription_data: {
-        metadata: { tenantId, userId, planId: plan.id.toString() }
-      }
-    });
+    try {
+      const session = await stripe.checkout.sessions.create({
+        customer: stripeCustomerId,
+        payment_method_types: ['card'],
+        line_items: [{
+          price: stripePriceId,
+          quantity: 1,
+        }],
+        mode: 'subscription',
+        success_url: `${req.headers.origin}/settings?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${req.headers.origin}/settings`,
+        metadata: { tenantId, userId, planId: plan.id.toString() },
+        subscription_data: {
+          metadata: { tenantId, userId, planId: plan.id.toString() }
+        }
+      });
 
-    res.json({ url: session.url });
+      res.json({ url: session.url });
+    } catch (stripeError: any) {
+      // If customer doesn't exist in this mode (common after env switch with stale DB data)
+      if (stripeError.code === 'resource_missing' && stripeError.param === 'customer') {
+        console.log(`Customer ${stripeCustomerId} not found in Stripe. Cleaning up local record...`);
+        await db.delete(billingCustomers).where(
+          and(
+            eq(billingCustomers.tenantId, tenantId),
+            eq(billingCustomers.userId, userId),
+            eq(billingCustomers.environment, currentEnv)
+          )
+        );
+        return res.status(400).json({ 
+          error: 'Sua conta de faturamento estava dessincronizada. Por favor, tente clicar no botão de assinatura novamente para criar um novo registro correto.' 
+        });
+      }
+
+      if (stripeError.raw?.message?.includes("No such price") || (stripeError.code === 'resource_missing' && stripeError.param === 'price')) {
+        console.log(`Price ${stripePriceId} not found in Stripe. Cleaning up local plan sync...`);
+        const updateData: any = { updatedAt: new Date() };
+        if (isProd) {
+          updateData.liveStripePriceId = null;
+          updateData.liveStripeProductId = null;
+        } else {
+          updateData.testStripePriceId = null;
+          updateData.testStripeProductId = null;
+        }
+        await db.update(plans).set(updateData).where(eq(plans.id, plan.id));
+        
+        return res.status(400).json({ 
+          error: `O ID de preço do plano '${planId}' não existe no seu Stripe (${isProd ? 'Produção' : 'Teste'}). Por favor, peça ao administrador para 'Sincronizar Planos' novamente no painel de controle.` 
+        });
+      }
+
+      throw stripeError;
+    }
   } catch (error: any) {
     console.error(error);
     res.status(500).json({ error: error.message });
@@ -107,12 +149,20 @@ stripeRouter.post("/stripe/portal-session", requireAuth, tenantMiddleware, async
     }
 
     const stripe = await getStripe();
-    const session = await stripe.billingPortal.sessions.create({
-      customer: customer.stripeCustomerId,
-      return_url: `${req.headers.origin}/settings`,
-    });
+    try {
+      const session = await stripe.billingPortal.sessions.create({
+        customer: customer.stripeCustomerId,
+        return_url: `${req.headers.origin}/settings`,
+      });
 
-    res.json({ url: session.url });
+      res.json({ url: session.url });
+    } catch (stripeError: any) {
+      if (stripeError.code === 'resource_missing' && stripeError.param === 'customer') {
+        await db.delete(billingCustomers).where(eq(billingCustomers.id, customer.id));
+        return res.status(400).json({ error: 'Registro de cliente inválido detectado e removido. Por favor, tente novamente.' });
+      }
+      throw stripeError;
+    }
   } catch (error: any) {
     console.error(error);
     res.status(500).json({ error: error.message });
