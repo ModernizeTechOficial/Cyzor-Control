@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Building2, Users, CreditCard, Server, Activity, Shield, LogOut } from 'lucide-react';
+import { LayoutDashboard, Building2, Briefcase, Users, CreditCard, Server, Activity, Shield, LogOut } from 'lucide-react';
 import { View } from '../../../types.ts';
 import { useAuth } from '../../../context/AuthContext.tsx';
 
@@ -14,7 +14,8 @@ export default function AdminSidebar({ isCollapsed, toggleSidebar, currentView, 
   const { logout } = useAuth();
   const navItems = [
     { id: 'admin', icon: LayoutDashboard, label: 'Platform' },
-    { id: 'admin-tenants', icon: Building2, label: 'Empresas' },
+    { id: 'admin-tenants', icon: Server, label: 'Workspaces (SaaS)' },
+    { id: 'admin-companies', icon: Briefcase, label: 'Empresas Clientes' },
     { id: 'admin-users', icon: Users, label: 'Usuários' },
     { id: 'admin-finance', icon: CreditCard, label: 'Financeiro' },
     { id: 'admin-infrastructure', icon: Server, label: 'Infraestrutura' },
