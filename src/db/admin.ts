@@ -414,6 +414,56 @@ adminRouter.post("/stripe/provision-webhook", async (req: AuthRequest, res) => {
   }
 });
 
+adminRouter.post("/stripe/sync-all-plans", async (req: AuthRequest, res) => {
+  try {
+    const config = await getStripeConfig();
+    if (!config) return res.status(400).json({ error: 'Stripe config not found' });
+    
+    const isProd = config.environment === 'production';
+    const stripe = await getStripe();
+    const allPlans = await db.select().from(plans);
+    const results = [];
+
+    for (const plan of allPlans) {
+      let productId = isProd ? plan.liveStripeProductId : plan.testStripeProductId;
+      if (!productId) {
+        const product = await stripe.products.create({
+          name: plan.name,
+          description: `Cyzor Control - ${plan.name} (${isProd ? 'Live' : 'Test'})`,
+        });
+        productId = product.id;
+      }
+      
+      let priceId = isProd ? plan.liveStripePriceId : plan.testStripePriceId;
+      if (!priceId) {
+        const price = await stripe.prices.create({
+          product: productId,
+          unit_amount: Math.round(Number(plan.price) * 100),
+          currency: plan.currency?.toLowerCase() || 'brl',
+          recurring: { interval: plan.billingPeriod === 'yearly' ? 'year' : 'month' },
+        });
+        priceId = price.id;
+      }
+      
+      const updateData: any = { updatedAt: new Date() };
+      if (isProd) {
+        updateData.liveStripeProductId = productId;
+        updateData.liveStripePriceId = priceId;
+      } else {
+        updateData.testStripeProductId = productId;
+        updateData.testStripePriceId = priceId;
+      }
+      
+      const updated = await db.update(plans).set(updateData).where(eq(plans.id, plan.id)).returning();
+      results.push(updated[0]);
+    }
+    
+    res.json(results);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 adminRouter.post("/stripe/sync-plan/:id", async (req: AuthRequest, res) => {
   try {
     const id = parseInt(req.params.id);

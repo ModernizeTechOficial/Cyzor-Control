@@ -96,6 +96,25 @@ export function BillingAdminView() {
     setLoading(false);
   };
 
+  const syncAllPlans = async () => {
+    setLoading(true);
+    try {
+      const res = await fetchWithAuth('/api/admin/stripe/sync-all-plans', {
+        method: 'POST'
+      });
+      if (res.ok) {
+        alert('Todos os planos foram sincronizados com sucesso!');
+        loadPlans();
+      } else {
+        const data = await res.json();
+        alert(`Erro: ${data.error || 'Falha ao sincronizar planos'}`);
+      }
+    } catch (e) {
+      alert('Erro ao sincronizar');
+    }
+    setLoading(false);
+  };
+
   const loadPlans = async () => {
     try {
       const res = await fetchWithAuth('/api/admin/plans');
@@ -247,11 +266,28 @@ export function BillingAdminView() {
       )}
 
       {activeTab === 'plans' && (
-        <div className="space-y-4">
-          <div className="bg-yellow-900/30 border border-yellow-700/50 p-4 rounded text-sm text-yellow-200">
-            <strong>Atenção:</strong> Sincronize os planos para gerar Product e Price no Stripe. O Stripe não é a fonte da verdade, apenas processa os pagamentos baseados nestes IDs.
+        <div className="space-y-6">
+          <div className="flex justify-between items-center bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-xl">
+            <div>
+              <h3 className="text-lg font-bold text-white">Sincronização em Massa</h3>
+              <p className="text-sm text-gray-400">Garanta que todos os planos existam no Stripe para o ambiente atual: 
+                <span className={`ml-2 font-bold ${environment === 'production' ? 'text-green-500' : 'text-blue-500'}`}>
+                  {environment === 'production' ? 'PRODUÇÃO (LIVE)' : 'SANDBOX (TEST)'}
+                </span>
+              </p>
+            </div>
+            <button 
+              onClick={syncAllPlans} 
+              disabled={loading}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-lg ${environment === 'production' ? 'bg-green-600 hover:bg-green-700 text-white shadow-green-600/20' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20'}`}
+            >
+              {loading ? <RefreshCw className="animate-spin" size={18} /> : <RefreshCw size={18} />}
+              Sincronizar Todos os Planos
+            </button>
           </div>
-          <table className="w-full text-left text-sm text-gray-400">
+
+          <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+            <table className="w-full text-left text-sm text-gray-400">
             <thead className="bg-gray-800 text-gray-300">
               <tr>
                 <th className="px-4 py-3 rounded-tl-lg">Plano</th>
@@ -294,7 +330,8 @@ export function BillingAdminView() {
             </tbody>
           </table>
         </div>
-      )}
+      </div>
+    )}
 
       {activeTab === 'subscriptions' && (
         <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">

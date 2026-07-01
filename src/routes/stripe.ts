@@ -24,7 +24,10 @@ stripeRouter.post("/stripe/checkout-session", requireAuth, tenantMiddleware, asy
     const stripePriceId = isProd ? plan?.liveStripePriceId : plan?.testStripePriceId;
 
     if (!plan || !stripePriceId) {
-      return res.status(400).json({ error: 'Invalid plan or not synchronized with Stripe for current environment' });
+      const mode = isProd ? 'Production (Live)' : 'Sandbox (Test)';
+      return res.status(400).json({ 
+        error: `O plano '${planId}' não está sincronizado com o Stripe no ambiente ${mode}. Por favor, acesse o painel Administrativo > Faturamento e clique em 'Sincronizar Todos os Planos' ou sincronize este plano manualmente.` 
+      });
     }
 
     const stripe = await getStripe();
