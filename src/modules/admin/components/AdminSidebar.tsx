@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Building2, Briefcase, Users, CreditCard, Server, Activity, Shield, LogOut, Package } from 'lucide-react';
+import { LayoutDashboard, Building2, Briefcase, Users, CreditCard, Server, Activity, Shield, LogOut, Package, Settings } from 'lucide-react';
 import { View } from '../../../types.ts';
 import { useAuth } from '../../../context/AuthContext.tsx';
 
@@ -20,6 +20,7 @@ export default function AdminSidebar({ isCollapsed, toggleSidebar, currentView, 
     { id: 'admin-finance', icon: CreditCard, label: 'Financeiro' },
     { id: 'admin-plans', icon: Package, label: 'Planos' },
     { id: 'admin-billing', icon: CreditCard, label: 'Billing Stripe' },
+    { id: 'admin-settings', icon: Settings, label: 'Configurações' },
     { id: 'admin-infrastructure', icon: Server, label: 'Infraestrutura' },
     { id: 'admin-logs', icon: Activity, label: 'Logs & Auditoria' },
   ];

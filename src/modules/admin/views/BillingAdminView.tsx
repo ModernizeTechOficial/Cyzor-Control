@@ -3,8 +3,8 @@ import { useAuth } from '../../../context/AuthContext';
 import { Settings, RefreshCw, CreditCard, Clock, Activity, FileText } from 'lucide-react';
 
 export function BillingAdminView() {
-  const { user, fetchWithAuth, refreshBranding } = useAuth();
-  const [activeTab, setActiveTab] = useState<'branding' | 'config' | 'plans' | 'subscriptions' | 'payments' | 'webhooks'>('branding');
+  const { fetchWithAuth, refreshBranding } = useAuth();
+  const [activeTab, setActiveTab] = useState<'config' | 'plans' | 'subscriptions' | 'payments' | 'webhooks'>('config');
   
   // Config
   const [testPublishableKey, setTestPublishableKey] = useState('');
@@ -14,14 +14,6 @@ export function BillingAdminView() {
   const [liveSecretKey, setLiveSecretKey] = useState('');
   const [liveWebhookSecret, setLiveWebhookSecret] = useState('');
   const [environment, setEnvironment] = useState('sandbox');
-  
-  // Global Branding
-  const [globalLogoUrl, setGlobalLogoUrl] = useState('');
-  const [globalIconUrl, setGlobalIconUrl] = useState('');
-  const [globalLoginHeroUrl, setGlobalLoginHeroUrl] = useState('');
-  const [globalLogoSize, setGlobalLogoSize] = useState('40');
-  const [globalIconSize, setGlobalIconSize] = useState('20');
-  const [globalAppName, setGlobalAppName] = useState('CYZOR');
   
   // Data
   const [plans, setPlans] = useState<any[]>([]);
@@ -55,12 +47,6 @@ export function BillingAdminView() {
           setLiveSecretKey(data.liveSecretKey || '');
           setLiveWebhookSecret(data.liveWebhookSecret || '');
           setEnvironment(data.environment || 'sandbox');
-          setGlobalLogoUrl(data.globalLogoUrl || '');
-          setGlobalIconUrl(data.globalIconUrl || '');
-          setGlobalLoginHeroUrl(data.loginHeroUrl || '');
-          setGlobalLogoSize(data.globalLogoSize || '40');
-          setGlobalIconSize(data.globalIconSize || '20');
-          setGlobalAppName(data.globalAppName || 'CYZOR');
         }
       }
     } catch (e) { console.error(e); }
@@ -76,8 +62,7 @@ export function BillingAdminView() {
         body: JSON.stringify({ 
           testPublishableKey, testSecretKey, testWebhookSecret,
           livePublishableKey, liveSecretKey, liveWebhookSecret,
-          environment,
-          globalLogoUrl, globalIconUrl, loginHeroUrl: globalLoginHeroUrl, globalLogoSize, globalIconSize, globalAppName
+          environment
         })
       });
       if (res.ok) {
@@ -185,78 +170,12 @@ export function BillingAdminView() {
       </div>
 
       <div className="flex space-x-1 border-b border-gray-800">
-        <button onClick={() => setActiveTab('branding')} className={`px-4 py-3 text-sm font-medium ${activeTab === 'branding' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-400 hover:text-white'}`}>Identidade Visual</button>
         <button onClick={() => setActiveTab('config')} className={`px-4 py-3 text-sm font-medium ${activeTab === 'config' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-400 hover:text-white'}`}>Configuração Stripe</button>
         <button onClick={() => setActiveTab('plans')} className={`px-4 py-3 text-sm font-medium ${activeTab === 'plans' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-400 hover:text-white'}`}>Sincronização de Planos</button>
         <button onClick={() => setActiveTab('subscriptions')} className={`px-4 py-3 text-sm font-medium ${activeTab === 'subscriptions' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-400 hover:text-white'}`}>Assinaturas</button>
         <button onClick={() => setActiveTab('payments')} className={`px-4 py-3 text-sm font-medium ${activeTab === 'payments' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-400 hover:text-white'}`}>Pagamentos</button>
         <button onClick={() => setActiveTab('webhooks')} className={`px-4 py-3 text-sm font-medium ${activeTab === 'webhooks' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-400 hover:text-white'}`}>Logs Webhook</button>
       </div>
-
-      {activeTab === 'branding' && (
-        <form onSubmit={saveConfig} className="max-w-4xl space-y-6">
-           <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 space-y-6">
-            <div className="border-b border-gray-700 pb-4">
-              <h3 className="text-lg font-bold text-white">Identidade Visual Global</h3>
-              <p className="text-sm text-gray-400">Branding padrão do sistema para todos os workspaces que não possuem White Label (Pro).</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider">Nome do App Global</label>
-                  <input type="text" value={globalAppName} onChange={e => setGlobalAppName(e.target.value)} className="w-full bg-gray-900 border border-gray-700 text-white rounded px-3 py-2 text-sm" placeholder="CYZOR CONTROL" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider">Tamanho Logo (px)</label>
-                    <input type="text" value={globalLogoSize} onChange={e => setGlobalLogoSize(e.target.value)} className="w-full bg-gray-900 border border-gray-700 text-white rounded px-3 py-2 text-sm" placeholder="40" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider">Tamanho Ícone (px)</label>
-                    <input type="text" value={globalIconSize} onChange={e => setGlobalIconSize(e.target.value)} className="w-full bg-gray-900 border border-gray-700 text-white rounded px-3 py-2 text-sm" placeholder="20" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider">URL do Logo Global (Landing Page)</label>
-                  <div className="flex gap-2">
-                    <input type="text" value={globalLogoUrl} onChange={e => setGlobalLogoUrl(e.target.value)} className="flex-1 bg-gray-900 border border-gray-700 text-white rounded px-3 py-2 text-sm" placeholder="https://..." />
-                    {globalLogoUrl && <img src={globalLogoUrl} alt="Preview" className="h-10 w-10 object-contain bg-white rounded p-1" />}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider">URL do Ícone Global (Dashboard)</label>
-                  <div className="flex gap-2">
-                    <input type="text" value={globalIconUrl} onChange={e => setGlobalIconUrl(e.target.value)} className="flex-1 bg-gray-900 border border-gray-700 text-white rounded px-3 py-2 text-sm" placeholder="https://..." />
-                    {globalIconUrl && <img src={globalIconUrl} alt="Preview" className="h-10 w-10 object-contain bg-white rounded p-1" />}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1 uppercase tracking-wider">URL da Imagem de Login (Hero)</label>
-                  <div className="flex gap-2">
-                    <input type="text" value={globalLoginHeroUrl} onChange={e => setGlobalLoginHeroUrl(e.target.value)} className="flex-1 bg-gray-900 border border-gray-700 text-white rounded px-3 py-2 text-sm" placeholder="https://..." />
-                    {globalLoginHeroUrl && <img src={globalLoginHeroUrl} alt="Preview" className="h-10 w-20 object-cover bg-white rounded p-1" />}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 text-blue-400 text-xs leading-relaxed">
-              <strong>Dica:</strong> Utilize URLs de imagens hospedadas em serviços confiáveis. O ícone deve ser preferencialmente quadrado (1:1) e o logo pode ser retangular.
-            </div>
-          </div>
-
-          <div className="flex justify-end pt-4">
-            <button type="submit" disabled={loading} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-blue-600/20 transition-all flex items-center gap-2">
-              {loading ? <RefreshCw className="animate-spin" size={18} /> : <Settings size={18} />}
-              Salvar Identidade Visual
-            </button>
-          </div>
-        </form>
-      )}
 
       {activeTab === 'config' && (
         <form onSubmit={saveConfig} className="max-w-4xl space-y-6">

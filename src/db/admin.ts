@@ -1,4 +1,5 @@
 import { Router, Request, Response, NextFunction } from "express";
+import multer from "multer";
 import { requireAuth, AuthRequest } from "../middleware/auth.ts";
 import { db } from "./index.ts";
 import { tenants, users, companies, products, projects, userTenants, financeEntries, tasks, ideas, workspaces, plans } from "./schema.ts";
@@ -540,6 +541,21 @@ adminRouter.get("/stripe/webhooks", async (req: AuthRequest, res) => {
   try {
     const events = await db.select().from(billingWebhookEvents).orderBy(desc(billingWebhookEvents.createdAt)).limit(100);
     res.json(events);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+const upload = multer({ storage: multer.memoryStorage() });
+
+adminRouter.post("/upload", upload.single('file'), (req: any, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+    const base64 = req.file.buffer.toString('base64');
+    const dataUrl = `data:${req.file.mimetype};base64,${base64}`;
+    res.json({ url: dataUrl });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
