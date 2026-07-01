@@ -43,7 +43,14 @@ export default function AdminLayout({ currentView, setCurrentView }: AdminLayout
   }, [loadMetrics]);
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD] font-sans relative flex">
+    <div className="min-h-screen bg-[#09090B] text-zinc-100 font-sans relative flex overflow-hidden">
+      {/* Immersive Cyber Mesh Grid & Neon Ambient Accents */}
+      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f293708_1px,transparent_1px),linear-gradient(to_bottom,#1f293708_1px,transparent_1px)] bg-[size:24px_24px] opacity-40" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_800px_at_100%_200px,#4f46e50f,transparent)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_600px_at_0%_80%,#06b6d408,transparent)]" />
+      </div>
+
       <AdminSidebar
         isCollapsed={isSidebarCollapsed}
         toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
@@ -51,14 +58,14 @@ export default function AdminLayout({ currentView, setCurrentView }: AdminLayout
         setCurrentView={setCurrentView}
       />
       
-      <div className={`transition-all duration-300 flex-1 flex flex-col min-w-0 h-screen overflow-hidden`}>
+      <div className={`transition-all duration-300 flex-1 flex flex-col min-w-0 h-screen overflow-hidden relative z-10`}>
         <AdminTopbar 
           isSidebarCollapsed={isSidebarCollapsed} 
           toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)} 
           setCurrentView={setCurrentView}
         />
         
-        <main className="flex-1 overflow-y-auto pt-4 px-6 md:px-8 pb-12 w-full">
+        <main className="flex-1 overflow-y-auto pt-6 px-6 md:px-8 pb-16 w-full custom-dark-scrollbar">
           {currentView === 'admin' && (
             <PlatformAdminDashboard 
               metrics={metrics} 
@@ -75,8 +82,8 @@ export default function AdminLayout({ currentView, setCurrentView }: AdminLayout
           {currentView === 'admin-settings' && <GlobalSettingsAdminView />}
           {/* add more admin views here */}
           {['admin-infrastructure', 'admin-logs'].includes(currentView as string) && (
-            <div className="flex items-center justify-center h-64 border border-dashed border-gray-300 rounded-xl">
-              <p className="text-gray-500 font-medium">Módulo em construção</p>
+            <div className="flex items-center justify-center h-64 border border-dashed border-zinc-800 rounded-2xl bg-zinc-900/40">
+              <p className="text-zinc-500 font-medium">Módulo em construção</p>
             </div>
           )}
         </main>

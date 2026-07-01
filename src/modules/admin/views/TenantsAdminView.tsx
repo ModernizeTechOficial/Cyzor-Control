@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext.tsx';
-import { Building2, Search, Filter, Edit3, Trash2, XCircle, AlertTriangle } from 'lucide-react';
+import { Building2, Search, Filter, Edit3, Trash2, XCircle, AlertTriangle, Server } from 'lucide-react';
 
 export default function TenantsAdminView() {
   const { fetchWithAuth } = useAuth();
@@ -93,85 +93,88 @@ export default function TenantsAdminView() {
   );
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 animate-in fade-in duration-500 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#18181B] pb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Workspaces & Tenants</h1>
-          <p className="text-sm text-gray-500 font-medium">Controle de instâncias isoladas de banco de dados e planos de faturamento SaaS.</p>
+          <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+            <Server className="text-indigo-400 shrink-0" size={24} />
+            Workspaces & SaaS Tenants
+          </h1>
+          <p className="text-sm text-zinc-400 font-medium">Controle de instâncias isoladas de banco de dados e planos de faturamento SaaS.</p>
         </div>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-100 flex items-center gap-4 bg-gray-50/50">
+      <div className="bg-[#0D0D10]/95 border border-[#18181B] rounded-2xl shadow-2xl overflow-hidden">
+        <div className="p-4 border-b border-[#18181B] flex items-center gap-4 bg-[#121215]/50">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 w-4 h-4" />
             <input 
               type="text" 
               placeholder="Buscar workspaces por nome ou slug..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
+              className="w-full pl-9 pr-4 py-2.5 bg-[#121215] border border-[#1E1E22] text-zinc-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all placeholder:text-zinc-500 font-medium font-mono"
             />
           </div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-100 font-bold">
+          <table className="w-full text-xs text-left">
+            <thead className="text-[10px] text-zinc-400 uppercase bg-[#121215]/80 border-b border-[#18181B] font-bold font-mono tracking-wider">
               <tr>
-                <th className="px-6 py-4">Tenant / Empresa</th>
-                <th className="px-6 py-4">Slug Identificador</th>
-                <th className="px-6 py-4">Plano Ativo</th>
-                <th className="px-6 py-4">Criado em</th>
-                <th className="px-6 py-4 text-right">Ações</th>
+                <th className="px-6 py-4.5">Tenant / Empresa</th>
+                <th className="px-6 py-4.5">Slug Identificador</th>
+                <th className="px-6 py-4.5">Plano Ativo</th>
+                <th className="px-6 py-4.5">Criado em</th>
+                <th className="px-6 py-4.5 text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-[#18181B]">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600 mx-auto"></div>
+                  <td colSpan={5} className="px-6 py-12 text-center text-zinc-500">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500 mx-auto"></div>
                   </td>
                 </tr>
               ) : filteredTenants.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500 font-medium">Nenhum tenant encontrado.</td>
+                  <td colSpan={5} className="px-6 py-12 text-center text-zinc-500 font-medium">Nenhum tenant cadastrado no sistema.</td>
                 </tr>
               ) : (
                 filteredTenants.map((tenant) => (
-                  <tr key={tenant.id} className="hover:bg-gray-50/50 transition-colors">
+                  <tr key={tenant.id} className="hover:bg-[#121215]/40 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold uppercase shrink-0 border border-indigo-100">
+                        <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-bold uppercase shrink-0 border border-indigo-500/20">
                           {tenant.name?.charAt(0) || 'E'}
                         </div>
-                        <span className="font-semibold text-gray-900">{tenant.name}</span>
+                        <span className="font-bold text-zinc-100">{tenant.name}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-gray-500 font-mono text-xs">{tenant.slug}</td>
+                    <td className="px-6 py-4 text-zinc-400 font-mono">{tenant.slug}</td>
                     <td className="px-6 py-4">
-                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-100 uppercase">
+                      <span className="px-2.5 py-1 rounded-full text-[9px] font-extrabold bg-purple-500/10 text-purple-400 border border-purple-500/20 uppercase tracking-widest">
                         {tenant.plan || 'Free'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-gray-500">
+                    <td className="px-6 py-4 text-zinc-400 font-mono">
                       {new Date(tenant.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button 
                           onClick={() => handleOpenEdit(tenant)}
-                          className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          className="p-1.5 text-zinc-400 hover:text-indigo-400 hover:bg-indigo-500/10 border border-[#1E1E22] bg-[#121215]/80 rounded-lg transition-colors"
                           title="Editar"
                         >
-                          <Edit3 size={16} />
+                          <Edit3 size={14} />
                         </button>
                         <button 
                           onClick={() => handleDelete(tenant.id)}
-                          className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 border border-[#1E1E22] bg-[#121215]/80 rounded-lg transition-colors"
                           title="Excluir"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </td>
@@ -185,50 +188,50 @@ export default function TenantsAdminView() {
 
       {/* EDIT MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-[#0A0A0A]/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl w-full max-w-md border border-gray-100 shadow-2xl overflow-hidden flex flex-col animate-in scale-in-95 duration-200">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                <Building2 className="text-indigo-600" size={20} />
-                Editar Tenant
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-[#0D0D10] rounded-3xl w-full max-w-md border border-[#1E1E22] shadow-2xl overflow-hidden flex flex-col animate-in scale-in-95 duration-200 text-zinc-100">
+            <div className="p-6 border-b border-[#18181B] flex items-center justify-between bg-[#121215]/50">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-2">
+                <Building2 className="text-indigo-400" size={18} />
+                Editar Tenant Workspace
               </h2>
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition-all"
+                className="text-zinc-500 hover:text-zinc-200 p-1.5 rounded-lg hover:bg-zinc-800 transition-all"
               >
-                <XCircle size={20} />
+                <XCircle size={18} />
               </button>
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Nome do Tenant</label>
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Nome do Tenant</label>
                 <input 
                   type="text"
                   required
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white transition-all font-medium"
+                  className="w-full px-4 py-2.5 bg-[#121215] border border-[#1E1E22] text-zinc-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all font-medium"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Slug Identificador</label>
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Slug Identificador</label>
                 <input 
                   type="text"
                   required
                   value={formData.slug}
                   onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white transition-all font-medium font-mono"
+                  className="w-full px-4 py-2.5 bg-[#121215] border border-[#1E1E22] text-zinc-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all font-medium font-mono"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Plano SaaS</label>
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Plano SaaS</label>
                 <select 
                   value={formData.plan}
                   onChange={(e) => setFormData(prev => ({ ...prev, plan: e.target.value }))}
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white transition-all font-medium text-gray-700"
+                  className="w-full px-4 py-2.5 bg-[#121215] border border-[#1E1E22] text-zinc-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all font-medium"
                 >
                   <option value="Free">Free</option>
                   <option value="Pro">Pro</option>
@@ -236,17 +239,17 @@ export default function TenantsAdminView() {
                 </select>
               </div>
 
-              <div className="pt-4 flex items-center justify-end gap-3 border-t border-gray-100">
+              <div className="pt-4 flex items-center justify-end gap-3 border-t border-[#18181B]">
                 <button 
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-all"
+                  className="px-4 py-2 border border-[#1E1E22] rounded-xl text-xs font-semibold text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-all"
                 >
                   Cancelar
                 </button>
                 <button 
                   type="submit"
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all"
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-md transition-all active:scale-[0.98]"
                 >
                   Salvar Alterações
                 </button>

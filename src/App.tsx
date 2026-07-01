@@ -49,8 +49,13 @@ export default function App() {
 
   useEffect(() => {
     const handleRestartTour = () => setRestartTour(prev => prev + 1);
+    const handleToggleChat = () => setIsChatOpen(prev => !prev);
     window.addEventListener('restart-tour', handleRestartTour);
-    return () => window.removeEventListener('restart-tour', handleRestartTour);
+    window.addEventListener('toggle-cyzor-chat', handleToggleChat);
+    return () => {
+      window.removeEventListener('restart-tour', handleRestartTour);
+      window.removeEventListener('toggle-cyzor-chat', handleToggleChat);
+    };
   }, []);
 
   useEffect(() => {
@@ -113,7 +118,7 @@ export default function App() {
 
       <Sidebar isCollapsed={isSidebarCollapsed} toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)} currentView={currentView} setCurrentView={setCurrentView} />
       
-      <div className={`transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-[88px]' : 'lg:ml-[280px]'} flex-1 min-w-0`}>
+      <div className={`transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-[80px]' : 'lg:ml-[260px]'} flex-1 min-w-0`}>
         <Topbar isSidebarCollapsed={isSidebarCollapsed} toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)} setCurrentView={setCurrentView} />
         <main className="pt-24 lg:pt-28 px-4 sm:px-6 md:px-8 pb-28 lg:pb-12 flex flex-col gap-6 md:gap-10 w-full xl:max-w-none min-h-screen">
           {currentView === 'dashboard' && <DashboardView setCurrentView={setCurrentView} />}
