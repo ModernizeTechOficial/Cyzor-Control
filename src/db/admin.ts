@@ -421,18 +421,22 @@ adminRouter.post("/stripe/sync-plan/:id", async (req: AuthRequest, res) => {
     
     if (!plan) return res.status(404).json({ error: 'Plan not found' });
     
+    const config = await getStripeConfig();
+    if (!config) return res.status(400).json({ error: 'Stripe config not found' });
+    
+    const isProd = config.environment === 'production';
     const stripe = await getStripe();
     
-    let productId = plan.stripeProductId;
+    let productId = isProd ? plan.liveStripeProductId : plan.testStripeProductId;
     if (!productId) {
       const product = await stripe.products.create({
         name: plan.name,
-        description: `Cyzor Control - ${plan.name}`,
+        description: `Cyzor Control - ${plan.name} (${isProd ? 'Live' : 'Test'})`,
       });
       productId = product.id;
     }
     
-    let priceId = plan.stripePriceId;
+    let priceId = isProd ? plan.liveStripePriceId : plan.testStripePriceId;
     if (!priceId) {
       const price = await stripe.prices.create({
         product: productId,
@@ -443,11 +447,16 @@ adminRouter.post("/stripe/sync-plan/:id", async (req: AuthRequest, res) => {
       priceId = price.id;
     }
     
-    const updated = await db.update(plans).set({
-      stripeProductId: productId,
-      stripePriceId: priceId,
-      updatedAt: new Date()
-    }).where(eq(plans.id, id)).returning();
+    const updateData: any = { updatedAt: new Date() };
+    if (isProd) {
+      updateData.liveStripeProductId = productId;
+      updateData.liveStripePriceId = priceId;
+    } else {
+      updateData.testStripeProductId = productId;
+      updateData.testStripePriceId = priceId;
+    }
+    
+    const updated = await db.update(plans).set(updateData).where(eq(plans.id, id)).returning();
     
     res.json(updated[0]);
   } catch (error: any) {

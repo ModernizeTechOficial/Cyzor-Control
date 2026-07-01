@@ -590,6 +590,10 @@ export const plans = pgTable('plans', {
   isActive: boolean('is_active').default(true),
   stripeProductId: text('stripe_product_id'),
   stripePriceId: text('stripe_price_id'),
+  testStripeProductId: text('test_stripe_product_id'),
+  testStripePriceId: text('test_stripe_price_id'),
+  liveStripeProductId: text('live_stripe_product_id'),
+  liveStripePriceId: text('live_stripe_price_id'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });

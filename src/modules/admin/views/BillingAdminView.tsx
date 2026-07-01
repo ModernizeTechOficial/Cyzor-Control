@@ -257,8 +257,8 @@ export function BillingAdminView() {
                 <th className="px-4 py-3 rounded-tl-lg">Plano</th>
                 <th className="px-4 py-3">Preço</th>
                 <th className="px-4 py-3">Intervalo</th>
-                <th className="px-4 py-3">Stripe Product ID</th>
-                <th className="px-4 py-3">Stripe Price ID</th>
+                <th className="px-4 py-3">Stripe Test (ID)</th>
+                <th className="px-4 py-3">Stripe Live (ID)</th>
                 <th className="px-4 py-3 rounded-tr-lg">Ação</th>
               </tr>
             </thead>
@@ -268,11 +268,25 @@ export function BillingAdminView() {
                   <td className="px-4 py-3 text-white">{p.name}</td>
                   <td className="px-4 py-3">{p.currency} {p.price}</td>
                   <td className="px-4 py-3">{p.billingPeriod}</td>
-                  <td className="px-4 py-3"><span className="text-xs bg-gray-900 px-2 py-1 rounded font-mono">{p.stripeProductId || 'Não sincronizado'}</span></td>
-                  <td className="px-4 py-3"><span className="text-xs bg-gray-900 px-2 py-1 rounded font-mono">{p.stripePriceId || 'Não sincronizado'}</span></td>
                   <td className="px-4 py-3">
-                    <button onClick={() => syncPlan(p.id)} disabled={loading} className="text-blue-500 hover:text-blue-400 text-xs font-bold border border-blue-500/30 px-3 py-1.5 rounded">
-                      Sincronizar
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] text-gray-500 uppercase tracking-tighter font-bold">Sandbox (Test)</span>
+                      <span className={`text-[10px] bg-gray-900 px-2 py-0.5 rounded font-mono ${p.testStripePriceId ? 'text-blue-400' : 'text-gray-600'}`}>
+                        {p.testStripePriceId || 'Não sincronizado'}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] text-gray-500 uppercase tracking-tighter font-bold">Production (Live)</span>
+                      <span className={`text-[10px] bg-gray-900 px-2 py-0.5 rounded font-mono ${p.liveStripePriceId ? 'text-green-400' : 'text-gray-600'}`}>
+                        {p.liveStripePriceId || 'Não sincronizado'}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <button onClick={() => syncPlan(p.id)} disabled={loading} className={`text-xs font-bold border px-3 py-1.5 rounded transition-all ${environment === 'production' ? 'text-green-500 border-green-500/30 hover:bg-green-500/10' : 'text-blue-500 border-blue-500/30 hover:bg-blue-500/10'}`}>
+                      Sincronizar {environment === 'production' ? 'Live' : 'Test'}
                     </button>
                   </td>
                 </tr>

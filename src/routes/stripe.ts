@@ -16,8 +16,15 @@ stripeRouter.post("/stripe/checkout-session", requireAuth, tenantMiddleware, asy
     const tenantId = req.tenantId!;
 
     const [plan] = await db.select().from(plans).where(eq(plans.name, planId)).limit(1);
-    if (!plan || !plan.stripePriceId) {
-      return res.status(400).json({ error: 'Invalid plan or not synchronized with Stripe' });
+    const config = await getStripeConfig();
+    
+    if (!config) return res.status(400).json({ error: 'Stripe config not found' });
+    
+    const isProd = config.environment === 'production';
+    const stripePriceId = isProd ? plan?.liveStripePriceId : plan?.testStripePriceId;
+
+    if (!plan || !stripePriceId) {
+      return res.status(400).json({ error: 'Invalid plan or not synchronized with Stripe for current environment' });
     }
 
     const stripe = await getStripe();
@@ -51,7 +58,7 @@ stripeRouter.post("/stripe/checkout-session", requireAuth, tenantMiddleware, asy
       customer: stripeCustomerId,
       payment_method_types: ['card'],
       line_items: [{
-        price: plan.stripePriceId,
+        price: stripePriceId,
         quantity: 1,
       }],
       mode: 'subscription',
