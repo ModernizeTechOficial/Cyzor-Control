@@ -101,6 +101,7 @@ export default function Sidebar({
       id: 'administration',
       title: 'Administration',
       items: [
+        { id: 'equipe', label: 'Equipe', icon: Users, view: 'equipe' as View },
         { id: 'configuracoes', label: 'Configurações', icon: Settings, view: 'configuracoes' as View },
         ...(dbUser?.isPlatformAdmin ? [
           { id: 'admin', label: 'Admin Cyzor', icon: ShieldCheck, view: 'admin' as View }

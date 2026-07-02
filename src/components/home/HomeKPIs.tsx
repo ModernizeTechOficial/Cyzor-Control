@@ -58,7 +58,7 @@ export default function HomeKPIs({ metrics, setCurrentView }: KPIProps) {
     },
     {
       label: 'Clientes',
-      value: metrics.clients || 124,
+      value: metrics.clients || 0,
       icon: Users,
       trend: '+15.3%',
       comparison: 'vs último mês',

@@ -1,4 +1,5 @@
-import { Search, Bell, PanelLeftClose, PanelLeft, Sun, Moon, LogOut, User, CheckCircle2, AlertTriangle, Info, Clock, ShieldCheck, HelpCircle } from 'lucide-react';
+import { Search, Bell, PanelLeftClose, PanelLeft, Sun, Moon, LogOut, User, CheckCircle2, AlertTriangle, Info, Clock, ShieldCheck, HelpCircle, ChevronDown, Plus, X } from 'lucide-react';
+import { motion } from 'motion/react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useBranding } from '../hooks/useBranding.ts';
@@ -234,6 +235,97 @@ function UserProfileMenu({ setCurrentView }: { setCurrentView?: (view: View) => 
   );
 }
 
+function WorkspaceSelector() {
+  const { workspaces, activeWorkspace, updateSaaSBackend, setIsCreateWorkspaceModalOpen } = useAuth();
+  const [showMenu, setShowMenu] = useState(false);
+
+  if (workspaces.length <= 1 && !activeWorkspace) return null;
+
+  return (
+    <div className="relative">
+      <button 
+        onClick={() => setShowMenu(!showMenu)}
+        className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-[#FAFAFA] border border-[#0F172A05] hover:border-[#0F172A15] transition-all group"
+      >
+        <div className="w-5 h-5 rounded-md bg-[#111111] flex items-center justify-center text-[10px] font-bold text-white shadow-sm">
+          {activeWorkspace?.name?.charAt(0) || 'W'}
+        </div>
+        <span className="text-xs font-bold text-[#111111] max-w-[120px] truncate">
+          {activeWorkspace?.name || 'Workspace Principal'}
+        </span>
+        <ChevronDown size={14} className={`text-[#64748B] transition-transform duration-200 ${showMenu ? 'rotate-180' : ''}`} />
+      </button>
+
+      {showMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
+          <div className="absolute left-0 mt-2 w-64 bg-white border border-[#0F172A0F] rounded-[20px] p-2 shadow-[0_10px_30px_rgba(0,0,0,0.08)] z-50 flex flex-col gap-1 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="px-3 py-2 border-b border-[#0F172A05] mb-1 flex items-center justify-between">
+              <span className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-widest">Meus Workspaces</span>
+              <button 
+                onClick={() => {
+                  setIsCreateWorkspaceModalOpen(true);
+                  setShowMenu(false);
+                }}
+                className="p-1 hover:bg-[#FAFAFA] rounded-lg text-[#111111] transition-colors"
+                title="Novo Workspace"
+              >
+                <Plus size={14} />
+              </button>
+            </div>
+            <div className="max-h-[300px] overflow-y-auto custom-scrollbar flex flex-col gap-1 pr-1">
+              {workspaces.map((workspace) => (
+                <button
+                  key={workspace.id}
+                  onClick={() => {
+                    updateSaaSBackend(undefined, workspace.id);
+                    setShowMenu(false);
+                  }}
+                  className={`w-full flex items-center gap-3 p-2 rounded-xl transition-all ${
+                    activeWorkspace?.id === workspace.id 
+                      ? 'bg-[#111111]/5 text-[#111111] font-bold' 
+                      : 'text-[#64748B] hover:bg-[#FAFAFA] hover:text-[#111111]'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shadow-sm ${
+                    activeWorkspace?.id === workspace.id ? 'bg-[#111111] text-white' : 'bg-[#F1F5F9] text-[#64748B]'
+                  }`}>
+                    {workspace.name.charAt(0)}
+                  </div>
+                  <div className="flex flex-col items-start overflow-hidden">
+                    <span className="text-xs truncate w-full text-left">{workspace.name}</span>
+                    <span className="text-[9px] font-medium opacity-60 uppercase tracking-tighter">
+                      {workspace.ownerId === activeWorkspace?.ownerId ? 'Proprietário' : 'Membro'}
+                    </span>
+                  </div>
+                  {activeWorkspace?.id === workspace.id && (
+                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[#111111]" />
+                  )}
+                </button>
+              ))}
+            </div>
+            
+            <div className="mt-1 pt-1 border-t border-[#0F172A05]">
+              <button
+                onClick={() => {
+                  setIsCreateWorkspaceModalOpen(true);
+                  setShowMenu(false);
+                }}
+                className="w-full flex items-center gap-3 p-2 rounded-xl text-[#111111] font-bold hover:bg-[#FAFAFA] transition-all text-xs"
+              >
+                <div className="w-8 h-8 rounded-lg bg-[#FAFAFA] border border-dashed border-[#0F172A20] flex items-center justify-center text-[#64748B]">
+                  <Plus size={16} />
+                </div>
+                Criar novo Workspace
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function Topbar({ isSidebarCollapsed, toggleSidebar, setCurrentView }: { isSidebarCollapsed: boolean, toggleSidebar: () => void, setCurrentView?: (view: View) => void }) {
   const [isDark, setIsDark] = useState(false);
   const [time, setTime] = useState(new Date());
@@ -294,9 +386,9 @@ export default function Topbar({ isSidebarCollapsed, toggleSidebar, setCurrentVi
            <div className="w-px h-6 bg-[#0F172A08]" />
            <div className="flex flex-col gap-0.5">
               <span className="text-[9px] font-black text-[#64748B] uppercase tracking-[0.2em] opacity-40">Ambiente</span>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                  <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500'}`} />
-                 <span className="text-[12px] font-bold text-[#111111] tracking-tight">{activeWorkspace?.name || 'Geral'}</span>
+                 <WorkspaceSelector />
               </div>
            </div>
         </div>

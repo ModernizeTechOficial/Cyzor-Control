@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ProjectExtended } from '../../types/project';
 import { User, Flag, Calendar, Building2, Layers, Briefcase, Users, Activity, CheckSquare, Clock } from 'lucide-react';
 import { FormGroup, FormLabel, FormInput, FormTextarea, FormSelect } from '../ui/FormComponents';
+import { RelationshipView } from '../common/RelationshipView';
 
 interface AbaVisaoGeralProps {
   project: ProjectExtended;
@@ -267,6 +268,8 @@ export default function AbaVisaoGeral({ project, isEditing, onChange, companies 
               ))}
             </div>
           </div>
+          
+          <RelationshipView sourceType="projects" sourceId={project.id} />
         </div>
 
       </div>

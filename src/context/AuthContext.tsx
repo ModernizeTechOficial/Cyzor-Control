@@ -18,8 +18,11 @@ interface AuthContextType {
   token: string | null;
   workspaces: any[];
   activeWorkspace: any;
+  isSwitchingWorkspace: boolean;
   tourCompleted: boolean;
   setTourCompleted: (completed: boolean) => void;
+  isCreateWorkspaceModalOpen: boolean;
+  setIsCreateWorkspaceModalOpen: (open: boolean) => void;
   globalBranding: any;
   refreshBranding: () => Promise<void>;
   googleCalendarToken: string | null;
@@ -52,7 +55,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [workspaces, setWorkspaces] = useState<any[]>([]);
   const [activeWorkspace, setActiveWorkspace] = useState<any>(null);
+  const [isSwitchingWorkspace, setIsSwitchingWorkspace] = useState(false);
   const [tourCompleted, setTourCompleted] = useState<boolean>(true);
+  const [isCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen] = useState(false);
   const [globalBranding, setGlobalBranding] = useState<any>(null);
   
   const [googleCalendarToken, setGoogleCalendarToken] = useState<string | null>(null);
@@ -185,6 +190,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateSaaSBackend = async (plan?: string, workspaceId?: number) => {
     if (!user) return;
+    setIsSwitchingWorkspace(true);
     try {
       const res = await fetchWithAuth('/api/auth/state', {
         method: 'PUT',
@@ -206,6 +212,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err) {
       console.error('Failed to update core state on SQLite:', err);
+    } finally {
+      setIsSwitchingWorkspace(false);
     }
   };
 
@@ -418,8 +426,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       token,
       workspaces,
       activeWorkspace,
+      isSwitchingWorkspace,
       tourCompleted,
       setTourCompleted,
+      isCreateWorkspaceModalOpen,
+      setIsCreateWorkspaceModalOpen,
       globalBranding,
       refreshBranding,
       googleCalendarToken,

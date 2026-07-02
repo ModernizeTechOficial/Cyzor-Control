@@ -86,6 +86,8 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
     };
 
     fetchDashboardData();
+    const interval = setInterval(fetchDashboardData, 30000); // Poll every 30s
+    return () => clearInterval(interval);
   }, [activeWorkspace]);
 
   return (

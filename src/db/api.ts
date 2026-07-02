@@ -2,12 +2,32 @@ import { Router } from "express";
 import { requireAuth, AuthRequest } from "../middleware/auth.ts";
 import { tenantMiddleware, TenantRequest } from "../middleware/tenant.ts";
 import { db } from "./index.ts";
-import { companies, clients, products, projects, tasks, ideas, documents, financeEntries, sprints, milestones, aiMemories, notifications, agendaEvents, users, workspaceMembers, workspaces, flows, notes, deploys, productLicenses } from "./schema.ts";
+import { companies, clients, products, projects, tasks, ideas, documents, financeEntries, sprints, milestones, aiMemories, notifications, agendaEvents, users, workspaceMembers, workspaces, flows, notes, deploys, productLicenses, workspaceInvitations, auditLogs } from "./schema.ts";
 import { eq, and, desc, sql, or, inArray, gte, lte, not } from "drizzle-orm";
 import { getUserSaaSState } from "./queries.ts";
 import { sendProjectNotificationEmail, testSmtpConnection } from "./mail.ts";
+import { v4 as uuidv4 } from 'uuid';
 
 const apiRouter = Router();
+
+// --- AUDIT LOG HELPER ---
+async function logAction(req: AuthRequest, action: string, tableName: string, recordId: string, oldValues?: any, newValues?: any) {
+  try {
+    await db.insert(auditLogs).values({
+      tenantId: req.tenantId as any,
+      workspaceId: req.workspaceId,
+      userId: req.user!.uid,
+      action,
+      tableName,
+      recordId: recordId.toString(),
+      oldValues,
+      newValues,
+      ipAddress: req.ip
+    });
+  } catch (err) {
+    console.error("Error creating audit log:", err);
+  }
+}
 
 apiRouter.use((req, res, next) => {
   console.log(`[apiRouter Request] ${req.method} ${req.url}`);
@@ -201,24 +221,269 @@ apiRouter.post("/gemini", async (req: AuthRequest, res) => {
   }
 });
 
-// --- TENANT INFO & AUDIT LOGS ---
-apiRouter.get("/tenant/info", async (req: AuthRequest, res) => {
+// --- WORKSPACES ---
+apiRouter.get("/workspaces", async (req: AuthRequest, res) => {
   try {
-    const { getTenantContext } = await import("./context.ts");
-    const context = getTenantContext();
-    res.json({ status: "success", tenant: context.tenant });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    const data = await db.select({
+      id: workspaces.id,
+      name: workspaces.name,
+      ownerUid: workspaces.ownerUid,
+      settings: workspaces.settings,
+      createdAt: workspaces.createdAt,
+      role: workspaceMembers.role
+    })
+    .from(workspaces)
+    .innerJoin(workspaceMembers, eq(workspaces.id, workspaceMembers.workspaceId))
+    .where(eq(workspaceMembers.userUid, req.user!.uid));
+    
+    res.json(data);
+  } catch (error) {
+    console.error("Error fetching workspaces:", error);
+    res.status(500).json({ error: "Failed to fetch workspaces" });
   }
 });
 
-apiRouter.get("/audit-logs", async (req: AuthRequest, res) => {
+apiRouter.post("/workspaces", async (req: AuthRequest, res) => {
   try {
-    const { auditLogRepository } = await import("./repositories.ts");
-    const logs = await auditLogRepository.findAll();
-    res.json(logs);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    const { name, description } = req.body;
+    if (!name) return res.status(400).json({ error: "Name is required" });
+
+    const [newWs] = await db.insert(workspaces).values({
+      name,
+      tenantId: req.tenantId as any,
+      ownerUid: req.user!.uid,
+      settings: { description }
+    }).returning();
+
+    // Add owner as member
+    await db.insert(workspaceMembers).values({
+      workspaceId: newWs.id,
+      userUid: req.user!.uid,
+      tenantId: req.tenantId as any,
+      role: 'OWNER',
+      cargo: 'Proprietário'
+    });
+
+    await logAction(req, 'CREATE', 'workspaces', newWs.id.toString(), null, newWs);
+    res.json(newWs);
+  } catch (error) {
+    console.error("Error creating workspace:", error);
+    res.status(500).json({ error: "Failed to create workspace" });
+  }
+});
+
+apiRouter.put("/user/active-workspace", async (req: AuthRequest, res) => {
+  try {
+    const { workspaceId } = req.body;
+    if (!workspaceId) return res.status(400).json({ error: "workspaceId is required" });
+
+    // Verify membership
+    const [membership] = await db.select()
+      .from(workspaceMembers)
+      .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userUid, req.user!.uid)))
+      .limit(1);
+
+    if (!membership) return res.status(403).json({ error: "Not a member of this workspace" });
+
+    await db.update(users).set({ activeWorkspaceId: workspaceId }).where(eq(users.uid, req.user!.uid));
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error updating active workspace:", error);
+    res.status(500).json({ error: "Failed to update active workspace" });
+  }
+});
+
+// --- WORKSPACE MEMBERS & TEAM ---
+apiRouter.get("/workspace/members", async (req: AuthRequest, res) => {
+  try {
+    const data = await db.select({
+      id: workspaceMembers.id,
+      userUid: workspaceMembers.userUid,
+      role: workspaceMembers.role,
+      cargo: workspaceMembers.cargo,
+      status: workspaceMembers.status,
+      createdAt: workspaceMembers.createdAt,
+      userName: users.displayName,
+      userEmail: users.email,
+      userPhoto: users.photoUrl
+    })
+    .from(workspaceMembers)
+    .innerJoin(users, eq(workspaceMembers.userUid, users.uid))
+    .where(eq(workspaceMembers.workspaceId, req.workspaceId!));
+    
+    res.json(data);
+  } catch (error) {
+    console.error("Error fetching members:", error);
+    res.status(500).json({ error: "Failed to fetch members" });
+  }
+});
+
+apiRouter.put("/workspace/members/:id", async (req: AuthRequest, res) => {
+  try {
+    const { role, cargo, status } = req.body;
+    const memberId = Number(req.params.id);
+
+    // Permission check: only ADMIN or OWNER can manage members
+    const { getMemberRole, WorkspaceRole } = await import("./permissions.ts");
+    const myRole = await getMemberRole(req.user!.uid, req.workspaceId!);
+    if (myRole !== WorkspaceRole.OWNER && myRole !== WorkspaceRole.ADMIN) {
+      return res.status(403).json({ error: "Insufficient permissions" });
+    }
+
+    const [oldMember] = await db.select().from(workspaceMembers).where(eq(workspaceMembers.id, memberId)).limit(1);
+    if (!oldMember) return res.status(404).json({ error: "Member not found" });
+
+    const [updated] = await db.update(workspaceMembers)
+      .set({ 
+        role: role !== undefined ? role : oldMember.role, 
+        cargo: cargo !== undefined ? cargo : oldMember.cargo,
+        status: status !== undefined ? status : oldMember.status
+      })
+      .where(and(eq(workspaceMembers.id, memberId), eq(workspaceMembers.workspaceId, req.workspaceId!)))
+      .returning();
+
+    await logAction(req, 'UPDATE', 'workspace_members', memberId.toString(), oldMember, updated);
+    res.json(updated);
+  } catch (error) {
+    console.error("Error updating member:", error);
+    res.status(500).json({ error: "Failed to update member" });
+  }
+});
+
+apiRouter.delete("/workspace/members/:id", async (req: AuthRequest, res) => {
+  try {
+    const memberId = Number(req.params.id);
+
+    // Permission check
+    const { getMemberRole, WorkspaceRole } = await import("./permissions.ts");
+    const myRole = await getMemberRole(req.user!.uid, req.workspaceId!);
+    if (myRole !== WorkspaceRole.OWNER && myRole !== WorkspaceRole.ADMIN) {
+      return res.status(403).json({ error: "Insufficient permissions" });
+    }
+
+    const [deleted] = await db.delete(workspaceMembers)
+      .where(and(eq(workspaceMembers.id, memberId), eq(workspaceMembers.workspaceId, req.workspaceId!)))
+      .returning();
+
+    if (deleted) {
+      await logAction(req, 'DELETE', 'workspace_members', memberId.toString(), deleted, null);
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error removing member:", error);
+    res.status(500).json({ error: "Failed to remove member" });
+  }
+});
+
+// --- INVITATIONS ---
+apiRouter.get("/workspace/invitations", async (req: AuthRequest, res) => {
+  try {
+    const data = await db.select({
+      id: workspaceInvitations.id,
+      email: workspaceInvitations.email,
+      role: workspaceInvitations.role,
+      status: workspaceInvitations.status,
+      expiresAt: workspaceInvitations.expiresAt,
+      createdAt: workspaceInvitations.createdAt,
+      inviterName: users.displayName
+    })
+    .from(workspaceInvitations)
+    .leftJoin(users, eq(workspaceInvitations.inviterUid, users.uid))
+    .where(eq(workspaceInvitations.workspaceId, req.workspaceId!));
+    
+    res.json(data);
+  } catch (error) {
+    console.error("Error fetching invitations:", error);
+    res.status(500).json({ error: "Failed to fetch invitations" });
+  }
+});
+
+apiRouter.post("/workspace/invitations", async (req: AuthRequest, res) => {
+  try {
+    const { email, role } = req.body;
+    if (!email) return res.status(400).json({ error: "Email is required" });
+
+    // Permission check
+    const { getMemberRole, WorkspaceRole } = await import("./permissions.ts");
+    const myRole = await getMemberRole(req.user!.uid, req.workspaceId!);
+    if (myRole !== WorkspaceRole.OWNER && myRole !== WorkspaceRole.ADMIN) {
+      return res.status(403).json({ error: "Insufficient permissions" });
+    }
+
+    const token = uuidv4();
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiration
+
+    const [invitation] = await db.insert(workspaceInvitations).values({
+      workspaceId: req.workspaceId!,
+      tenantId: req.tenantId as any,
+      email,
+      role: role || 'MEMBER',
+      inviterUid: req.user!.uid,
+      token,
+      expiresAt
+    }).returning();
+
+    // In a real app, send email here
+    console.log(`Invitation token for ${email}: ${token}`);
+
+    await logAction(req, 'INVITE', 'workspace_invitations', invitation.id.toString(), null, invitation);
+    res.json(invitation);
+  } catch (error) {
+    console.error("Error creating invitation:", error);
+    res.status(500).json({ error: "Failed to create invitation" });
+  }
+});
+
+apiRouter.delete("/workspace/invitations/:id", async (req: AuthRequest, res) => {
+  try {
+    const invId = Number(req.params.id);
+
+    // Permission check
+    const { getMemberRole, WorkspaceRole } = await import("./permissions.ts");
+    const myRole = await getMemberRole(req.user!.uid, req.workspaceId!);
+    if (myRole !== WorkspaceRole.OWNER && myRole !== WorkspaceRole.ADMIN) {
+      return res.status(403).json({ error: "Insufficient permissions" });
+    }
+
+    const [deleted] = await db.update(workspaceInvitations)
+      .set({ status: 'CANCELLED' })
+      .where(and(eq(workspaceInvitations.id, invId), eq(workspaceInvitations.workspaceId, req.workspaceId!)))
+      .returning();
+
+    if (deleted) {
+      await logAction(req, 'CANCEL_INVITE', 'workspace_invitations', invId.toString(), null, deleted);
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error cancelling invitation:", error);
+    res.status(500).json({ error: "Failed to cancel invitation" });
+  }
+});
+
+// --- AUDIT LOG ---
+apiRouter.get("/workspace/audit-logs", async (req: AuthRequest, res) => {
+  try {
+    const data = await db.select({
+      id: auditLogs.id,
+      action: auditLogs.action,
+      tableName: auditLogs.tableName,
+      recordId: auditLogs.recordId,
+      createdAt: auditLogs.createdAt,
+      userName: users.displayName,
+      userEmail: users.email,
+      userPhoto: users.photoUrl
+    })
+    .from(auditLogs)
+    .leftJoin(users, eq(auditLogs.userId, users.uid))
+    .where(eq(auditLogs.workspaceId, req.workspaceId!))
+    .orderBy(desc(auditLogs.createdAt))
+    .limit(100);
+    
+    res.json(data);
+  } catch (error) {
+    console.error("Error fetching audit logs:", error);
+    res.status(500).json({ error: "Failed to fetch audit logs" });
   }
 });
 
@@ -640,17 +905,13 @@ apiRouter.get("/products/:id/kpis", async (req: AuthRequest, res) => {
 apiRouter.get("/sprints", async (req: AuthRequest, res) => {
   const { projectId } = req.query;
   
-  const conditions = [eq(projects.workspaceId, req.workspaceId!)];
+  const conditions = [eq(sprints.workspaceId, req.workspaceId!)];
   if (projectId) {
     conditions.push(eq(sprints.projectId, Number(projectId)));
   }
   
-  const data = await db.select().from(sprints).innerJoin(projects, eq(sprints.projectId, projects.id)).where(and(...conditions));
-  res.json(data.map(d => ({
-      ...d.sprints,
-      startDate: d.sprints.startDate,
-      endDate: d.sprints.endDate
-  })));
+  const data = await db.select().from(sprints).where(and(...conditions));
+  res.json(data);
 });
 
 apiRouter.post("/sprints", async (req: AuthRequest, res) => {
@@ -666,6 +927,8 @@ apiRouter.post("/sprints", async (req: AuthRequest, res) => {
       }
     
       const data = await db.insert(sprints).values({ 
+          workspaceId: req.workspaceId!,
+          tenantId: req.tenantId as any,
           projectId: Number(projectId), 
           name, 
           goal,
@@ -685,15 +948,6 @@ apiRouter.put("/sprints/:id", async (req: AuthRequest, res) => {
   const { name, goal, startDate, endDate, status } = req.body;
 
   try {
-      // Verify workspace
-      const existing = await db.select().from(sprints)
-        .innerJoin(projects, eq(sprints.projectId, projects.id))
-        .where(and(eq(sprints.id, sprintId), eq(projects.workspaceId, req.workspaceId!)));
-      
-      if (existing.length === 0) {
-        return res.status(403).json({ error: "Sprint not found or not in workspace" });
-      }
-
       const updateValues: any = {};
       if (name !== undefined) updateValues.name = name;
       if (goal !== undefined) updateValues.goal = goal;
@@ -701,7 +955,12 @@ apiRouter.put("/sprints/:id", async (req: AuthRequest, res) => {
       if (startDate !== undefined) updateValues.startDate = startDate ? new Date(startDate) : null;
       if (endDate !== undefined) updateValues.endDate = endDate ? new Date(endDate) : null;
 
-      const data = await db.update(sprints).set(updateValues).where(eq(sprints.id, sprintId)).returning();
+      const data = await db.update(sprints)
+        .set(updateValues)
+        .where(and(eq(sprints.id, sprintId), eq(sprints.workspaceId, req.workspaceId!)))
+        .returning();
+
+      if (data.length === 0) return res.status(404).json({ error: "Sprint not found" });
       res.json(data[0]);
   } catch (error) {
     console.error("Error updating sprint:", error);
@@ -712,15 +971,14 @@ apiRouter.put("/sprints/:id", async (req: AuthRequest, res) => {
 apiRouter.delete("/sprints/:id", async (req: AuthRequest, res) => {
     const sprintId = Number(req.params.id);
     try {
-        const existing = await db.select().from(sprints)
-          .innerJoin(projects, eq(sprints.projectId, projects.id))
-          .where(and(eq(sprints.id, sprintId), eq(projects.workspaceId, req.workspaceId!)));
+        const deleted = await db.delete(sprints)
+          .where(and(eq(sprints.id, sprintId), eq(sprints.workspaceId, req.workspaceId!)))
+          .returning();
         
-        if (existing.length === 0) {
-          return res.status(403).json({ error: "Sprint not found or not in workspace" });
+        if (deleted.length === 0) {
+          return res.status(404).json({ error: "Sprint not found" });
         }
 
-        await db.delete(sprints).where(eq(sprints.id, sprintId));
         res.json({ success: true });
     } catch (error) {
         console.error("Error deleting sprint:", error);
@@ -731,29 +989,12 @@ apiRouter.delete("/sprints/:id", async (req: AuthRequest, res) => {
 // --- TASKS ---
 apiRouter.get("/tasks", async (req: AuthRequest, res) => {
   const data = await db
-    .select({
-      id: tasks.id,
-      projectId: tasks.projectId,
-      sprintId: tasks.sprintId,
-      title: tasks.title,
-      description: tasks.description,
-      status: tasks.status,
-      priority: tasks.priority,
-      assigneeUid: tasks.assigneeUid,
-      dueDate: tasks.dueDate,
-      tags: tasks.tags,
-      subtasks: tasks.subtasks,
-      taskComments: tasks.taskComments,
-      dependencies: tasks.dependencies,
-      order: tasks.order,
-      createdAt: tasks.createdAt,
-      updatedAt: tasks.updatedAt
-    })
+    .select()
     .from(tasks)
-    .innerJoin(projects, eq(tasks.projectId, projects.id))
-    .where(eq(projects.workspaceId, req.workspaceId!));
+    .where(eq(tasks.workspaceId, req.workspaceId!));
   res.json(data);
 });
+
 apiRouter.post("/tasks", async (req: AuthRequest, res) => {
   const { projectId, sprintId, title, description, status, priority, assigneeUid, dueDate, tags, subtasks, taskComments } = req.body;
   if (!projectId) {
@@ -767,11 +1008,13 @@ apiRouter.post("/tasks", async (req: AuthRequest, res) => {
       }
       
       const values: any = { 
+          workspaceId: req.workspaceId!,
+          tenantId: req.tenantId as any,
           projectId: Number(projectId), 
           sprintId: sprintId ? Number(sprintId) : null,
           title, 
           description,
-          status: status || 'TODO', 
+          status: status || 'BACKLOG', 
           priority: priority || 'MEDIUM' 
       };
       
@@ -798,17 +1041,10 @@ apiRouter.post("/tasks", async (req: AuthRequest, res) => {
       res.status(500).json({ error: "Failed to create task", details: error });
   }
 });
+
 apiRouter.put("/tasks/:id", async (req: AuthRequest, res) => {
   const taskId = Number(req.params.id);
-  const existingTask = await db.select({ projectId: tasks.projectId })
-    .from(tasks)
-    .innerJoin(projects, eq(tasks.projectId, projects.id))
-    .where(and(eq(tasks.id, taskId), eq(projects.workspaceId, req.workspaceId!)));
   
-  if (existingTask.length === 0) {
-    return res.status(403).json({ error: "Task not found or not in workspace" });
-  }
-
   const { title, description, status, priority, assigneeUid, dueDate, tags, subtasks, taskComments, sprintId, dependencies } = req.body;
   const updateValues: any = {};
   
@@ -844,27 +1080,66 @@ apiRouter.put("/tasks/:id", async (req: AuthRequest, res) => {
   if (subtasks !== undefined) updateValues.subtasks = subtasks;
   if (taskComments !== undefined) updateValues.taskComments = taskComments;
 
-  const data = await db.update(tasks).set(updateValues).where(eq(tasks.id, taskId)).returning();
+  const data = await db.update(tasks)
+    .set(updateValues)
+    .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, req.workspaceId!)))
+    .returning();
+
+  if (data.length === 0) return res.status(404).json({ error: "Task not found" });
   res.json(data[0]);
 });
 
 apiRouter.delete("/tasks/:id", async (req: AuthRequest, res) => {
   const taskId = Number(req.params.id);
   try {
-      const existingTask = await db.select({ projectId: tasks.projectId })
-        .from(tasks)
-        .innerJoin(projects, eq(tasks.projectId, projects.id))
-        .where(and(eq(tasks.id, taskId), eq(projects.workspaceId, req.workspaceId!)));
+      const deleted = await db.delete(tasks)
+        .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, req.workspaceId!)))
+        .returning();
       
-      if (existingTask.length === 0) {
-        return res.status(403).json({ error: "Task not found" });
+      if (deleted.length === 0) {
+        return res.status(404).json({ error: "Task not found" });
       }
 
-      await db.delete(tasks).where(eq(tasks.id, taskId));
       res.json({ success: true });
   } catch (error) {
       console.error("Error deleting task:", error);
       res.status(500).json({ error: "Failed to delete task" });
+  }
+});
+
+
+// --- RELATIONSHIPS ---
+apiRouter.get("/relationships/:type/:id", async (req: AuthRequest, res) => {
+  try {
+    const { type, id } = req.params;
+    const { relationshipService } = await import('../services/relationshipService.ts');
+    const relationships = await relationshipService.getRelationshipsForEntity(type, Number(id));
+    res.json(relationships);
+  } catch (error) {
+    console.error("Error fetching relationships:", error);
+    res.status(500).json({ error: "Failed to fetch relationships" });
+  }
+});
+
+apiRouter.post("/relationships", async (req: AuthRequest, res) => {
+  try {
+    const { sourceType, sourceId, targetType, targetId, relationshipType } = req.body;
+    const { relationshipService } = await import('../services/relationshipService.ts');
+    
+    const [relationship] = await relationshipService.createRelationship({
+      tenantId: req.tenantId as any,
+      workspaceId: req.workspaceId!,
+      sourceType,
+      sourceId: Number(sourceId),
+      targetType,
+      targetId: Number(targetId),
+      relationshipType
+    });
+    
+    res.json(relationship);
+  } catch (error) {
+    console.error("Error creating relationship:", error);
+    res.status(500).json({ error: "Failed to create relationship" });
   }
 });
 
@@ -932,16 +1207,13 @@ apiRouter.put("/finance/:id", async (req: AuthRequest, res) => {
 // --- MILESTONES ---
 apiRouter.get("/milestones", async (req: AuthRequest, res) => {
   const { projectId } = req.query;
-  
-  const conditions = [eq(projects.workspaceId, req.workspaceId!)];
+  const conditions = [eq(milestones.workspaceId, req.workspaceId!)];
   if (projectId) {
     conditions.push(eq(milestones.projectId, Number(projectId)));
   }
   
-  const data = await db.select().from(milestones).innerJoin(projects, eq(milestones.projectId, projects.id)).where(and(...conditions));
-  res.json(data.map(d => ({
-      ...d.milestones
-  })));
+  const data = await db.select().from(milestones).where(and(...conditions));
+  res.json(data);
 });
 
 apiRouter.post("/milestones", async (req: AuthRequest, res) => {
@@ -955,8 +1227,10 @@ apiRouter.post("/milestones", async (req: AuthRequest, res) => {
       if (proj.length === 0) {
         return res.status(403).json({ error: "Project not found or not in workspace" });
       }
-    
+
       const data = await db.insert(milestones).values({ 
+          workspaceId: req.workspaceId!,
+          tenantId: req.tenantId as any,
           projectId: Number(projectId), 
           name, 
           date: date ? new Date(date) : null,
@@ -975,21 +1249,18 @@ apiRouter.put("/milestones/:id", async (req: AuthRequest, res) => {
   const { name, date, status, description } = req.body;
 
   try {
-      const existing = await db.select().from(milestones)
-        .innerJoin(projects, eq(milestones.projectId, projects.id))
-        .where(and(eq(milestones.id, milestoneId), eq(projects.workspaceId, req.workspaceId!)));
-      
-      if (existing.length === 0) {
-        return res.status(403).json({ error: "Milestone not found or not in workspace" });
-      }
-
       const updateValues: any = {};
       if (name !== undefined) updateValues.name = name;
       if (status !== undefined) updateValues.status = status;
       if (description !== undefined) updateValues.description = description;
       if (date !== undefined) updateValues.date = date ? new Date(date) : null;
 
-      const data = await db.update(milestones).set(updateValues).where(eq(milestones.id, milestoneId)).returning();
+      const data = await db.update(milestones)
+        .set(updateValues)
+        .where(and(eq(milestones.id, milestoneId), eq(milestones.workspaceId, req.workspaceId!)))
+        .returning();
+
+      if (data.length === 0) return res.status(404).json({ error: "Milestone not found" });
       res.json(data[0]);
   } catch (error) {
     console.error("Error updating milestone:", error);
@@ -1000,15 +1271,14 @@ apiRouter.put("/milestones/:id", async (req: AuthRequest, res) => {
 apiRouter.delete("/milestones/:id", async (req: AuthRequest, res) => {
     const milestoneId = Number(req.params.id);
     try {
-        const existing = await db.select().from(milestones)
-          .innerJoin(projects, eq(milestones.projectId, projects.id))
-          .where(and(eq(milestones.id, milestoneId), eq(projects.workspaceId, req.workspaceId!)));
+        const deleted = await db.delete(milestones)
+          .where(and(eq(milestones.id, milestoneId), eq(milestones.workspaceId, req.workspaceId!)))
+          .returning();
         
-        if (existing.length === 0) {
-          return res.status(403).json({ error: "Milestone not found or not in workspace" });
+        if (deleted.length === 0) {
+          return res.status(404).json({ error: "Milestone not found" });
         }
 
-        await db.delete(milestones).where(eq(milestones.id, milestoneId));
         res.json({ success: true });
     } catch (error) {
         console.error("Error deleting milestone:", error);

@@ -20,6 +20,7 @@ import AgendaPage from './agenda/pages/AgendaPage';
 import GoogleKeepView from './components/GoogleKeepView';
 import VisualSystemsStudioView from './modules/VisualSystemsStudio/VisualSystemsStudioView';
 import AdminLayout from './modules/admin/AdminLayout';
+import EquipeView from './components/EquipeView';
 import { View } from './types';
 import { useAuth } from './context/AuthContext.tsx';
 import { Sparkles } from 'lucide-react';
@@ -27,9 +28,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import HomeIntelligence from './components/home/HomeIntelligence';
 import ProductTour from './components/layout/ProductTour';
 import WelcomeModal from './components/layout/WelcomeModal';
+import { CreateWorkspaceModal } from './components/CreateWorkspaceModal';
 
 export default function App() {
-  const { user, dbUser, loading } = useAuth();
+  const { user, dbUser, loading, activeWorkspace, isSwitchingWorkspace, isCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen } = useAuth();
   const [currentView, setCurrentView] = useState<View | 'admin'>('landing');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -120,21 +122,31 @@ export default function App() {
       
       <div className={`transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-[80px]' : 'lg:ml-[260px]'} flex-1 min-w-0`}>
         <Topbar isSidebarCollapsed={isSidebarCollapsed} toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)} setCurrentView={setCurrentView} />
-        <main className="pt-24 lg:pt-28 px-4 sm:px-6 md:px-8 pb-28 lg:pb-12 flex flex-col gap-6 md:gap-10 w-full xl:max-w-none min-h-screen">
-          {currentView === 'dashboard' && <DashboardView setCurrentView={setCurrentView} />}
-          {currentView === 'empresas' && <EmpresasView />}
-          {currentView === 'clientes' && <ClientesView />}
-          {currentView === 'produtos' && <ProdutosView />}
-          {currentView === 'projetos' && <ProjetosView />}
-          {currentView === 'ideias' && <IdeiasView />}
-          {currentView === 'financeiro' && <FinanceiroView />}
-          {currentView === 'documentacao' && <DocumentacaoView />}
-          {currentView === 'ia' && <IAView />}
-          {currentView === 'agenda' && <AgendaPage />}
-          {currentView === 'keep' && <GoogleKeepView />}
-          {currentView === 'flow-builder' && <VisualSystemsStudioView />}
-          {currentView === 'configuracoes' && <ConfiguracoesView />}
-        </main>
+        <AnimatePresence mode="wait">
+          <motion.main
+            key={activeWorkspace?.id}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="pt-24 lg:pt-28 px-4 sm:px-6 md:px-8 pb-28 lg:pb-12 flex flex-col gap-6 md:gap-10 w-full xl:max-w-none min-h-screen"
+          >
+            {currentView === 'dashboard' && <DashboardView setCurrentView={setCurrentView} />}
+            {currentView === 'empresas' && <EmpresasView />}
+            {currentView === 'clientes' && <ClientesView />}
+            {currentView === 'produtos' && <ProdutosView />}
+            {currentView === 'projetos' && <ProjetosView />}
+            {currentView === 'ideias' && <IdeiasView />}
+            {currentView === 'financeiro' && <FinanceiroView />}
+            {currentView === 'documentacao' && <DocumentacaoView />}
+            {currentView === 'ia' && <IAView />}
+            {currentView === 'agenda' && <AgendaPage />}
+            {currentView === 'keep' && <GoogleKeepView />}
+            {currentView === 'flow-builder' && <VisualSystemsStudioView />}
+            {currentView === 'configuracoes' && <ConfiguracoesView />}
+            {currentView === 'equipe' && <EquipeView />}
+          </motion.main>
+        </AnimatePresence>
       </div>
       <BottomBar currentView={currentView} setCurrentView={setCurrentView} />
 
@@ -185,6 +197,16 @@ export default function App() {
           setCurrentView('configuracoes');
         }} 
       />
+      <CreateWorkspaceModal isOpen={isCreateWorkspaceModalOpen} onClose={() => setIsCreateWorkspaceModalOpen(false)} />
+      
+      {isSwitchingWorkspace && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-12 h-12 border-4 border-[#111111]/20 border-t-[#111111] rounded-full animate-spin" />
+            <p className="text-sm font-bold text-[#111111]">Carregando workspace...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

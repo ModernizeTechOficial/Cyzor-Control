@@ -56,6 +56,7 @@ export const userTenants = pgTable('user_tenants', {
 export const auditLogs = pgTable('audit_logs', {
   id: serial('id').primaryKey(),
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  workspaceId: integer('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
   userId: text('user_id').references(() => users.uid, { onDelete: 'set null' }),
   action: text('action').notNull(), // CREATE, UPDATE, DELETE, etc.
   tableName: text('table').notNull(),
@@ -66,6 +67,7 @@ export const auditLogs = pgTable('audit_logs', {
   createdAt: timestamp('created_at').defaultNow(),
 }, (t) => ({
   tenantIdx: index('audit_logs_tenant_idx').on(t.tenantId),
+  wsIdx: index('audit_logs_ws_idx').on(t.workspaceId),
   tenantTableIdx: index('audit_logs_tenant_table_idx').on(t.tenantId, t.tableName),
 }));
 
@@ -90,13 +92,33 @@ export const workspaceMembers = pgTable('workspace_members', {
   tenantId: uuid('tenant_id').defaultRandom().notNull(),
   workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
   userUid: text('user_uid').notNull().references(() => users.uid, { onDelete: 'cascade' }),
-  role: text('role').notNull().default('MEMBER'), // OWNER, ADMIN, MEMBER
+  role: text('role').notNull().default('MEMBER'), // OWNER, ADMIN, MANAGER, DEVELOPER, DESIGNER, FINANCE, VIEWER, MEMBER
   cargo: text('cargo').default('Colaborador'), // Job title / function (e.g. Desenvolvedor, QA, PM)
+  status: text('status').default('Ativo'), // Ativo, Suspenso
   createdAt: timestamp('created_at').defaultNow(),
 }, (t) => ({
   wsUserIdx: index('ws_members_ws_user_idx').on(t.workspaceId, t.userUid),
   userIdx: index('ws_members_user_idx').on(t.userUid),
   tenantIdx: index('workspace_members_tenant_idx').on(t.tenantId),
+}));
+
+// WORKSPACE INVITATIONS
+export const workspaceInvitations = pgTable('workspace_invitations', {
+  id: serial('id').primaryKey(),
+  tenantId: uuid('tenant_id').defaultRandom().notNull(),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  email: text('email').notNull(),
+  role: text('role').notNull().default('MEMBER'),
+  inviterUid: text('inviter_uid').notNull().references(() => users.uid, { onDelete: 'cascade' }),
+  status: text('status').default('PENDING'), // PENDING, ACCEPTED, REJECTED, EXPIRED, CANCELLED
+  token: text('token').notNull().unique(),
+  expiresAt: timestamp('expires_at').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (t) => ({
+  wsEmailIdx: index('ws_inv_ws_email_idx').on(t.workspaceId, t.email),
+  tokenIdx: index('ws_inv_token_idx').on(t.token),
+  tenantIdx: index('ws_inv_tenant_idx').on(t.tenantId),
 }));
 
 // COMPANIES (Empresas)
@@ -193,6 +215,7 @@ export const projects = pgTable('projects', {
 export const sprints = pgTable('sprints', {
   id: serial('id').primaryKey(),
   tenantId: uuid('tenant_id').defaultRandom().notNull(),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
   projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   goal: text('goal'),
@@ -201,6 +224,7 @@ export const sprints = pgTable('sprints', {
   status: text('status').default('PLANNED'), // PLANNED, ACTIVE, COMPLETED
   createdAt: timestamp('created_at').defaultNow(),
 }, (t) => ({
+  wsIdx: index('sprints_ws_idx').on(t.workspaceId),
   projIdx: index('sprints_proj_idx').on(t.projectId),
   tenantIdx: index('sprints_tenant_idx').on(t.tenantId),
 }));
@@ -209,6 +233,7 @@ export const sprints = pgTable('sprints', {
 export const tasks = pgTable('tasks', {
   id: serial('id').primaryKey(),
   tenantId: uuid('tenant_id').defaultRandom().notNull(),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
   projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
   sprintId: integer('sprint_id').references(() => sprints.id, { onDelete: 'set null' }),
   title: text('title').notNull(),
@@ -225,6 +250,7 @@ export const tasks = pgTable('tasks', {
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 }, (t) => ({
+  wsIdx: index('tasks_ws_idx').on(t.workspaceId),
   projIdx: index('tasks_proj_idx').on(t.projectId),
   sprintIdx: index('tasks_sprint_idx').on(t.sprintId),
   tenantIdx: index('tasks_tenant_idx').on(t.tenantId),
@@ -380,6 +406,28 @@ export const aiHistory = pgTable('ai_history', {
   tenantIdx: index('ai_history_tenant_idx').on(t.tenantId),
 }));
 
+// RELATIONSHIPS (Generic)
+export const entityRelationships = pgTable('entity_relationships', {
+  id: serial('id').primaryKey(),
+  tenantId: uuid('tenant_id').defaultRandom().notNull(),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  sourceType: text('source_type').notNull(), // 'company', 'project', 'client', etc.
+  sourceId: integer('source_id').notNull(),
+  
+  targetType: text('target_type').notNull(), // 'company', 'project', 'client', etc.
+  targetId: integer('target_id').notNull(),
+  
+  relationshipType: text('relationship_type'), // 'belongs_to', 'related_to', 'generated_from'
+  
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => ({
+  sourceIdx: index('rel_source_idx').on(t.sourceType, t.sourceId),
+  targetIdx: index('rel_target_idx').on(t.targetType, t.targetId),
+  wsIdx: index('rel_ws_idx').on(t.workspaceId),
+  tenantIdx: index('rel_tenant_idx').on(t.tenantId),
+}));
+
 // NOTIFICATIONS
 export const notifications = pgTable('notifications', {
   id: serial('id').primaryKey(),
@@ -454,6 +502,7 @@ export const deploys = pgTable('deploys', {
 export const milestones = pgTable('milestones', {
   id: serial('id').primaryKey(),
   tenantId: uuid('tenant_id').defaultRandom().notNull(),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
   projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   date: timestamp('date'),
@@ -461,10 +510,10 @@ export const milestones = pgTable('milestones', {
   description: text('description'),
   createdAt: timestamp('created_at').defaultNow(),
 }, (t) => ({
+  wsIdx: index('milestones_ws_idx').on(t.workspaceId),
   tenantIdx: index('milestones_tenant_idx').on(t.tenantId),
 }));
 
-// PRODUCT LICENSES
 export const productLicenses = pgTable('product_licenses', {
   id: serial('id').primaryKey(),
   tenantId: uuid('tenant_id').defaultRandom().notNull(),
@@ -500,7 +549,14 @@ export const userTenantsRelations = relations(userTenants, ({ one }) => ({
 
 export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   tenant: one(tenants, { fields: [auditLogs.tenantId], references: [tenants.id] }),
+  workspace: one(workspaces, { fields: [auditLogs.workspaceId], references: [workspaces.id] }),
   user: one(users, { fields: [auditLogs.userId], references: [users.uid] }),
+}));
+
+export const workspaceInvitationsRelations = relations(workspaceInvitations, ({ one }) => ({
+  workspace: one(workspaces, { fields: [workspaceInvitations.workspaceId], references: [workspaces.id] }),
+  inviter: one(users, { fields: [workspaceInvitations.inviterUid], references: [users.uid] }),
+  tenant: one(tenants, { fields: [workspaceInvitations.tenantId], references: [tenants.id] }),
 }));
 
 export const usersRelations = relations(users, ({ many, one }) => ({
@@ -513,6 +569,8 @@ export const usersRelations = relations(users, ({ many, one }) => ({
 export const workspacesRelations = relations(workspaces, ({ one, many }) => ({
   owner: one(users, { fields: [workspaces.ownerUid], references: [users.uid] }),
   members: many(workspaceMembers),
+  invitations: many(workspaceInvitations),
+  auditLogs: many(auditLogs),
   companies: many(companies),
   clients: many(clients),
   products: many(products),
@@ -576,7 +634,7 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   tenant: one(tenants, { fields: [products.tenantId], references: [tenants.id] }),
 }));
 
-export const projectsRelations = relations(projects, ({ one, many }) => ({
+export const projectsRelations = relations(projects, ({ many, one }) => ({
   workspace: one(workspaces, { fields: [projects.workspaceId], references: [workspaces.id] }),
   company: one(companies, { fields: [projects.companyId], references: [companies.id] }),
   product: one(products, { fields: [projects.productId], references: [products.id] }),
@@ -587,17 +645,20 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
 }));
 
 export const sprintsRelations = relations(sprints, ({ one, many }) => ({
+  workspace: one(workspaces, { fields: [sprints.workspaceId], references: [workspaces.id] }),
   project: one(projects, { fields: [sprints.projectId], references: [projects.id] }),
   tasks: many(tasks),
   tenant: one(tenants, { fields: [sprints.tenantId], references: [tenants.id] }),
 }));
 
 export const milestonesRelations = relations(milestones, ({ one }) => ({
+  workspace: one(workspaces, { fields: [milestones.workspaceId], references: [workspaces.id] }),
   project: one(projects, { fields: [milestones.projectId], references: [projects.id] }),
   tenant: one(tenants, { fields: [milestones.tenantId], references: [tenants.id] }),
 }));
 
 export const tasksRelations = relations(tasks, ({ one }) => ({
+  workspace: one(workspaces, { fields: [tasks.workspaceId], references: [workspaces.id] }),
   project: one(projects, { fields: [tasks.projectId], references: [projects.id] }),
   sprint: one(sprints, { fields: [tasks.sprintId], references: [sprints.id] }),
   assignee: one(users, { fields: [tasks.assigneeUid], references: [users.uid] }),
