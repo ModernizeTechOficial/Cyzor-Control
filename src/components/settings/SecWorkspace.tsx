@@ -36,10 +36,14 @@ export default function SecWorkspace({ activeWorkspace, onSelect }: { activeWork
   const [logoDarkUrl, setLogoDarkUrl] = useState('');
   const [iconLightUrl, setIconLightUrl] = useState('');
   const [iconDarkUrl, setIconDarkUrl] = useState('');
-  const [logoLightSize, setLogoLightSize] = useState('40');
-  const [logoDarkSize, setLogoDarkSize] = useState('40');
-  const [iconLightSize, setIconLightSize] = useState('20');
-  const [iconDarkSize, setIconDarkSize] = useState('20');
+  const [logoLightWidth, setLogoLightWidth] = useState('160');
+  const [logoLightHeight, setLogoLightHeight] = useState('40');
+  const [logoDarkWidth, setLogoDarkWidth] = useState('160');
+  const [logoDarkHeight, setLogoDarkHeight] = useState('40');
+  const [iconLightWidth, setIconLightWidth] = useState('40');
+  const [iconLightHeight, setIconLightHeight] = useState('40');
+  const [iconDarkWidth, setIconDarkWidth] = useState('40');
+  const [iconDarkHeight, setIconDarkHeight] = useState('40');
   const [workspaceName, setWorkspaceName] = useState(activeWorkspace);
 
   const handleFileUpload = async (file: File, type: 'logoLight' | 'logoDark' | 'iconLight' | 'iconDark') => {
@@ -80,10 +84,14 @@ export default function SecWorkspace({ activeWorkspace, onSelect }: { activeWork
         setLogoDarkUrl(settings.logoDarkUrl || '');
         setIconLightUrl(settings.iconLightUrl || '');
         setIconDarkUrl(settings.iconDarkUrl || '');
-        setLogoLightSize(settings.logoLightSize || '40');
-        setLogoDarkSize(settings.logoDarkSize || '40');
-        setIconLightSize(settings.iconLightSize || '20');
-        setIconDarkSize(settings.iconDarkSize || '20');
+        setLogoLightWidth(settings.logoLightWidth || '160');
+        setLogoLightHeight(settings.logoLightHeight || '40');
+        setLogoDarkWidth(settings.logoDarkWidth || '160');
+        setLogoDarkHeight(settings.logoDarkHeight || '40');
+        setIconLightWidth(settings.iconLightWidth || '40');
+        setIconLightHeight(settings.iconLightHeight || '40');
+        setIconDarkWidth(settings.iconDarkWidth || '40');
+        setIconDarkHeight(settings.iconDarkHeight || '40');
         setWorkspaceName(sData.workspace.name);
       }
 
@@ -258,10 +266,14 @@ export default function SecWorkspace({ activeWorkspace, onSelect }: { activeWork
             logoDarkUrl,
             iconLightUrl,
             iconDarkUrl,
-            logoLightSize,
-            logoDarkSize,
-            iconLightSize,
-            iconDarkSize
+            logoLightWidth,
+            logoLightHeight,
+            logoDarkWidth,
+            logoDarkHeight,
+            iconLightWidth,
+            iconLightHeight,
+            iconDarkWidth,
+            iconDarkHeight
           }
         })
       });
@@ -362,10 +374,10 @@ export default function SecWorkspace({ activeWorkspace, onSelect }: { activeWork
             <label className="text-[10px] font-bold tracking-widest uppercase text-[#64748B]">Nome da Aplicação</label>
             <input type="text" value={workspaceName} onChange={(e) => setWorkspaceName(e.target.value)} className="w-full bg-[#FAFAFA] border border-[#0F172A0F] rounded-[16px] py-3.5 px-4 outline-none focus:border-[#111111]/30 text-[#111111] font-bold" />
           </div>
-          <AssetUploader label="Logo (Light)" url={logoLightUrl} onChange={setLogoLightUrl} size={logoLightSize} onSizeChange={setLogoLightSize} onUpload={(f) => handleFileUpload(f, 'logoLight')} />
-          <AssetUploader label="Logo (Dark)" url={logoDarkUrl} onChange={setLogoDarkUrl} size={logoDarkSize} onSizeChange={setLogoDarkSize} onUpload={(f) => handleFileUpload(f, 'logoDark')} />
-          <AssetUploader label="Ícone (Light)" url={iconLightUrl} onChange={setIconLightUrl} size={iconLightSize} onSizeChange={setIconLightSize} onUpload={(f) => handleFileUpload(f, 'iconLight')} />
-          <AssetUploader label="Ícone (Dark)" url={iconDarkUrl} onChange={setIconDarkUrl} size={iconDarkSize} onSizeChange={setIconDarkSize} onUpload={(f) => handleFileUpload(f, 'iconDark')} />
+          <AssetUploader label="Logo (Light)" url={logoLightUrl} onChange={setLogoLightUrl} width={logoLightWidth} onWidthChange={setLogoLightWidth} height={logoLightHeight} onHeightChange={setLogoLightHeight} onUpload={(f) => handleFileUpload(f, 'logoLight')} />
+          <AssetUploader label="Logo (Dark)" url={logoDarkUrl} onChange={setLogoDarkUrl} width={logoDarkWidth} onWidthChange={setLogoDarkWidth} height={logoDarkHeight} onHeightChange={setLogoDarkHeight} onUpload={(f) => handleFileUpload(f, 'logoDark')} />
+          <AssetUploader label="Ícone (Light)" url={iconLightUrl} onChange={setIconLightUrl} width={iconLightWidth} onWidthChange={setIconLightWidth} height={iconLightHeight} onHeightChange={setIconLightHeight} onUpload={(f) => handleFileUpload(f, 'iconLight')} />
+          <AssetUploader label="Ícone (Dark)" url={iconDarkUrl} onChange={setIconDarkUrl} width={iconDarkWidth} onWidthChange={setIconDarkWidth} height={iconDarkHeight} onHeightChange={setIconDarkHeight} onUpload={(f) => handleFileUpload(f, 'iconDark')} />
         </div>
         <div className={`flex justify-start mt-2 ${!isWhiteLabelEnabled ? 'opacity-40 pointer-events-none' : ''}`}>
           <BtnSave label="Salvar Identidade" onClick={handleSaveWorkspace} loading={saving} />

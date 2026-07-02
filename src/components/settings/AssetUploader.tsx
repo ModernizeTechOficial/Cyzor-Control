@@ -5,12 +5,14 @@ interface AssetUploaderProps {
   label: string;
   url: string;
   onChange: (url: string) => void;
-  size: string;
-  onSizeChange: (size: string) => void;
+  width: string;
+  onWidthChange: (width: string) => void;
+  height: string;
+  onHeightChange: (height: string) => void;
   onUpload: (file: File) => void;
 }
 
-export default function AssetUploader({ label, url, onChange, size, onSizeChange, onUpload }: AssetUploaderProps) {
+export default function AssetUploader({ label, url, onChange, width, onWidthChange, height, onHeightChange, onUpload }: AssetUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleRemove = () => {
@@ -43,9 +45,15 @@ export default function AssetUploader({ label, url, onChange, size, onSizeChange
           <div className="w-16 h-16 bg-white border border-[#0F172A0F] rounded-[12px] overflow-hidden flex items-center justify-center p-1">
             <img src={url} alt="Preview" className="max-w-full max-h-full object-contain" />
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-[9px] font-bold text-[#64748B]">Tamanho (px)</label>
-            <input type="number" value={size} onChange={(e) => onSizeChange(e.target.value)} className="w-20 bg-white border border-[#0F172A0F] rounded-[12px] py-1 px-2 text-sm font-medium text-[#111111]" />
+          <div className="flex gap-2">
+            <div className="flex flex-col gap-1">
+                <label className="text-[9px] font-bold text-[#64748B]">Largura (px)</label>
+                <input type="number" value={width} onChange={(e) => onWidthChange(e.target.value)} className="w-20 bg-white border border-[#0F172A0F] rounded-[12px] py-1 px-2 text-sm font-medium text-[#111111]" />
+            </div>
+            <div className="flex flex-col gap-1">
+                <label className="text-[9px] font-bold text-[#64748B]">Altura (px)</label>
+                <input type="number" value={height} onChange={(e) => onHeightChange(e.target.value)} className="w-20 bg-white border border-[#0F172A0F] rounded-[12px] py-1 px-2 text-sm font-medium text-[#111111]" />
+            </div>
           </div>
         </div>
       )}

@@ -124,13 +124,13 @@ export default function Sidebar({
         
         {/* Workspace Brand Header */}
         <div className={`flex items-center mb-6 px-1.5 ${isCollapsed ? 'lg:justify-center' : 'gap-3'}`}>
-          <div className="w-8 h-8 flex items-center justify-center flex-shrink-0 relative">
+          <div className="w-[45px] h-[45px] flex items-center justify-center flex-shrink-0 relative">
             {iconUrl ? (
               <img 
                 src={iconUrl} 
                 alt="Logo" 
-                width={iconSize || 28} 
-                height={iconSize || 28} 
+                width={45} 
+                height={45} 
                 className="object-contain"
                 referrerPolicy="no-referrer"
                 onError={(e) => {
@@ -138,14 +138,14 @@ export default function Sidebar({
                   const parent = e.currentTarget.parentElement;
                   if (parent) {
                     const placeholder = document.createElement('div');
-                    placeholder.className = "w-8 h-8 bg-[#111111] rounded-lg flex items-center justify-center text-white font-bold text-sm";
+                    placeholder.className = "w-[45px] h-[45px] bg-[#111111] rounded-lg flex items-center justify-center text-white font-bold text-sm";
                     placeholder.innerText = appName.charAt(0);
                     parent.appendChild(placeholder);
                   }
                 }}
               />
             ) : (
-              <div className="w-8 h-8 bg-[#111111] rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-sm">
+              <div className="w-[45px] h-[45px] bg-[#111111] rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-sm">
                 {appName.charAt(0)}
               </div>
             )}

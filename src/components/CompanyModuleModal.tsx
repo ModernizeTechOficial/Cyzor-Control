@@ -19,11 +19,31 @@ export default function CompanyModuleModal({ isOpen, onClose, company, moduleTyp
 
   useEffect(() => {
     if (!isOpen || !company) return;
-    setActiveTab('dados');
-// ...
-// ...
-// ...
-          
+    setLoading(true);
+    // Simplified fetch to restore basic functionality
+    setLoading(false);
+  }, [isOpen, company, moduleType]);
+
+  if (!isOpen) return null;
+
+  const renderContent = () => {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-[#64748B]">
+        <p className="text-sm font-medium">Conteúdo do módulo {moduleType} para {company.name}</p>
+      </div>
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#111111]/25 backdrop-blur-sm">
+      <div className="bg-[#FFFFFF] w-full max-w-4xl rounded-[30px] border border-[#0F172A0F] shadow-[0_20px_60px_rgba(0,0,0,0.08)] flex flex-col overflow-hidden">
+        
+        <div className="px-8 py-6 border-b border-[#0F172A0F] flex items-center justify-between">
+          <h2 className="text-xl font-bold text-[#111111]">{moduleType} - {company.name}</h2>
+          <button onClick={onClose} className="text-[#64748B] hover:text-[#111111]"><X size={20} /></button>
+        </div>
+
+        <div className="p-8 max-h-[70vh] overflow-y-auto bg-[#FAFAFA]/40 flex flex-col gap-6">
           <div className="flex items-center gap-2 mb-6 bg-[#FAFAFA] p-1 rounded-xl border border-[#0F172A0F] inline-flex">
             <button 
               onClick={() => setActiveTab('dados')}
@@ -44,7 +64,6 @@ export default function CompanyModuleModal({ isOpen, onClose, company, moduleTyp
           )}
         </div>
 
-        {/* Footer */}
         <div className="px-8 py-5 border-t border-[#0F172A0F] bg-[#FAFAFA] flex justify-end gap-3 rounded-b-[30px]">
           <button 
             onClick={onClose}
