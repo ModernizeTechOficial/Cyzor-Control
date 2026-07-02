@@ -11,31 +11,57 @@ function NotificationMenu() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchNotifications = async (retries = 3) => {
-      if (!activeWorkspace) return;
-      try {
-        const res = await fetchWithAuth('/api/notifications');
-        if (res.ok) {
-          const data = await res.json();
-          setNotifications(data);
-        } else if (retries > 0) {
-          console.warn(`Failed to fetch notifications, retrying in 2s... (${retries} retries left)`);
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          await fetchNotifications(retries - 1);
-        }
-      } catch (err) {
-        console.error("Failed to fetch notifications:", err);
-        if (retries > 0) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          await fetchNotifications(retries - 1);
-        }
-      } finally {
-        if (retries === 0) setLoading(false);
+  const fetchNotifications = async (retries = 3) => {
+    if (!activeWorkspace || !activeWorkspace.id) {
+      setLoading(false);
+      return;
+    }
+    try {
+      const res = await fetchWithAuth('/api/notifications');
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data);
+        setLoading(false);
+      } else if (retries > 0) {
+        console.warn(`Failed to fetch notifications, retrying in 2s... (${retries} retries left)`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        await fetchNotifications(retries - 1);
+      } else {
+        setLoading(false);
       }
-    };
+    } catch (err) {
+      console.error("Failed to fetch notifications:", err);
+      if (retries > 0) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        await fetchNotifications(retries - 1);
+      } else {
+        setLoading(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    setLoading(true);
     fetchNotifications();
+
+    // Background polling every 30 seconds
+    const interval = setInterval(() => {
+      fetchNotifications(0);
+    }, 30000);
+
+    return () => {
+      clearInterval(interval);
+    };
   }, [fetchWithAuth, activeWorkspace]);
+
+  const handleToggleNotifications = () => {
+    const nextState = !showNotifications;
+    setShowNotifications(nextState);
+    if (nextState) {
+      setLoading(true);
+      fetchNotifications(0);
+    }
+  };
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
@@ -89,7 +115,7 @@ function NotificationMenu() {
   return (
     <div className="relative" id="notifications-btn">
       <button 
-        onClick={() => setShowNotifications(!showNotifications)}
+        onClick={handleToggleNotifications}
         className="relative w-10 h-10 rounded-[14px] bg-[#FFFFFF] border border-[#0F172A0F] flex items-center justify-center hover:bg-[#FAFAFA] transition-all shadow-[0_2px_8px_rgba(0,0,0,0.02)] text-[#111111]"
       >
         <Bell size={18} className={unreadCount > 0 ? "text-[#111111]" : "text-[#64748B]"} />

@@ -70,12 +70,14 @@ export default function ProductWorkspaceModal({ product, isOpen, onClose, onSave
 }
 
 import { useState } from 'react';
+import { Vision360 } from '../../common/Vision360';
 
 function WorkspaceTabsContainer({ product, onSave, onDelete, companies }: any) {
   const [activeTab, setActiveTab] = useState('visao_geral');
 
   const tabs = [
     { id: 'visao_geral', label: 'Visão Geral' },
+    { id: 'visao_360', label: 'Visão 360°' },
     { id: 'projetos', label: 'Projetos' },
     { id: 'clientes', label: 'Clientes' },
     { id: 'financeiro', label: 'Financeiro' },
@@ -112,6 +114,7 @@ function WorkspaceTabsContainer({ product, onSave, onDelete, companies }: any) {
 
       <div className="flex-1 p-8">
         {activeTab === 'visao_geral' && <VisaoGeralTab product={product} onSave={onSave} companies={companies} />}
+        {activeTab === 'visao_360' && <Vision360 entityType="product" entityId={product.id} entityName={product.name} entityData={product} />}
         {activeTab === 'projetos' && <ProjetosTab product={product} onSave={onSave} />}
         {activeTab === 'clientes' && <ClientesTab product={product} />}
         {activeTab === 'financeiro' && <FinanceiroTab product={product} />}

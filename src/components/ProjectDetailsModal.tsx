@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { 
   X, GitBranch, Calendar, User, Flag, MessageSquare, Plus, Pencil, FileText, 
-  LayoutGrid, Zap, Milestone, Users, FolderOpen, History 
+  LayoutGrid, Zap, Milestone, Users, FolderOpen, History, Sparkles 
 } from 'lucide-react';
 import { ProjectExtended } from '../types/project';
 import { useAuth } from '../context/AuthContext';
+import { Vision360 } from './common/Vision360';
 
 // Tab components
 import AbaVisaoGeral from './project-tabs/AbaVisaoGeral';
@@ -203,7 +204,7 @@ export default function ProjectDetailsModal({ project, isOpen, onClose, onSave }
             fetchAllData();
 
             setIsEditing(false);
-            setActiveTab('visao_geral');
+            setActiveTab('visao_360');
             setPrevProjectId(project.id);
         }
     } else if (!isOpen) {
@@ -264,6 +265,7 @@ export default function ProjectDetailsModal({ project, isOpen, onClose, onSave }
   };
 
   const tabs = [
+    { id: 'visao_360', label: 'Visão 360°', icon: Sparkles },
     { id: 'visao_geral', label: 'Visão Geral', icon: FileText },
     { id: 'kanban', label: 'Kanban', icon: LayoutGrid },
     { id: 'sprints', label: 'Sprints', icon: Zap },
@@ -368,6 +370,15 @@ export default function ProjectDetailsModal({ project, isOpen, onClose, onSave }
 
         {/* Content Area */}
         <div className="flex-grow overflow-y-auto bg-[#FFFFFF]">
+          {activeTab === 'visao_360' && (
+            <Vision360 
+              entityType="project" 
+              entityId={editedProject.id} 
+              entityName={editedProject.name} 
+              entityData={editedProject} 
+            />
+          )}
+
           {activeTab === 'visao_geral' && (
             <AbaVisaoGeral 
               project={editedProject} 

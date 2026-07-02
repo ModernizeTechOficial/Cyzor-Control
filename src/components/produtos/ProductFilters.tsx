@@ -1,4 +1,4 @@
-import { Search, Filter, LayoutGrid, List, ArrowDownAZ, KanbanSquare } from 'lucide-react';
+import { Search, Filter, LayoutGrid, List, ArrowDownAZ, KanbanSquare, Clock } from 'lucide-react';
 
 interface ProductFiltersProps {
   searchTerm: string;
@@ -7,8 +7,8 @@ interface ProductFiltersProps {
   setStatusFilter: (v: string) => void;
   companyFilter: string;
   setCompanyFilter: (v: string) => void;
-  viewMode: 'table' | 'grid' | 'kanban';
-  setViewMode: (v: 'table' | 'grid' | 'kanban') => void;
+  viewMode: 'table' | 'grid' | 'kanban' | 'timeline';
+  setViewMode: (v: 'table' | 'grid' | 'kanban' | 'timeline') => void;
   companies?: any[];
 }
 
@@ -97,6 +97,13 @@ export default function ProductFilters({
             title="Kanban"
           >
             <KanbanSquare size={14} strokeWidth={2.5} />
+          </button>
+          <button 
+            onClick={() => setViewMode('timeline')}
+            className={`p-1.5 rounded-lg transition-all ${viewMode === 'timeline' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+            title="Gantt"
+          >
+            <Clock size={14} strokeWidth={2.5} />
           </button>
         </div>
       </div>

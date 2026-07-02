@@ -7,7 +7,7 @@ export default function HomeWorkspaceStatus({
   projects = [],
   finance = [],
   agendaEvents = [],
-  metrics = { companies: 0, products: 0, projects: 0, clients: 124, revenue: 0, tasks: 0 },
+  metrics = { companies: 0, products: 0, projects: 0, clients: 0, revenue: 0, tasks: 0 },
   clients = []
 }: {
   deploys?: any[];

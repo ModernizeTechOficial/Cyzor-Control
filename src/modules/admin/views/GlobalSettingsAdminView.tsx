@@ -158,7 +158,7 @@ export default function GlobalSettingsAdminView() {
                   <div className="flex flex-col gap-3">
                     <div className="h-20 w-full bg-[#121215] rounded-xl border border-dashed border-[#1E1E22] flex items-center justify-center p-4 relative group">
                       {globalLogoUrl ? (
-                        <img src={globalLogoUrl} className="max-h-full object-contain" referrerPolicy="no-referrer" />
+                        <img src={globalLogoUrl} className="max-h-full object-contain" style={{ maxWidth: `${globalLogoSize}px` }} referrerPolicy="no-referrer" />
                       ) : (
                         <ImageIcon className="text-zinc-600" size={20} />
                       )}
@@ -174,6 +174,17 @@ export default function GlobalSettingsAdminView() {
                       className="w-full bg-[#121215]/60 border border-[#1E1E22] rounded-lg px-3 py-1.5 text-[9px] font-mono text-zinc-400 outline-none"
                       placeholder="https://..."
                     />
+                    <div className="flex items-center justify-between gap-3 bg-[#121215]/40 p-2.5 rounded-lg border border-[#1E1E22]">
+                      <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Tamanho Logo (Largura px)</span>
+                      <input 
+                        type="number" 
+                        value={globalLogoSize} 
+                        onChange={e => setGlobalLogoSize(e.target.value)} 
+                        className="w-20 bg-[#121215] border border-[#1E1E22] rounded px-2.5 py-1 text-center text-xs font-bold text-indigo-450 outline-none focus:border-indigo-500/50"
+                        min="20"
+                        max="500"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -182,7 +193,7 @@ export default function GlobalSettingsAdminView() {
                   <div className="flex flex-col gap-3">
                     <div className="h-20 w-full bg-[#121215] rounded-xl border border-dashed border-[#1E1E22] flex items-center justify-center p-4 relative group">
                       {globalIconUrl ? (
-                        <img src={globalIconUrl} className="max-h-12 object-contain" referrerPolicy="no-referrer" />
+                        <img src={globalIconUrl} className="max-h-12 object-contain" style={{ maxWidth: `${globalIconSize}px` }} referrerPolicy="no-referrer" />
                       ) : (
                         <ImageIcon className="text-zinc-600" size={20} />
                       )}
@@ -198,6 +209,17 @@ export default function GlobalSettingsAdminView() {
                       className="w-full bg-[#121215]/60 border border-[#1E1E22] rounded-lg px-3 py-1.5 text-[9px] font-mono text-zinc-400 outline-none"
                       placeholder="https://..."
                     />
+                    <div className="flex items-center justify-between gap-3 bg-[#121215]/40 p-2.5 rounded-lg border border-[#1E1E22]">
+                      <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">Tamanho Ícone (Largura px)</span>
+                      <input 
+                        type="number" 
+                        value={globalIconSize} 
+                        onChange={e => setGlobalIconSize(e.target.value)} 
+                        className="w-20 bg-[#121215] border border-[#1E1E22] rounded px-2.5 py-1 text-center text-xs font-bold text-indigo-450 outline-none focus:border-indigo-500/50"
+                        min="10"
+                        max="200"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

@@ -3,6 +3,7 @@ import { X, Building2, Globe, FileDigit, Briefcase, Trash2, Check } from 'lucide
 import { useAuth } from '../context/AuthContext.tsx';
 import ModalContainer from './layout/ModalContainer.tsx';
 import { FormGroup, FormLabel, FormInput, FormSelect } from './ui/FormComponents';
+import { Vision360 } from './common/Vision360';
 
 export default function CompanyModal({ 
   isOpen, 
@@ -16,6 +17,7 @@ export default function CompanyModal({
   company?: any
 }) {
   const { fetchWithAuth } = useAuth();
+  const [activeModalTab, setActiveModalTab] = useState<'cadastro' | 'visao_360'>('cadastro');
   const [formData, setFormData] = useState({
     name: '',
     industry: '',
@@ -35,8 +37,10 @@ export default function CompanyModal({
         website: company.website || '',
         status: company.status || 'Ativo'
       });
+      setActiveModalTab('cadastro');
     } else {
       setFormData({ name: '', industry: '', cnpj: '', website: '', status: 'Ativo' });
+      setActiveModalTab('cadastro');
     }
   }, [company, isOpen]);
 
@@ -88,7 +92,7 @@ export default function CompanyModal({
   };
 
   return (
-    <ModalContainer isOpen={isOpen} onClose={onClose} maxWidth="max-w-xl">
+    <ModalContainer isOpen={isOpen} onClose={onClose} maxWidth={company && activeModalTab === 'visao_360' ? 'max-w-4xl' : 'max-w-xl'}>
         {/* Header */}
         <div className="px-6 py-4.5 border-b border-[#0F172A05] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -97,10 +101,10 @@ export default function CompanyModal({
             </div>
             <div>
               <h3 className="text-sm font-bold text-[#111111]">
-                {company ? 'Editar Cadastro de Empresa' : 'Novo Cadastro de Empresa'}
+                {company ? 'Cadastro de Empresa' : 'Novo Cadastro de Empresa'}
               </h3>
               <p className="text-[10px] font-medium text-[#64748B] mt-0.5">
-                {company ? 'Atualize as informações da organização' : 'Registre uma nova organização no ecossistema'}
+                {company ? 'Gerencie os dados e visualize o módulo 360' : 'Registre uma nova organização no ecossistema'}
               </p>
             </div>
           </div>
@@ -112,98 +116,127 @@ export default function CompanyModal({
           </button>
         </div>
 
-        {/* Form Scrollable Section */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex flex-col gap-5 text-left">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormGroup>
-              <FormLabel required>Nome da Empresa</FormLabel>
-              <FormInput 
-                placeholder="Ex: Nexus Group" 
-                value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                required
-              />
-            </FormGroup>
-
-            <FormGroup>
-              <FormLabel>Status Comercial</FormLabel>
-              <FormSelect 
-                value={formData.status}
-                onChange={(e) => setFormData({...formData, status: e.target.value})}
-              >
-                <option value="Ativo">Ativo</option>
-                <option value="Inativo">Inativo</option>
-                <option value="Em Risco">Em Risco</option>
-              </FormSelect>
-            </FormGroup>
+        {/* Modal Level Tab Selector */}
+        {company && (
+          <div className="flex px-6 border-b border-[#0F172A0F] bg-[#FAFAFA]/50 gap-6">
+            <button 
+              onClick={() => setActiveModalTab('cadastro')}
+              className={`py-3 px-1 border-b-2 text-xs font-bold transition-all ${
+                activeModalTab === 'cadastro' ? 'border-[#111111] text-[#111111]' : 'border-transparent text-[#64748B] hover:text-[#111111]'
+              }`}
+            >
+              Dados Cadastrais
+            </button>
+            <button 
+              onClick={() => setActiveModalTab('visao_360')}
+              className={`py-3 px-1 border-b-2 text-xs font-bold transition-all ${
+                activeModalTab === 'visao_360' ? 'border-[#111111] text-[#111111]' : 'border-transparent text-[#64748B] hover:text-[#111111]'
+              }`}
+            >
+              Visão 360°
+            </button>
           </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormGroup>
-              <FormLabel>Segmento / Setor</FormLabel>
-              <FormInput 
-                placeholder="Ex: Fintech, SaaS, E-commerce" 
-                value={formData.industry}
-                onChange={(e) => setFormData({...formData, industry: e.target.value})}
-              />
-            </FormGroup>
+        )}
 
-            <FormGroup>
-              <FormLabel>CNPJ / Registro</FormLabel>
-              <FormInput 
-                placeholder="00.000.000/0000-00" 
-                value={formData.cnpj}
-                onChange={(e) => setFormData({...formData, cnpj: e.target.value})}
-              />
-            </FormGroup>
+        {/* Body content based on tab */}
+        {company && activeModalTab === 'visao_360' ? (
+          <div className="h-[60vh] overflow-y-auto">
+            <Vision360 entityType="company" entityId={company.id} entityName={company.name} entityData={company} />
           </div>
-          
-          <FormGroup>
-            <FormLabel>Website</FormLabel>
-            <FormInput 
-              placeholder="https://www.empresa.com" 
-              value={formData.website}
-              onChange={(e) => setFormData({...formData, website: e.target.value})}
-            />
-          </FormGroup>
+        ) : (
+          /* Form Scrollable Section */
+          <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex flex-col gap-5 text-left">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormGroup>
+                <FormLabel required>Nome da Empresa</FormLabel>
+                <FormInput 
+                  placeholder="Ex: Nexus Group" 
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  required
+                />
+              </FormGroup>
 
-          {/* Action buttons */}
-          <div className="flex items-center justify-between pt-4 border-t border-[#0F172A05]">
-            <div>
-              {company && (
+              <FormGroup>
+                <FormLabel>Status Comercial</FormLabel>
+                <FormSelect 
+                  value={formData.status}
+                  onChange={(e) => setFormData({...formData, status: e.target.value})}
+                >
+                  <option value="Ativo">Ativo</option>
+                  <option value="Inativo">Inativo</option>
+                  <option value="Em Risco">Em Risco</option>
+                </FormSelect>
+              </FormGroup>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormGroup>
+                <FormLabel>Segmento / Setor</FormLabel>
+                <FormInput 
+                  placeholder="Ex: Fintech, SaaS, E-commerce" 
+                  value={formData.industry}
+                  onChange={(e) => setFormData({...formData, industry: e.target.value})}
+                />
+              </FormGroup>
+
+              <FormGroup>
+                <FormLabel>CNPJ / Registro</FormLabel>
+                <FormInput 
+                  placeholder="00.000.000/0000-00" 
+                  value={formData.cnpj}
+                  onChange={(e) => setFormData({...formData, cnpj: e.target.value})}
+                />
+              </FormGroup>
+            </div>
+            
+            <FormGroup>
+              <FormLabel>Website</FormLabel>
+              <FormInput 
+                placeholder="https://www.empresa.com" 
+                value={formData.website}
+                onChange={(e) => setFormData({...formData, website: e.target.value})}
+              />
+            </FormGroup>
+
+            {/* Action buttons */}
+            <div className="flex items-center justify-between pt-4 border-t border-[#0F172A05]">
+              <div>
+                {company && (
+                  <button 
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={loading}
+                    className="text-rose-500 hover:text-rose-700 text-[10px] font-bold flex items-center gap-1 uppercase tracking-wider"
+                  >
+                     <Trash2 size={12} /> Excluir Empresa
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
                 <button 
                   type="button"
-                  onClick={handleDelete}
-                  disabled={loading}
-                  className="text-rose-500 hover:text-rose-700 text-[10px] font-bold flex items-center gap-1 uppercase tracking-wider"
+                  onClick={onClose}
+                  className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
                 >
-                   <Trash2 size={12} /> Excluir Empresa
+                  Cancelar
                 </button>
-              )}
+                <button 
+                  type="submit"
+                  disabled={loading || !formData.name}
+                  className="px-5 py-2 text-xs font-bold text-white bg-[#111111] hover:bg-[#222222] rounded-xl shadow-sm hover:scale-[1.01] transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  {loading ? 'Salvando...' : (
+                    <>
+                      <Check size={14} strokeWidth={2.5} />
+                      <span>{company ? 'Salvar Alterações' : 'Criar Empresa'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              <button 
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button 
-                type="submit"
-                disabled={loading || !formData.name}
-                className="px-5 py-2 text-xs font-bold text-white bg-[#111111] hover:bg-[#222222] rounded-xl shadow-sm hover:scale-[1.01] transition-all cursor-pointer flex items-center gap-1.5"
-              >
-                {loading ? 'Salvando...' : (
-                  <>
-                    <Check size={14} strokeWidth={2.5} />
-                    <span>{company ? 'Salvar Alterações' : 'Criar Empresa'}</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </form>
+          </form>
+        )}
     </ModalContainer>
   );
 }

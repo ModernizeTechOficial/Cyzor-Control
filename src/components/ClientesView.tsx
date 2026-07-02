@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { motion, AnimatePresence } from 'motion/react';
 import StandardHeader from './layout/StandardHeader';
 import MetricCard from './MetricCard';
+import { Vision360 } from './common/Vision360';
 
 export default function ClientesView() {
   const { fetchWithAuth, activeWorkspace } = useAuth();
@@ -23,6 +24,7 @@ export default function ClientesView() {
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [activeModalTab, setActiveModalTab] = useState<'cadastro' | 'visao_360'>('cadastro');
   const [editingClient, setEditingClient] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -76,6 +78,7 @@ export default function ClientesView() {
   // Open modal for Create
   const handleNewClient = () => {
     setEditingClient(null);
+    setActiveModalTab('cadastro');
     setFormData({
       name: '',
       email: '',
@@ -92,6 +95,7 @@ export default function ClientesView() {
   // Open modal for Edit
   const handleEditClient = (client: any) => {
     setEditingClient(client);
+    setActiveModalTab('cadastro');
     setFormData({
       name: client.name || '',
       email: client.email || '',
@@ -484,7 +488,9 @@ export default function ClientesView() {
               initial={{ scale: 0.95, opacity: 0, y: 15 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 15 }}
-              className="bg-white border border-[#0F172A0F] rounded-[24px] shadow-2xl max-w-xl w-full z-10 overflow-hidden flex flex-col max-h-[90vh]"
+              className={`bg-white border border-[#0F172A0F] rounded-[24px] shadow-2xl z-10 overflow-hidden flex flex-col max-h-[90vh] transition-all duration-300 ${
+                editingClient && activeModalTab === 'visao_360' ? 'max-w-4xl w-full' : 'max-w-xl w-full'
+              }`}
             >
               
               {/* Modal Header */}
@@ -495,10 +501,10 @@ export default function ClientesView() {
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-[#111111]">
-                      {editingClient ? 'Editar Cadastro de Cliente' : 'Novo Cadastro de Cliente'}
+                      {editingClient ? 'Cadastro de Cliente' : 'Novo Cadastro de Cliente'}
                     </h3>
                     <p className="text-[10px] font-medium text-[#64748B] mt-0.5">
-                      {editingClient ? 'Atualize as informações do contato' : 'Registre um novo tomador de decisão no sistema'}
+                      {editingClient ? 'Gerencie as informações e visualize o módulo 360' : 'Registre um novo tomador de decisão no sistema'}
                     </p>
                   </div>
                 </div>
@@ -510,8 +516,35 @@ export default function ClientesView() {
                 </button>
               </div>
 
-              {/* Form Scrollable Section */}
-              <form onSubmit={handleSubmit} className="p-6 flex-1 overflow-y-auto flex flex-col gap-5 text-left">
+              {/* Modal Level Tab Selector */}
+              {editingClient && (
+                <div className="flex px-6 border-b border-[#0F172A0F] bg-[#FAFAFA]/50 gap-6">
+                  <button 
+                    onClick={() => setActiveModalTab('cadastro')}
+                    className={`py-3 px-1 border-b-2 text-xs font-bold transition-all ${
+                      activeModalTab === 'cadastro' ? 'border-[#111111] text-[#111111]' : 'border-transparent text-[#64748B] hover:text-[#111111]'
+                    }`}
+                  >
+                    Cadastro do Cliente
+                  </button>
+                  <button 
+                    onClick={() => setActiveModalTab('visao_360')}
+                    className={`py-3 px-1 border-b-2 text-xs font-bold transition-all ${
+                      activeModalTab === 'visao_360' ? 'border-[#111111] text-[#111111]' : 'border-transparent text-[#64748B] hover:text-[#111111]'
+                    }`}
+                  >
+                    Visão 360°
+                  </button>
+                </div>
+              )}
+
+              {editingClient && activeModalTab === 'visao_360' ? (
+                <div className="h-[60vh] overflow-y-auto">
+                  <Vision360 entityType="client" entityId={editingClient.id} entityName={editingClient.name} entityData={editingClient} />
+                </div>
+              ) : (
+                /* Form Scrollable Section */
+                <form onSubmit={handleSubmit} className="p-6 flex-1 overflow-y-auto flex flex-col gap-5 text-left">
                 {/* Name */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Nome Completo *</label>
@@ -636,6 +669,7 @@ export default function ClientesView() {
                   </button>
                 </div>
               </form>
+              )}
 
             </motion.div>
           </div>

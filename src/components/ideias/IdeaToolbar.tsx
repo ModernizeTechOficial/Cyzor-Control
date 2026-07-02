@@ -3,8 +3,8 @@ import { Search, Filter, LayoutGrid, List, KanbanSquare, Clock, ArrowDownAZ } fr
 interface IdeaToolbarProps {
   searchTerm: string;
   setSearchTerm: (v: string) => void;
-  viewMode: 'kanban' | 'list' | 'roadmap';
-  setViewMode: (v: 'kanban' | 'list' | 'roadmap') => void;
+  viewMode: 'kanban' | 'list' | 'roadmap' | 'timeline';
+  setViewMode: (v: 'kanban' | 'list' | 'roadmap' | 'timeline') => void;
   statusFilter: string;
   setStatusFilter: (v: string) => void;
 }
@@ -94,6 +94,14 @@ export default function IdeaToolbar({
           >
             <Clock size={16} />
             <span className="hidden sm:inline text-xs">Roadmap</span>
+          </button>
+          <button 
+            onClick={() => setViewMode('timeline')}
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all ${viewMode === 'timeline' ? 'bg-white shadow-sm text-[#111111] font-bold' : 'text-[#64748B] font-medium hover:text-[#111111]'}`}
+            title="Gantt"
+          >
+            <Clock size={16} />
+            <span className="hidden sm:inline text-xs">Gantt</span>
           </button>
         </div>
       </div>

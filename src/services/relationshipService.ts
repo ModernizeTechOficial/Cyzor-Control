@@ -1,6 +1,6 @@
 import { db } from '../db/index.ts';
 import { entityRelationships } from '../db/schema.ts';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, or } from 'drizzle-orm';
 
 export interface Relationship {
   sourceType: string;
@@ -14,12 +14,10 @@ export interface Relationship {
 
 export const relationshipService = {
   async createRelationship(data: Relationship) {
-    return await db.insert(entityRelationships).values(data);
+    return await db.insert(entityRelationships).values(data).returning();
   },
 
   async getRelationshipsForEntity(type: string, id: number) {
-    // Find all relationships where this entity is source OR target
-    // For simplicity, let's just return relationships where it is source for now
     return await db.select().from(entityRelationships).where(
       or(
         and(eq(entityRelationships.sourceType, type), eq(entityRelationships.sourceId, id)),
@@ -28,4 +26,3 @@ export const relationshipService = {
     );
   }
 };
-import { or } from 'drizzle-orm';

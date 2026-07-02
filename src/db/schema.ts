@@ -776,3 +776,100 @@ export const billingWebhookEvents = pgTable('billing_webhook_events', {
   error: text('error'),
   createdAt: timestamp('created_at').defaultNow(),
 });
+
+// COMMENTS (Unified)
+export const entityComments = pgTable('entity_comments', {
+  id: serial('id').primaryKey(),
+  tenantId: uuid('tenant_id').defaultRandom().notNull(),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  entityType: text('entity_type').notNull(), // 'project', 'product', 'company', 'client', 'idea', 'document', 'event', 'flow', etc.
+  entityId: integer('entity_id').notNull(),
+  userId: text('user_id').references(() => users.uid, { onDelete: 'set null' }),
+  authorName: text('author_name').notNull(),
+  authorAvatar: text('author_avatar'),
+  content: text('content').notNull(),
+  parentId: integer('parent_id'), // For replies (threads)
+  reactions: jsonb('reactions').default('[]'), // [{emoji: '👍', count: 1, users: ['uid']}]
+  attachments: jsonb('attachments').default('[]'), // [{name: 'file.pdf', url: '...'}]
+  isEdited: boolean('is_edited').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => ({
+  entityIdx: index('comment_entity_idx').on(t.entityType, t.entityId),
+  wsIdx: index('comment_ws_idx').on(t.workspaceId),
+  tenantIdx: index('comment_tenant_idx').on(t.tenantId),
+}));
+
+// APPROVALS (Unified Mechanism)
+export const entityApprovals = pgTable('entity_approvals', {
+  id: serial('id').primaryKey(),
+  tenantId: uuid('tenant_id').defaultRandom().notNull(),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  entityType: text('entity_type').notNull(), // 'project', 'product', 'document', 'idea', 'finance', etc.
+  entityId: integer('entity_id').notNull(),
+  title: text('title').notNull(),
+  requesterUid: text('requester_uid').notNull().references(() => users.uid, { onDelete: 'cascade' }),
+  requesterName: text('requester_name').notNull(),
+  status: text('status').default('PENDING'), // PENDING, APPROVED, REJECTED, CHANGES_REQUESTED
+  approvers: jsonb('approvers').default('[]'), // ['uid1', 'uid2']
+  history: jsonb('history').default('[]'), // [{uid, name, status, comment, date}]
+  dueDate: timestamp('due_date'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => ({
+  entityIdx: index('approval_entity_idx').on(t.entityType, t.entityId),
+  wsIdx: index('approval_ws_idx').on(t.workspaceId),
+  tenantIdx: index('approval_tenant_idx').on(t.tenantId),
+}));
+
+// ROADMAPS (Strategic Initiatives)
+export const roadmaps = pgTable('roadmaps', {
+  id: serial('id').primaryKey(),
+  tenantId: uuid('tenant_id').defaultRandom().notNull(),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  productId: integer('product_id').references(() => products.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  description: text('description'),
+  status: text('status').default('PLANNING'), // PLANNING, IN_PROGRESS, SHIPPED, DEFERRED
+  priority: text('priority').default('MEDIUM'), // LOW, MEDIUM, HIGH, CRITICAL
+  progress: integer('progress').default(0),
+  responsibleUid: text('responsible_uid').references(() => users.uid, { onDelete: 'set null' }),
+  dependencies: jsonb('dependencies').default('[]'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (t) => ({
+  wsIdx: index('roadmap_ws_idx').on(t.workspaceId),
+  tenantIdx: index('roadmap_tenant_idx').on(t.tenantId),
+}));
+
+// TEMPLATES
+export const entityTemplates = pgTable('entity_templates', {
+  id: serial('id').primaryKey(),
+  tenantId: uuid('tenant_id').defaultRandom().notNull(),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  type: text('type').notNull(), // 'project', 'product', 'roadmap', 'document', 'flow', 'checklist', 'note', etc.
+  name: text('name').notNull(),
+  description: text('description'),
+  structureJson: jsonb('structure_json').default('{}'), // Initial structure, tasks, documents etc.
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => ({
+  wsIdx: index('template_ws_idx').on(t.workspaceId),
+  tenantIdx: index('template_tenant_idx').on(t.tenantId),
+}));
+
+// TIMELINE ACTIVITIES
+export const timelineActivities = pgTable('timeline_activities', {
+  id: serial('id').primaryKey(),
+  tenantId: uuid('tenant_id').defaultRandom().notNull(),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  entityType: text('entity_type').notNull(), // 'project', 'product', 'company', 'client', 'idea', 'document', 'finance', 'team', etc.
+  entityId: integer('entity_id'),
+  entityName: text('entity_name'),
+  action: text('action').notNull(), // 'created', 'updated', 'deleted', 'commented', 'approved', etc.
+  userName: text('user_name').notNull(),
+  userAvatar: text('user_avatar'),
+  description: text('description').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => ({
+  wsIdx: index('timeline_ws_idx').on(t.workspaceId),
+  tenantIdx: index('timeline_tenant_idx').on(t.tenantId),
+  entityIdx: index('timeline_entity_idx').on(t.entityType, t.entityId),
+}));

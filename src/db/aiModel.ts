@@ -427,6 +427,7 @@ INSTRUÇÕES:
         } else if (call.name === "create_task") {
           const { projectId, title, description, status, priority } = call.args as any;
           await db.insert(tasks).values({
+            workspaceId,
             projectId: Number(projectId),
             title,
             description: description || "",
@@ -500,3 +501,31 @@ INSTRUÇÕES:
     return "Desculpe, ocorreu um erro ao analisar os dados operacionais.";
   }
 }
+
+export async function generateEntityInsights(workspaceId: number, entityType: string, entityData: any) {
+  try {
+    const ai = await getAIInstance(workspaceId);
+    const model = 'gemini-2.5-flash';
+    
+    const prompt = `Analise a seguinte entidade do tipo "${entityType}" e gere insights estratégicos, identificação de riscos ocultos e recomendações acionáveis para uma empresa de tecnologia.
+    
+    Dados da Entidade:
+    ${JSON.stringify(entityData, null, 2)}
+    
+    Por favor, retorne a resposta formatada em Markdown elegante e profissional em português, com as seguintes seções estruturadas de forma organizada:
+    - **Análise Executiva**: Uma visão rápida sobre o estado atual desta entidade.
+    - **Identificação de Riscos**: Quais riscos, gargalos ou atrasos potenciais existem com base nos dados fornecidos.
+    - **Próximas Ações Sugeridas**: Lista de 3 a 5 ações práticas com alta prioridade para otimizar os resultados e garantir o sucesso.`;
+
+    const response = await ai.models.generateContent({
+      model,
+      contents: prompt,
+    });
+
+    return response.text;
+  } catch (error) {
+    console.error("Error generating entity insights:", error);
+    return "Não foi possível carregar as recomendações da IA no momento. Certifique-se de que a chave de API do Gemini esteja configurada nas configurações de Inteligência Artificial.";
+  }
+}
+

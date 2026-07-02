@@ -9,15 +9,21 @@ import {
   CheckCircle2,
   AlertCircle,
   XCircle,
-  Clock
+  Clock,
+  X,
+  User
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import ModalContainer from '../layout/ModalContainer';
+import { Vision360 } from '../common/Vision360';
 
 export default function MembrosTab() {
   const { fetchWithAuth } = useAuth();
   const [members, setMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [selectedMemberFor360, setSelectedMemberFor360] = useState<any>(null);
+  const [activeModalTab, setActiveModalTab] = useState<'dados' | 'visao_360'>('dados');
 
   const fetchMembers = async () => {
     try {
@@ -111,7 +117,11 @@ export default function MembrosTab() {
                   <td colSpan={6} className="px-8 py-12 text-center text-sm text-[#64748B] font-medium">Nenhum membro encontrado.</td>
                 </tr>
               ) : filteredMembers.map((member) => (
-                <tr key={member.id} className="hover:bg-[#FAFAFB]/50 transition-colors group">
+                <tr 
+                  key={member.id} 
+                  className="hover:bg-[#FAFAFB]/50 transition-colors group cursor-pointer"
+                  onClick={() => { setSelectedMemberFor360(member); setActiveModalTab('dados'); }}
+                >
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-xl bg-[#FAFAFB] border border-[#0F172A0A] overflow-hidden flex items-center justify-center text-[#111111] font-bold text-sm shadow-sm flex-shrink-0">
@@ -122,7 +132,7 @@ export default function MembrosTab() {
                         )}
                       </div>
                       <div className="flex flex-col min-w-0">
-                        <span className="text-sm font-bold text-[#111111] truncate">{member.userName}</span>
+                        <span className="text-sm font-bold text-[#111111] group-hover:text-indigo-600 transition-colors truncate">{member.userName}</span>
                         <span className="text-xs text-[#64748B] font-medium truncate">{member.userEmail}</span>
                       </div>
                     </div>
@@ -130,7 +140,7 @@ export default function MembrosTab() {
                   <td className="px-8 py-5">
                     <span className="text-sm font-bold text-[#111111]">{member.cargo || 'Colaborador'}</span>
                   </td>
-                  <td className="px-8 py-5">
+                  <td className="px-8 py-5" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-2">
                       <Shield size={14} className={member.role === 'OWNER' ? 'text-indigo-500' : member.role === 'ADMIN' ? 'text-amber-500' : 'text-[#94A3B8]'} />
                       <select 
@@ -164,7 +174,7 @@ export default function MembrosTab() {
                       {new Date(member.createdAt).toLocaleDateString()}
                     </div>
                   </td>
-                  <td className="px-8 py-5 text-right">
+                  <td className="px-8 py-5 text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button 
                         onClick={() => handleRemoveMember(member.id)}
@@ -185,6 +195,97 @@ export default function MembrosTab() {
           </table>
         </div>
       </div>
+
+      {/* Member 360 & Details Modal */}
+      {selectedMemberFor360 && (
+        <ModalContainer 
+          isOpen={!!selectedMemberFor360} 
+          onClose={() => setSelectedMemberFor360(null)} 
+          maxWidth={activeModalTab === 'visao_360' ? 'max-w-4xl' : 'max-w-xl'}
+        >
+          {/* Header */}
+          <div className="px-6 py-4.5 border-b border-[#0F172A05] flex items-center justify-between bg-[#FAFAFA]/50">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-full bg-slate-100 border border-[#0F172A0A] overflow-hidden flex items-center justify-center text-[#111111] font-bold text-sm shadow-sm flex-shrink-0">
+                {selectedMemberFor360.userPhoto ? (
+                  <img src={selectedMemberFor360.userPhoto} alt={selectedMemberFor360.userName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                ) : (
+                  selectedMemberFor360.userName?.charAt(0).toUpperCase()
+                )}
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-[#111111]">{selectedMemberFor360.userName}</h3>
+                <p className="text-[10px] font-medium text-[#64748B] mt-0.5">{selectedMemberFor360.userEmail}</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setSelectedMemberFor360(null)}
+              className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+            >
+              <X size={15} strokeWidth={2.5} />
+            </button>
+          </div>
+
+          {/* Modal Tabs */}
+          <div className="flex px-6 border-b border-[#0F172A0F] bg-[#FAFAFA]/50 gap-6">
+            <button 
+              onClick={() => setActiveModalTab('dados')}
+              className={`py-3 px-1 border-b-2 text-xs font-bold transition-all ${
+                activeModalTab === 'dados' ? 'border-[#111111] text-[#111111]' : 'border-transparent text-[#64748B] hover:text-[#111111]'
+              }`}
+            >
+              Perfil & Atribuições
+            </button>
+            <button 
+              onClick={() => setActiveModalTab('visao_360')}
+              className={`py-3 px-1 border-b-2 text-xs font-bold transition-all ${
+                activeModalTab === 'visao_360' ? 'border-[#111111] text-[#111111]' : 'border-transparent text-[#64748B] hover:text-[#111111]'
+              }`}
+            >
+              Visão 360°
+            </button>
+          </div>
+
+          {activeModalTab === 'visao_360' ? (
+            <div className="h-[60vh] overflow-y-auto">
+              <Vision360 entityType="team" entityId={selectedMemberFor360.id} entityName={selectedMemberFor360.userName} entityData={selectedMemberFor360} />
+            </div>
+          ) : (
+            <div className="p-6 flex flex-col gap-6 text-left bg-white">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Cargo / Função</label>
+                  <p className="text-sm font-semibold text-slate-800 mt-1">{selectedMemberFor360.cargo || 'Colaborador'}</p>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Status na Plataforma</label>
+                  <p className="text-sm font-semibold text-slate-800 mt-1">{selectedMemberFor360.status}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Papel de Acesso</label>
+                  <p className="text-sm font-semibold text-slate-800 mt-1">{selectedMemberFor360.role}</p>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Data de Ingresso</label>
+                  <p className="text-sm font-semibold text-slate-800 mt-1">{new Date(selectedMemberFor360.createdAt).toLocaleDateString()}</p>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-[#0F172A05] flex justify-end">
+                <button 
+                  onClick={() => setSelectedMemberFor360(null)}
+                  className="px-5 py-2 text-xs font-bold text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-xl transition-all"
+                >
+                  Fechar Perfil
+                </button>
+              </div>
+            </div>
+          )}
+        </ModalContainer>
+      )}
     </div>
   );
 }

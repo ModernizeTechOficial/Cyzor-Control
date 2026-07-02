@@ -13,6 +13,7 @@ import ProductKanban from './produtos/ProductKanban';
 import ProductActivity from './produtos/ProductActivity';
 import ProductEvents from './produtos/ProductEvents';
 import ProductActionBar from './produtos/ProductActionBar';
+import TimelineView, { TimelineItem } from './common/TimelineView';
 
 export default function ProdutosView() {
   const [products, setProducts] = useState<any[]>([]);
@@ -22,13 +23,38 @@ export default function ProdutosView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [companyFilter, setCompanyFilter] = useState('ALL');
-  const [viewMode, setViewMode] = useState<'table' | 'grid' | 'kanban'>('grid');
+  const [viewMode, setViewMode] = useState<'table' | 'grid' | 'kanban' | 'timeline'>('grid');
   
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   
   const { fetchWithAuth, activeWorkspace } = useAuth();
+
+  const handleUpdateProductDates = async (productId: number, newStartDate: string, newEndDate: string) => {
+    const prod = products.find(p => p.id === productId);
+    if (!prod) return;
+
+    const tags = prod.tags && Array.isArray(prod.tags) ? prod.tags : [];
+    const cleanTags = tags.filter((t: string) => !t.startsWith('start:') && !t.startsWith('end:'));
+    const updatedTags = [...cleanTags, `start:${newStartDate}`, `end:${newEndDate}`];
+
+    try {
+      const res = await fetchWithAuth(`/api/products/${productId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          tags: updatedTags
+        })
+      });
+
+      if (res.ok) {
+        setProducts(prev => prev.map(p => p.id === productId ? { ...p, tags: updatedTags } : p));
+      }
+    } catch (e) {
+      console.error("Error updating product dates in timeline:", e);
+    }
+  };
 
   const fetchData = async () => {
     if (!activeWorkspace) return;
@@ -91,6 +117,48 @@ export default function ProdutosView() {
 
     return matchesSearch && matchesStatus && matchesCompany;
   });
+
+  const timelineItems = useMemo(() => {
+    return filteredProducts.map(prod => {
+      let startDate = '';
+      let endDate = '';
+      
+      const tags = prod.tags && Array.isArray(prod.tags) ? prod.tags : [];
+      const startTag = tags.find((t: string) => t.startsWith('start:'));
+      const endTag = tags.find((t: string) => t.startsWith('end:'));
+      
+      if (startTag) startDate = startTag.replace('start:', '');
+      if (endTag) endDate = endTag.replace('end:', '');
+      
+      if (!startDate) {
+        const today = new Date();
+        startDate = today.toISOString().split('T')[0];
+        const nextMonth = new Date();
+        nextMonth.setDate(today.getDate() + 30);
+        endDate = nextMonth.toISOString().split('T')[0];
+      }
+      
+      if (!endDate) {
+        const d = new Date(startDate);
+        d.setDate(d.getDate() + 30);
+        endDate = d.toISOString().split('T')[0];
+      }
+
+      return {
+        id: prod.id,
+        name: prod.name,
+        startDate,
+        endDate,
+        status: prod.status || 'PLANEJAMENTO',
+        statusLabel: prod.status || 'Planejamento',
+        priority: 'Média',
+        assignee: prod.empresa || '-',
+        progress: prod.projectsCount ? Math.min(100, prod.projectsCount * 25) : 30,
+        dependencies: [],
+        rawItem: prod
+      } as TimelineItem;
+    });
+  }, [filteredProducts]);
 
   const handleUpdateProduct = async (updated: any) => {
     try {
@@ -183,6 +251,21 @@ export default function ProdutosView() {
               onRefresh={fetchData}
               setProducts={setProducts}
             />
+          )}
+
+          {viewMode === 'timeline' && (
+            <div className="w-full bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm">
+              <TimelineView 
+                items={timelineItems}
+                onUpdateItemDates={handleUpdateProductDates}
+                onItemClick={(rawItem) => setSelectedProduct(rawItem)}
+                onDeleteItem={(productId) => {
+                  setProducts(prev => prev.filter(p => p.id !== productId));
+                }}
+                title="Linha do Tempo dos Produtos"
+                emptyMessage="Nenhum produto cadastrado para exibir na linha do tempo."
+              />
+            </div>
           )}
         </div>
         

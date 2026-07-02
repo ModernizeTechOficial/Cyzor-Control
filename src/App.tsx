@@ -29,6 +29,7 @@ import HomeIntelligence from './components/home/HomeIntelligence';
 import ProductTour from './components/layout/ProductTour';
 import WelcomeModal from './components/layout/WelcomeModal';
 import { CreateWorkspaceModal } from './components/CreateWorkspaceModal';
+import { CommandPalette } from './components/common/CommandPalette';
 
 export default function App() {
   const { user, dbUser, loading, activeWorkspace, isSwitchingWorkspace, isCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen } = useAuth();
@@ -37,6 +38,18 @@ export default function App() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [restartTour, setRestartTour] = useState(0);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+
+  useEffect(() => {
+    const handleGlobalKeys = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key?.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeys);
+    return () => window.removeEventListener('keydown', handleGlobalKeys);
+  }, []);
 
   useEffect(() => {
     // Show welcome modal after login (once per session)
@@ -198,6 +211,7 @@ export default function App() {
         }} 
       />
       <CreateWorkspaceModal isOpen={isCreateWorkspaceModalOpen} onClose={() => setIsCreateWorkspaceModalOpen(false)} />
+      <CommandPalette isOpen={isCommandPaletteOpen} onClose={() => setIsCommandPaletteOpen(false)} onNavigate={(v) => setCurrentView(v)} />
       
       {isSwitchingWorkspace && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/80 backdrop-blur-sm">

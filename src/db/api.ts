@@ -2,7 +2,7 @@ import { Router } from "express";
 import { requireAuth, AuthRequest } from "../middleware/auth.ts";
 import { tenantMiddleware, TenantRequest } from "../middleware/tenant.ts";
 import { db } from "./index.ts";
-import { companies, clients, products, projects, tasks, ideas, documents, financeEntries, sprints, milestones, aiMemories, notifications, agendaEvents, users, workspaceMembers, workspaces, flows, notes, deploys, productLicenses, workspaceInvitations, auditLogs } from "./schema.ts";
+import { companies, clients, products, projects, tasks, ideas, documents, financeEntries, sprints, milestones, aiMemories, notifications, agendaEvents, users, workspaceMembers, workspaces, flows, notes, deploys, productLicenses, workspaceInvitations, auditLogs, entityComments, entityApprovals, roadmaps, entityTemplates, timelineActivities } from "./schema.ts";
 import { eq, and, desc, sql, or, inArray, gte, lte, not } from "drizzle-orm";
 import { getUserSaaSState } from "./queries.ts";
 import { sendProjectNotificationEmail, testSmtpConnection } from "./mail.ts";
@@ -146,7 +146,7 @@ apiRouter.post("/user/complete-tour", async (req: AuthRequest, res) => {
 
 apiRouter.use(tenantMiddleware as any);
 
-import { processAIChat, generateProactiveInsights, getAIInstance } from './aiModel.ts';
+import { processAIChat, generateProactiveInsights, getAIInstance, generateEntityInsights } from './aiModel.ts';
 
 // --- AI INSIGHTS ---
 apiRouter.get("/ai/insights", async (req: AuthRequest, res) => {
@@ -156,6 +156,17 @@ apiRouter.get("/ai/insights", async (req: AuthRequest, res) => {
   } catch (error: any) {
     console.error("Error in /api/ai/insights route:", error);
     res.status(500).json({ error: "Failed to generate insights" });
+  }
+});
+
+apiRouter.post("/ai/entity-insights", async (req: AuthRequest, res) => {
+  try {
+    const { entityType, entityData } = req.body;
+    const insights = await generateEntityInsights(req.workspaceId!, entityType, entityData);
+    res.json({ insights });
+  } catch (error: any) {
+    console.error("Error in /api/ai/entity-insights route:", error);
+    res.status(500).json({ error: "Failed to generate entity insights" });
   }
 });
 
@@ -516,6 +527,19 @@ apiRouter.post("/companies", async (req: AuthRequest, res) => {
       website: website || null,
       status: status || 'Ativo'
     }).returning();
+
+    try {
+      await db.insert(notifications).values({
+        tenantId: req.tenantId as any,
+        workspaceId: req.workspaceId!,
+        title: "Nova Empresa Cadastrada",
+        description: `A empresa "${name}" foi cadastrada com sucesso.`,
+        type: "info"
+      });
+    } catch (e) {
+      console.error("Error creating company notification:", e);
+    }
+
     res.json(data[0]);
   } catch (error) {
     console.error("Error creating company:", error);
@@ -569,6 +593,19 @@ apiRouter.post("/clients", async (req: AuthRequest, res) => {
       role: role || null,
       tags: tags || []
     }).returning();
+
+    try {
+      await db.insert(notifications).values({
+        tenantId: req.tenantId as any,
+        workspaceId: req.workspaceId!,
+        title: "Novo Cliente Cadastrado",
+        description: `O contato de "${name}" foi cadastrado no workspace.`,
+        type: "info"
+      });
+    } catch (e) {
+      console.error("Error creating client notification:", e);
+    }
+
     res.json(data[0]);
   } catch (error) {
     console.error("Error creating client:", error);
@@ -682,6 +719,18 @@ apiRouter.post("/projects", async (req: AuthRequest, res) => {
       owner: owner || 'Sem dono'
     }).returning();
     
+    try {
+      await db.insert(notifications).values({
+        tenantId: req.tenantId as any,
+        workspaceId: req.workspaceId!,
+        title: "Novo Projeto Criado",
+        description: `O projeto "${name}" foi criado por ${req.user!.displayName || req.user!.email || 'Membro'}.`,
+        type: "info"
+      });
+    } catch (e) {
+      console.error("Error creating project notification:", e);
+    }
+
     res.json(data[0]);
   } catch (error) {
     console.error("Error creating project:", error);
@@ -707,6 +756,21 @@ apiRouter.put("/projects/:id", async (req: AuthRequest, res) => {
   if (owner !== undefined) updateValues.owner = owner;
 
   const data = await db.update(projects).set(updateValues).where(and(eq(projects.id, Number(req.params.id)), eq(projects.workspaceId, req.workspaceId!))).returning();
+  
+  try {
+    if (status !== undefined) {
+      await db.insert(notifications).values({
+        tenantId: req.tenantId as any,
+        workspaceId: req.workspaceId!,
+        title: "Status do Projeto Atualizado",
+        description: `O projeto "${data[0].name}" agora está em "${status}".`,
+        type: "success"
+      });
+    }
+  } catch (e) {
+    console.error("Error creating project update notification:", e);
+  }
+
   res.json(data[0]);
 });
 
@@ -717,11 +781,58 @@ apiRouter.get("/ideas", async (req: AuthRequest, res) => {
 });
 apiRouter.post("/ideas", async (req: AuthRequest, res) => {
   const data = await db.insert(ideas).values({ ...req.body, workspaceId: req.workspaceId!, authorUid: req.user!.uid }).returning();
+  
+  try {
+    await db.insert(notifications).values({
+      tenantId: req.tenantId as any,
+      workspaceId: req.workspaceId!,
+      title: "Nova Ideia Capturada",
+      description: `A ideia "${data[0].title}" foi adicionada por ${req.user!.displayName || req.user!.email || 'Membro'}.`,
+      type: "info"
+    });
+  } catch (e) {
+    console.error("Error creating idea notification:", e);
+  }
+
   res.json(data[0]);
 });
 
 apiRouter.put("/ideas/:id", async (req: AuthRequest, res) => {
   const data = await db.update(ideas).set(req.body).where(and(eq(ideas.id, Number(req.params.id)), eq(ideas.workspaceId, req.workspaceId!))).returning();
+  
+  try {
+    if (req.body.status) {
+      const statusLabels: Record<string, string> = {
+        capturadas: 'Capturada',
+        avaliacao: 'Em Avaliação',
+        pesquisa: 'Pesquisa',
+        mvp: 'MVP',
+        lancadas: 'Lançada'
+      };
+      const label = statusLabels[req.body.status.toLowerCase()] || req.body.status;
+      await db.insert(notifications).values({
+        tenantId: req.tenantId as any,
+        workspaceId: req.workspaceId!,
+        title: "Ideia Movida no Funil",
+        description: `A ideia "${data[0].title}" foi movida para "${label}".`,
+        type: "success"
+      });
+    } else if (req.body.tags) {
+      const qTag = req.body.tags.find((t: string) => ['Q3 2026', 'Q4 2026', 'Q1 2027', 'Q2 2027'].includes(t));
+      if (qTag) {
+        await db.insert(notifications).values({
+          tenantId: req.tenantId as any,
+          workspaceId: req.workspaceId!,
+          title: "Ideia Agendada no Roadmap",
+          description: `A ideia "${data[0].title}" foi planejada para o trimestre ${qTag}.`,
+          type: "success"
+        });
+      }
+    }
+  } catch (e) {
+    console.error("Error updating idea notification:", e);
+  }
+
   res.json(data[0]);
 });
 
@@ -802,6 +913,18 @@ apiRouter.post("/products", async (req: AuthRequest, res) => {
       pricingModel: pricingModel || null,
       features: features || []
     }).returning();
+
+    try {
+      await db.insert(notifications).values({
+        tenantId: req.tenantId as any,
+        workspaceId: req.workspaceId!,
+        title: "Novo Produto Adicionado",
+        description: `O produto "${name}" foi adicionado ao portfólio.`,
+        type: "info"
+      });
+    } catch (e) {
+      console.error("Error creating product notification:", e);
+    }
 
     res.json(data[0]);
   } catch (error: any) {
@@ -1035,6 +1158,19 @@ apiRouter.post("/tasks", async (req: AuthRequest, res) => {
       if (taskComments) values.taskComments = taskComments;
       
       const data = await db.insert(tasks).values(values).returning();
+
+      try {
+        await db.insert(notifications).values({
+          tenantId: req.tenantId as any,
+          workspaceId: req.workspaceId!,
+          title: "Nova Tarefa Criada",
+          description: `A tarefa "${title}" foi criada por ${req.user!.displayName || req.user!.email || 'Membro'}.`,
+          type: "info"
+        });
+      } catch (e) {
+        console.error("Error creating task notification:", e);
+      }
+
       res.json(data[0]);
   } catch (error) {
       console.error("Error creating task:", error);
@@ -1086,6 +1222,29 @@ apiRouter.put("/tasks/:id", async (req: AuthRequest, res) => {
     .returning();
 
   if (data.length === 0) return res.status(404).json({ error: "Task not found" });
+
+  try {
+    if (status !== undefined) {
+      await db.insert(notifications).values({
+        tenantId: req.tenantId as any,
+        workspaceId: req.workspaceId!,
+        title: "Tarefa Movida",
+        description: `A tarefa "${data[0].title}" foi movida para "${status}".`,
+        type: "success"
+      });
+    } else if (assigneeUid !== undefined && updateValues.assigneeUid) {
+      await db.insert(notifications).values({
+        tenantId: req.tenantId as any,
+        workspaceId: req.workspaceId!,
+        title: "Responsável Atribuído",
+        description: `A tarefa "${data[0].title}" foi atribuída a um novo membro.`,
+        type: "info"
+      });
+    }
+  } catch (e) {
+    console.error("Error creating task update notification:", e);
+  }
+
   res.json(data[0]);
 });
 
@@ -1143,6 +1302,393 @@ apiRouter.post("/relationships", async (req: AuthRequest, res) => {
   }
 });
 
+// --- GLOBAL COMMENTS SYSTEM ---
+apiRouter.get("/comments/:entityType/:entityId", async (req: AuthRequest, res) => {
+  try {
+    const { entityType, entityId } = req.params;
+    const comments = await db.select().from(entityComments).where(
+      and(
+        eq(entityComments.workspaceId, req.workspaceId!),
+        eq(entityComments.entityType, entityType),
+        eq(entityComments.entityId, Number(entityId))
+      )
+    ).orderBy(desc(entityComments.createdAt));
+    res.json(comments);
+  } catch (error) {
+    console.error("Error fetching comments:", error);
+    res.status(500).json({ error: "Failed to fetch comments" });
+  }
+});
+
+apiRouter.post("/comments", async (req: AuthRequest, res) => {
+  try {
+    const { entityType, entityId, content, parentId, reactions, attachments } = req.body;
+    const [comment] = await db.insert(entityComments).values({
+      tenantId: req.tenantId as any,
+      workspaceId: req.workspaceId!,
+      entityType,
+      entityId: Number(entityId),
+      userId: req.user!.uid,
+      authorName: req.user!.displayName || req.user!.email || "Membro",
+      authorAvatar: req.user!.photoURL || "",
+      content,
+      parentId: parentId ? Number(parentId) : null,
+      reactions: reactions || [],
+      attachments: attachments || []
+    }).returning();
+
+    // Generate notification for other users or creator (mock simulation / live notification)
+    await db.insert(notifications).values({
+      tenantId: req.tenantId as any,
+      workspaceId: req.workspaceId!,
+      title: "Novo comentário",
+      description: `${req.user!.displayName || req.user!.email} comentou em ${entityType} #${entityId}: "${content.substring(0, 30)}..."`,
+      type: "comment"
+    });
+
+    // Register activity
+    await db.insert(timelineActivities).values({
+      tenantId: req.tenantId as any,
+      workspaceId: req.workspaceId!,
+      entityType,
+      entityId: Number(entityId),
+      entityName: `${entityType} #${entityId}`,
+      action: "commented",
+      userName: req.user!.displayName || req.user!.email || "Membro",
+      userAvatar: req.user!.photoURL || "",
+      description: `Comentou em ${entityType} #${entityId}`
+    });
+
+    res.json(comment);
+  } catch (error) {
+    console.error("Error creating comment:", error);
+    res.status(500).json({ error: "Failed to create comment" });
+  }
+});
+
+apiRouter.delete("/comments/:id", async (req: AuthRequest, res) => {
+  try {
+    const id = Number(req.params.id);
+    await db.delete(entityComments).where(
+      and(
+        eq(entityComments.id, id),
+        eq(entityComments.workspaceId, req.workspaceId!)
+      )
+    );
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting comment:", error);
+    res.status(500).json({ error: "Failed to delete comment" });
+  }
+});
+
+// --- SYSTEM OF APPROVALS ---
+apiRouter.get("/approvals", async (req: AuthRequest, res) => {
+  try {
+    const approvalsList = await db.select().from(entityApprovals).where(
+      eq(entityApprovals.workspaceId, req.workspaceId!)
+    ).orderBy(desc(entityApprovals.createdAt));
+    res.json(approvalsList);
+  } catch (error) {
+    console.error("Error fetching approvals:", error);
+    res.status(500).json({ error: "Failed to fetch approvals" });
+  }
+});
+
+apiRouter.get("/approvals/:entityType/:entityId", async (req: AuthRequest, res) => {
+  try {
+    const { entityType, entityId } = req.params;
+    const approvalsList = await db.select().from(entityApprovals).where(
+      and(
+        eq(entityApprovals.workspaceId, req.workspaceId!),
+        eq(entityApprovals.entityType, entityType),
+        eq(entityApprovals.entityId, Number(entityId))
+      )
+    ).orderBy(desc(entityApprovals.createdAt));
+    res.json(approvalsList);
+  } catch (error) {
+    console.error("Error fetching entity approvals:", error);
+    res.status(500).json({ error: "Failed to fetch approvals" });
+  }
+});
+
+apiRouter.post("/approvals", async (req: AuthRequest, res) => {
+  try {
+    const { entityType, entityId, title, approvers, dueDate } = req.body;
+    const [approval] = await db.insert(entityApprovals).values({
+      tenantId: req.tenantId as any,
+      workspaceId: req.workspaceId!,
+      entityType,
+      entityId: Number(entityId),
+      title,
+      requesterUid: req.user!.uid,
+      requesterName: req.user!.displayName || req.user!.email || "Membro",
+      status: "PENDING",
+      approvers: approvers || [],
+      history: [],
+      dueDate: dueDate ? new Date(dueDate) : null
+    }).returning();
+
+    // Create notifications for approvers
+    await db.insert(notifications).values({
+      tenantId: req.tenantId as any,
+      workspaceId: req.workspaceId!,
+      title: "Solicitação de Aprovação",
+      description: `Nova solicitação de aprovação criada: "${title}" para ${entityType}`,
+      type: "approval"
+    });
+
+    // Register activity
+    await db.insert(timelineActivities).values({
+      tenantId: req.tenantId as any,
+      workspaceId: req.workspaceId!,
+      entityType,
+      entityId: Number(entityId),
+      entityName: title,
+      action: "approval_requested",
+      userName: req.user!.displayName || req.user!.email || "Membro",
+      userAvatar: req.user!.photoURL || "",
+      description: `Solicitou aprovação para ${entityType}: "${title}"`
+    });
+
+    res.json(approval);
+  } catch (error) {
+    console.error("Error creating approval:", error);
+    res.status(500).json({ error: "Failed to create approval" });
+  }
+});
+
+apiRouter.put("/approvals/:id", async (req: AuthRequest, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { status, comment } = req.body;
+    
+    const existing = await db.select().from(entityApprovals).where(
+      and(
+        eq(entityApprovals.id, id),
+        eq(entityApprovals.workspaceId, req.workspaceId!)
+      )
+    );
+    if (!existing.length) {
+      return res.status(404).json({ error: "Approval not found" });
+    }
+
+    const currentApproval = existing[0];
+    const currentHistory = (currentApproval.history as any[]) || [];
+    const newHistoryEntry = {
+      uid: req.user!.uid,
+      name: req.user!.displayName || req.user!.email || "Membro",
+      status,
+      comment: comment || "",
+      date: new Date().toISOString()
+    };
+
+    const [updated] = await db.update(entityApprovals).set({
+      status,
+      history: [...currentHistory, newHistoryEntry]
+    }).where(
+      and(
+        eq(entityApprovals.id, id),
+        eq(entityApprovals.workspaceId, req.workspaceId!)
+      )
+    ).returning();
+
+    // Create notification
+    await db.insert(notifications).values({
+      tenantId: req.tenantId as any,
+      workspaceId: req.workspaceId!,
+      title: `Aprovação ${status}`,
+      description: `A solicitação "${currentApproval.title}" foi ${status} por ${req.user!.displayName || req.user!.email}`,
+      type: "approval"
+    });
+
+    // Register activity
+    await db.insert(timelineActivities).values({
+      tenantId: req.tenantId as any,
+      workspaceId: req.workspaceId!,
+      entityType: currentApproval.entityType,
+      entityId: currentApproval.entityId,
+      entityName: currentApproval.title,
+      action: status === "APPROVED" ? "approved" : "rejected",
+      userName: req.user!.displayName || req.user!.email || "Membro",
+      userAvatar: req.user!.photoURL || "",
+      description: `Aprovou/Rejeitou com status ${status}: "${currentApproval.title}"`
+    });
+
+    res.json(updated);
+  } catch (error) {
+    console.error("Error updating approval:", error);
+    res.status(500).json({ error: "Failed to update approval" });
+  }
+});
+
+// --- ROADMAPS ---
+apiRouter.get("/roadmaps", async (req: AuthRequest, res) => {
+  try {
+    const list = await db.select().from(roadmaps).where(
+      eq(roadmaps.workspaceId, req.workspaceId!)
+    ).orderBy(desc(roadmaps.createdAt));
+    res.json(list);
+  } catch (error) {
+    console.error("Error fetching roadmaps:", error);
+    res.status(500).json({ error: "Failed to fetch roadmaps" });
+  }
+});
+
+apiRouter.post("/roadmaps", async (req: AuthRequest, res) => {
+  try {
+    const { productId, title, description, status, priority, progress, responsibleUid, dependencies } = req.body;
+    const [item] = await db.insert(roadmaps).values({
+      tenantId: req.tenantId as any,
+      workspaceId: req.workspaceId!,
+      productId: productId ? Number(productId) : null,
+      title,
+      description: description || "",
+      status: status || "PLANNING",
+      priority: priority || "MEDIUM",
+      progress: progress ? Number(progress) : 0,
+      responsibleUid: responsibleUid || null,
+      dependencies: dependencies || []
+    }).returning();
+
+    // Register activity
+    await db.insert(timelineActivities).values({
+      tenantId: req.tenantId as any,
+      workspaceId: req.workspaceId!,
+      entityType: "product",
+      entityId: productId ? Number(productId) : null,
+      entityName: title,
+      action: "created",
+      userName: req.user!.displayName || req.user!.email || "Membro",
+      userAvatar: req.user!.photoURL || "",
+      description: `Criou iniciativa no Roadmap: "${title}"`
+    });
+
+    res.json(item);
+  } catch (error) {
+    console.error("Error creating roadmap initiative:", error);
+    res.status(500).json({ error: "Failed to create roadmap initiative" });
+  }
+});
+
+apiRouter.put("/roadmaps/:id", async (req: AuthRequest, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { title, description, status, priority, progress, responsibleUid, dependencies } = req.body;
+    
+    const [updated] = await db.update(roadmaps).set({
+      title,
+      description,
+      status,
+      priority,
+      progress: progress ? Number(progress) : 0,
+      responsibleUid: responsibleUid || null,
+      dependencies: dependencies || [],
+      updatedAt: new Date()
+    }).where(
+      and(
+        eq(roadmaps.id, id),
+        eq(roadmaps.workspaceId, req.workspaceId!)
+      )
+    ).returning();
+
+    res.json(updated);
+  } catch (error) {
+    console.error("Error updating roadmap:", error);
+    res.status(500).json({ error: "Failed to update roadmap" });
+  }
+});
+
+// --- TEMPLATES ---
+apiRouter.get("/templates/:type", async (req: AuthRequest, res) => {
+  try {
+    const { type } = req.params;
+    const list = await db.select().from(entityTemplates).where(
+      and(
+        eq(entityTemplates.workspaceId, req.workspaceId!),
+        eq(entityTemplates.type, type)
+      )
+    );
+    res.json(list);
+  } catch (error) {
+    console.error("Error fetching templates:", error);
+    res.status(500).json({ error: "Failed to fetch templates" });
+  }
+});
+
+apiRouter.post("/templates", async (req: AuthRequest, res) => {
+  try {
+    const { type, name, description, structureJson } = req.body;
+    const [template] = await db.insert(entityTemplates).values({
+      tenantId: req.tenantId as any,
+      workspaceId: req.workspaceId!,
+      type,
+      name,
+      description: description || "",
+      structureJson: structureJson || {}
+    }).returning();
+    res.json(template);
+  } catch (error) {
+    console.error("Error creating template:", error);
+    res.status(500).json({ error: "Failed to create template" });
+  }
+});
+
+// --- TIMELINE ACTIVITIES ---
+apiRouter.get("/activities", async (req: AuthRequest, res) => {
+  try {
+    const { entityType, entityId } = req.query;
+    let query = db.select().from(timelineActivities).where(
+      eq(timelineActivities.workspaceId, req.workspaceId!)
+    );
+    
+    // Add dynamic filters if provided
+    if (entityType && entityId) {
+      query = db.select().from(timelineActivities).where(
+        and(
+          eq(timelineActivities.workspaceId, req.workspaceId!),
+          eq(timelineActivities.entityType, entityType as string),
+          eq(timelineActivities.entityId, Number(entityId))
+        )
+      );
+    } else if (entityType) {
+      query = db.select().from(timelineActivities).where(
+        and(
+          eq(timelineActivities.workspaceId, req.workspaceId!),
+          eq(timelineActivities.entityType, entityType as string)
+        )
+      );
+    }
+    
+    const list = await query.orderBy(desc(timelineActivities.createdAt));
+    res.json(list);
+  } catch (error) {
+    console.error("Error fetching activities:", error);
+    res.status(500).json({ error: "Failed to fetch activities" });
+  }
+});
+
+apiRouter.post("/activities", async (req: AuthRequest, res) => {
+  try {
+    const { entityType, entityId, entityName, action, description } = req.body;
+    const [activity] = await db.insert(timelineActivities).values({
+      tenantId: req.tenantId as any,
+      workspaceId: req.workspaceId!,
+      entityType,
+      entityId: entityId ? Number(entityId) : null,
+      entityName: entityName || "",
+      action,
+      userName: req.user!.displayName || req.user!.email || "Membro",
+      userAvatar: req.user!.photoURL || "",
+      description
+    }).returning();
+    res.json(activity);
+  } catch (error) {
+    console.error("Error logging activity:", error);
+    res.status(500).json({ error: "Failed to log activity" });
+  }
+});
+
 // --- FINANCE ---
 apiRouter.get("/finance", async (req: AuthRequest, res) => {
   const data = await db.select().from(financeEntries).where(eq(financeEntries.workspaceId, req.workspaceId!));
@@ -1164,6 +1710,20 @@ apiRouter.post("/finance", async (req: AuthRequest, res) => {
         isRecurrent: !!isRecurrent,
         dueDate: dueDate ? new Date(dueDate) : null
     }).returning();
+
+    try {
+      const typeLabel = type === 'receita' ? 'Receita' : 'Despesa';
+      await db.insert(notifications).values({
+        tenantId: req.tenantId as any,
+        workspaceId: req.workspaceId!,
+        title: `Nova ${typeLabel} Registrada`,
+        description: `${typeLabel} "${description}" no valor de R$ ${Number(amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} foi lançada.`,
+        type: type === 'receita' ? 'success' : 'warning'
+      });
+    } catch (e) {
+      console.error("Error creating finance notification:", e);
+    }
+
     res.json(data[0]);
   } catch (error) {
     console.error("Error in POST /finance:", error);
@@ -1373,6 +1933,22 @@ apiRouter.post("/deploys", async (req: AuthRequest, res) => {
       logs: logs || '',
       userUid: req.user!.uid
     }).returning();
+
+    try {
+      const prodList = await db.select().from(products).where(eq(products.id, Number(productId)));
+      const productName = prodList[0]?.name || `Produto #${productId}`;
+      
+      await db.insert(notifications).values({
+        tenantId: req.tenantId as any,
+        workspaceId: req.workspaceId!,
+        title: "Deploy Concluído",
+        description: `Novo deploy da versão v${version} de "${productName}" finalizado com status "${status}".`,
+        type: status === 'failed' ? 'error' : 'success'
+      });
+    } catch (e) {
+      console.error("Error creating deploy notification:", e);
+    }
+
     res.json(newDeploy);
   } catch (error) {
     console.error("Error creating deploy:", error);
