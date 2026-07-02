@@ -97,7 +97,7 @@ export default function TenantsAdminView() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#18181B] pb-6">
         <div>
           <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-            <Server className="text-indigo-400 shrink-0" size={24} />
+            <Building2 className="text-indigo-400 shrink-0" size={24} />
             Workspaces & SaaS Tenants
           </h1>
           <p className="text-sm text-zinc-400 font-medium">Controle de instâncias isoladas de banco de dados e planos de faturamento SaaS.</p>

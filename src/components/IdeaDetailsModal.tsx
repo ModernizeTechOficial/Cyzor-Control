@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { X, Lightbulb, Box, CheckCircle2, DollarSign, Target, Star, Building2, Pencil } from 'lucide-react';
+import { FormGroup, FormLabel, FormInput, FormTextarea, FormSelect } from './ui/FormComponents';
 
 export default function IdeaDetailsModal({ idea, isOpen, onClose, onSave }: { idea: any, isOpen: boolean, onClose: () => void, onSave: (i: any) => void }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -42,15 +43,20 @@ export default function IdeaDetailsModal({ idea, isOpen, onClose, onSave }: { id
               <div className="flex items-center gap-3 mb-1.5 whitespace-nowrap">
                 {isEditing ? (
                   <>
-                    <input 
+                    <FormSelect 
                       value={editedIdea.categoria} 
                       onChange={e => setEditedIdea({...editedIdea, categoria: e.target.value})}
-                      className="text-[10px] font-bold uppercase px-2 py-1.5 rounded bg-[#FFFFFF] border border-[#0F172A0F] text-[#64748B] outline-none focus:border-[#111111]/30 w-32 shadow-sm"
-                    />
-                    <select 
+                      className="!py-1.5 !px-2 !rounded-lg !text-[10px] w-32"
+                    >
+                      <option value="SaaS">SaaS</option>
+                      <option value="Mobile">Mobile</option>
+                      <option value="AI">AI</option>
+                      <option value="Fintech">Fintech</option>
+                    </FormSelect>
+                    <FormSelect 
                       value={editedIdea.column} 
                       onChange={e => setEditedIdea({...editedIdea, column: e.target.value})}
-                      className="text-[10px] font-bold uppercase px-2 py-1.5 rounded bg-[#FFFFFF] border border-[#0F172A0F] text-[#64748B] outline-none focus:border-[#111111]/30 shadow-sm"
+                      className="!py-1.5 !px-2 !rounded-lg !text-[10px]"
                     >
                       <option value="capturadas">Capturadas</option>
                       <option value="avaliacao">Avaliação</option>
@@ -58,7 +64,7 @@ export default function IdeaDetailsModal({ idea, isOpen, onClose, onSave }: { id
                       <option value="mvp">MVP</option>
                       <option value="lancadas">Lançadas</option>
                       <option value="arquivadas">Arquivadas</option>
-                    </select>
+                    </FormSelect>
                   </>
                 ) : (
                   <>
@@ -69,10 +75,10 @@ export default function IdeaDetailsModal({ idea, isOpen, onClose, onSave }: { id
               </div>
               
               {isEditing ? (
-                <input 
+                <FormInput 
                   value={editedIdea.name}
                   onChange={e => setEditedIdea({...editedIdea, name: e.target.value})}
-                  className="text-3xl font-display font-bold text-[#111111] tracking-tight leading-tight bg-[#FFFFFF] border border-[#0F172A0F] rounded-[8px] px-2 py-1 outline-none focus:border-[#111111]/30 w-full shadow-sm mt-1"
+                  className="!text-3xl font-display font-bold !py-1"
                 />
               ) : (
                 <h2 className="text-3xl font-display font-bold text-[#111111] tracking-tight leading-tight mt-1">{editedIdea.name}</h2>
@@ -124,13 +130,13 @@ export default function IdeaDetailsModal({ idea, isOpen, onClose, onSave }: { id
         </div>
 
         {/* Footer (Actions) */}
-        <div className="px-8 py-5 border-t border-[#0F172A0F] bg-[#FAFAFA] flex justify-end items-center rounded-b-[30px] gap-3">
+        <div className="px-8 py-5 border-t border-slate-100 bg-slate-50 flex justify-end items-center rounded-b-[30px] gap-3">
           {isEditing ? (
-            <button onClick={handleSave} className="px-8 py-3 rounded-[14px] text-sm font-bold text-[#FFFFFF] bg-[#111111] shadow-[0_4px_14px_rgba(0,0,0,0.15)] hover:bg-black transition-all">
+            <button onClick={handleSave} className="px-8 py-3 rounded-xl text-sm font-bold text-white bg-indigo-600 shadow-md hover:bg-indigo-700 transition-all">
               Salvar Alterações
             </button>
           ) : (
-            <button onClick={onClose} className="px-8 py-3 rounded-[14px] text-sm font-bold text-[#111111] bg-[#FFFFFF] border border-[#0F172A0F] hover:bg-[#FAFAFA] transition-all">
+            <button onClick={onClose} className="px-8 py-3 rounded-xl text-sm font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 transition-all">
               Fechar
             </button>
           )}
@@ -142,31 +148,31 @@ export default function IdeaDetailsModal({ idea, isOpen, onClose, onSave }: { id
 
 function InfoBox({ label, icon, value, isEditing, onChange }: { label: string, icon: any, value: string, isEditing: boolean, onChange: (v: string) => void }) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-[11px] font-bold uppercase text-[#64748B] tracking-widest flex items-center gap-1.5">{icon} {label}</span>
+    <FormGroup>
+      <FormLabel className="flex items-center gap-1.5">{icon} {label}</FormLabel>
       <div className="flex items-center mt-1">
         {isEditing ? (
-          <input value={value} onChange={e => onChange(e.target.value)} className="text-sm font-semibold text-[#111111] bg-[#FAFAFA] border border-[#0F172A0F] px-3 py-1.5 rounded-[10px] outline-none focus:border-[#111111]/30 w-full shadow-sm" />
+          <FormInput value={value} onChange={e => onChange(e.target.value)} className="!py-1.5 !px-3" />
         ) : (
-          <span className="text-sm font-semibold text-[#111111]">{value}</span>
+          <span className="text-sm font-semibold text-slate-700">{value}</span>
         )}
       </div>
-    </div>
+    </FormGroup>
   );
 }
 
 function TextAreaField({ label, value, isEditing, onChange, className = "" }: { label: string, value: string, isEditing: boolean, onChange: (v: string) => void, className?: string }) {
   return (
     <div className={`flex flex-col gap-3 ${className}`}>
-      <h3 className="text-[11px] font-bold uppercase text-[#64748B] tracking-widest border-b border-[#0F172A0F] pb-2">{label}</h3>
+      <h3 className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider border-b border-slate-100 pb-2">{label}</h3>
       {isEditing ? (
-        <textarea 
+        <FormTextarea 
           value={value}
           onChange={e => onChange(e.target.value)}
-          className="w-full text-sm text-[#475569] leading-relaxed bg-[#FAFAFA] border border-[#0F172A0F] rounded-[16px] p-4 outline-none focus:border-[#111111]/30 transition-colors resize-y min-h-[100px] shadow-sm"
+          rows={4}
         />
       ) : (
-        <p className="text-sm text-[#475569] leading-relaxed whitespace-pre-wrap bg-[#FFFFFF] p-2 rounded-lg">
+        <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap bg-slate-50/50 p-4 rounded-xl border border-slate-100">
           {value}
         </p>
       )}

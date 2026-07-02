@@ -205,7 +205,7 @@ export default function IAView() {
         </div>
 
         {/* Input Area */}
-        <div className="p-4 sm:p-6 border-t border-[#0F172A0F] bg-[#FFFFFF] flex-shrink-0">
+        <div className="p-5 sm:p-6 border-t border-[#0F172A05] bg-[#FFFFFF] flex-shrink-0">
           <div className="relative group flex items-center">
             <input 
               type="text"
@@ -214,15 +214,15 @@ export default function IAView() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSend(query);
               }}
-              placeholder="Pergunte sobre seus projetos..."
-              className="w-full bg-[#FAFAFA] border border-[#0F172A0F] rounded-[16px] sm:rounded-[20px] py-3 sm:py-4 pl-4 sm:pl-6 pr-12 sm:pr-16 outline-none focus:border-[#111111]/30 hover:border-[#0F172A0F]-dark transition-all text-xs sm:text-sm font-medium placeholder:text-[#64748B]/50 shadow-[0_2px_8px_rgba(0,0,0,0.01)]"
+              placeholder="Pergunte sobre seus projetos, finanças ou clientes..."
+              className="w-full bg-slate-50/50 border border-slate-200 rounded-xl py-3.5 pl-5 pr-14 outline-none focus:border-indigo-500 focus:bg-white transition-all text-sm font-medium placeholder:text-slate-400 shadow-sm"
             />
             <button 
               onClick={() => handleSend(query)}
               disabled={!query.trim()}
-              className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-[10px] sm:rounded-[14px] bg-[#111111] text-[#FFFFFF] flex items-center justify-center hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-lg bg-[#111111] text-[#FFFFFF] flex items-center justify-center hover:bg-[#222222] transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-sm active:scale-95"
             >
-              <Send size={14} className="-ml-0.5" />
+              <Send size={15} />
             </button>
           </div>
         </div>

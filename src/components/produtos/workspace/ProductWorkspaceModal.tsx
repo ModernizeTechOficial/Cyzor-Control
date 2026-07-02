@@ -8,10 +8,12 @@ import WorkspaceKPIs from './WorkspaceKPIs';
 import WorkspaceSidebar from './WorkspaceSidebar';
 import VisaoGeralTab from './tabs/VisaoGeralTab';
 import ProjetosTab from './tabs/ProjetosTab';
-import DeploysTab from './tabs/DeploysTab';
 import FinanceiroTab from './tabs/FinanceiroTab';
 import RoadmapTab from './tabs/RoadmapTab';
 import AnalyticsTab from './tabs/AnalyticsTab';
+import LicencasTab from './tabs/LicencasTab';
+import ClientesTab from './tabs/ClientesTab';
+import EquipeTab from './tabs/EquipeTab';
 import OutrasTabs from './tabs/OutrasTabs';
 
 interface ProductWorkspaceModalProps {
@@ -75,7 +77,6 @@ function WorkspaceTabsContainer({ product, onSave, onDelete, companies }: any) {
   const tabs = [
     { id: 'visao_geral', label: 'Visão Geral' },
     { id: 'projetos', label: 'Projetos' },
-    { id: 'deploys', label: 'Deploys' },
     { id: 'clientes', label: 'Clientes' },
     { id: 'financeiro', label: 'Financeiro' },
     { id: 'licencas', label: 'Licenças' },
@@ -112,11 +113,13 @@ function WorkspaceTabsContainer({ product, onSave, onDelete, companies }: any) {
       <div className="flex-1 p-8">
         {activeTab === 'visao_geral' && <VisaoGeralTab product={product} onSave={onSave} companies={companies} />}
         {activeTab === 'projetos' && <ProjetosTab product={product} onSave={onSave} />}
-        {activeTab === 'deploys' && <DeploysTab product={product} />}
+        {activeTab === 'clientes' && <ClientesTab product={product} />}
         {activeTab === 'financeiro' && <FinanceiroTab product={product} />}
+        {activeTab === 'licencas' && <LicencasTab product={product} />}
         {activeTab === 'roadmap' && <RoadmapTab product={product} onSave={onSave} />}
         {activeTab === 'analytics' && <AnalyticsTab product={product} />}
-        {['clientes', 'licencas', 'documentacao', 'equipe', 'logs', 'configuracoes'].includes(activeTab) && (
+        {activeTab === 'equipe' && <EquipeTab product={product} />}
+        {['documentacao', 'logs', 'configuracoes'].includes(activeTab) && (
           <OutrasTabs activeTab={activeTab} product={product} onDelete={onDelete} />
         )}
       </div>

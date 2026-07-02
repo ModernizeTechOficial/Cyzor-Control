@@ -50,12 +50,12 @@ export default function PlatformAdminDashboard({ metrics, loading, onRefresh }: 
 
   const kpis = [
     {
-      label: 'Total Workspaces SaaS',
-      value: totalTenants,
-      icon: Building2,
+      label: 'Faturamento Mensal (MRR)',
+      value: 'R$ 42.500',
+      icon: CreditCard,
       trend: '+12%',
       trendDirection: 'up' as const,
-      sparkData: [12, 14, 13, 15, 17, 16, 18],
+      sparkData: [32000, 34000, 33000, 35000, 37000, 40000, 42500],
       accentColor: '#6366F1'
     },
     {
@@ -68,21 +68,21 @@ export default function PlatformAdminDashboard({ metrics, loading, onRefresh }: 
       accentColor: '#06B6D4'
     },
     {
-      label: 'Empresas Atendidas',
-      value: totalCompanies,
-      icon: Briefcase,
-      trend: '+14.5%',
+      label: 'Churn Rate (Mensal)',
+      value: '1.2%',
+      icon: RefreshCw,
+      trend: '-0.5%',
       trendDirection: 'up' as const,
-      sparkData: [28, 30, 31, 34, 35, 36, 38],
-      accentColor: '#8B5CF6'
+      sparkData: [2.5, 2.2, 2.0, 1.8, 1.5, 1.3, 1.2],
+      accentColor: '#F43F5E'
     },
     {
-      label: 'Database Projects',
-      value: totalProjects,
-      icon: Cpu,
-      trend: 'Uptime 100%',
-      trendDirection: 'neutral' as const,
-      sparkData: [20, 22, 21, 23, 23, 24, 24],
+      label: 'Workspaces SaaS Ativos',
+      value: totalTenants,
+      icon: Building2,
+      trend: '+4 novos',
+      trendDirection: 'up' as const,
+      sparkData: [12, 14, 13, 15, 15, 17, 18],
       accentColor: '#10B981'
     }
   ];
@@ -111,10 +111,10 @@ export default function PlatformAdminDashboard({ metrics, loading, onRefresh }: 
 
               <div>
                 <h1 className="text-3xl md:text-4xl font-extrabold text-zinc-950 tracking-tight leading-none mb-2">
-                  Bom dia, {user?.displayName || 'Diego'} 👋
+                  Painel de Controle SaaS, {user?.displayName || 'Diego'} 👋
                 </h1>
                 <p className="text-xs md:text-sm text-zinc-500 font-medium">
-                  Toda a sua infraestrutura cloud, automações de microsserviços e gateways estão operando normalmente.
+                  Acompanhe a saúde financeira, crescimento da base de usuários e performance das instâncias SaaS da CYZOR.
                 </p>
               </div>
             </div>
@@ -160,12 +160,12 @@ export default function PlatformAdminDashboard({ metrics, loading, onRefresh }: 
                 </div>
               </div>
 
-              {/* Status 5: GitHub integrations */}
+              {/* Status 5: API Status */}
               <div className="bg-[#FAFAFB] border border-[#ECECEF] rounded-[16px] p-3 hover:border-zinc-300 transition-all group flex flex-col justify-between h-16">
-                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider font-mono">Git Engine</span>
+                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider font-mono">Core API</span>
                 <div className="flex items-center gap-1.5 mt-1">
-                  <GitBranch size={12} className="text-zinc-800" />
-                  <span className="text-[11px] font-bold text-zinc-950">Synced</span>
+                  <CheckCircle2 size={12} className="text-emerald-500" />
+                  <span className="text-[11px] font-bold text-zinc-950">Active & Fast</span>
                 </div>
               </div>
 
@@ -200,7 +200,7 @@ export default function PlatformAdminDashboard({ metrics, loading, onRefresh }: 
               className="px-4 py-2.5 bg-zinc-950 hover:bg-zinc-800 border border-zinc-900 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-sm shrink-0 active:scale-95 disabled:opacity-50 w-full"
             >
               <RefreshCw size={12} className={loading ? 'animate-spin text-indigo-400' : 'text-zinc-400'} />
-              <span>{loading ? 'Sincronizando...' : 'RESSINCRONIZAR INFRA'}</span>
+              <span>{loading ? 'Sincronizando...' : 'ATUALIZAR DADOS'}</span>
             </button>
           </div>
         </div>
@@ -241,11 +241,11 @@ export default function PlatformAdminDashboard({ metrics, loading, onRefresh }: 
         </div>
       </div>
 
-      {/* 4. INFRASTRUCTURE & SECURITY INSIGHTS SECTION */}
+      {/* 4. SYSTEM HEALTH & AI INSIGHTS SECTION */}
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400 font-mono">
-            Infrastructure & AI Observability
+            System Performance & AI Monitoring
           </h2>
           <div className="h-[1px] bg-[#ECECEF] flex-1" />
         </div>
@@ -260,11 +260,11 @@ export default function PlatformAdminDashboard({ metrics, loading, onRefresh }: 
         </div>
       </div>
 
-      {/* 5. DEPLOYS & PLATFORM ACTIVITY TIMELINE SECTION */}
+      {/* 5. WORKSPACE ACTIVITY & OPERATIONAL TIMELINE SECTION */}
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400 font-mono">
-            Deploys & Operational Activity
+            SaaS Workspaces & Subscriptions
           </h2>
           <div className="h-[1px] bg-[#ECECEF] flex-1" />
         </div>

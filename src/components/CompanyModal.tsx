@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { X, Building2, Globe, FileDigit, Briefcase, Trash2 } from 'lucide-react';
+import { X, Building2, Globe, FileDigit, Briefcase, Trash2, Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
 import ModalContainer from './layout/ModalContainer.tsx';
+import { FormGroup, FormLabel, FormInput, FormSelect } from './ui/FormComponents';
 
 export default function CompanyModal({ 
   isOpen, 
@@ -39,7 +40,8 @@ export default function CompanyModal({
     }
   }, [company, isOpen]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!formData.name) return;
     setLoading(true);
     try {
@@ -86,132 +88,122 @@ export default function CompanyModal({
   };
 
   return (
-    <ModalContainer isOpen={isOpen} onClose={onClose} maxWidth="max-w-2xl">
+    <ModalContainer isOpen={isOpen} onClose={onClose} maxWidth="max-w-xl">
         {/* Header */}
-        <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-[#0F172A0F] flex items-center justify-between bg-[#FFFFFF] relative">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#111111]/10 to-transparent"></div>
-          
-          <div className="flex items-center gap-3 sm:gap-4 text-left">
-            <div className="w-10 sm:w-12 h-10 sm:h-12 rounded-[16px] bg-[#111111] flex items-center justify-center flex-shrink-0 shadow-[0_4px_12px_rgba(0,0,0,0.15)]">
-               <Building2 size={20} className="text-[#FFFFFF]" />
+        <div className="px-6 py-4.5 border-b border-[#0F172A05] flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <Building2 size={14} strokeWidth={2.5} />
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-display font-bold text-[#111111] tracking-tight">
-                {company ? 'Editar Empresa' : 'Nova Empresa'}
-              </h2>
-              <p className="text-xs sm:text-sm font-medium text-[#64748B]">
-                {company ? 'Atualize as informações da organização.' : 'Adicione uma nova organização ao ecossistema CYZOR.'}
+              <h3 className="text-sm font-bold text-[#111111]">
+                {company ? 'Editar Cadastro de Empresa' : 'Novo Cadastro de Empresa'}
+              </h3>
+              <p className="text-[10px] font-medium text-[#64748B] mt-0.5">
+                {company ? 'Atualize as informações da organização' : 'Registre uma nova organização no ecossistema'}
               </p>
             </div>
           </div>
-          
           <button 
             onClick={onClose}
-            className="w-10 h-10 rounded-[14px] flex items-center justify-center hover:bg-[#FAFAFA] border border-transparent hover:border-[#0F172A0F] text-[#64748B] transition-colors"
+            className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
           >
-            <X size={20} />
+            <X size={15} strokeWidth={2.5} />
           </button>
         </div>
 
-        {/* Body */}
-        <div className="p-6 sm:p-8 pb-10 flex flex-col gap-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <InputField 
-              label="NOME DA EMPRESA" 
-              Icon={Building2} 
-              placeholder="Ex: Nexus Group" 
-              value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
-            />
-            <div className="flex flex-col gap-2 w-full">
-              <label className="text-[11px] font-bold tracking-widest uppercase text-[#64748B] px-1">STATUS</label>
-              <select 
+        {/* Form Scrollable Section */}
+        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex flex-col gap-5 text-left">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormGroup>
+              <FormLabel required>Nome da Empresa</FormLabel>
+              <FormInput 
+                placeholder="Ex: Nexus Group" 
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                required
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <FormLabel>Status Comercial</FormLabel>
+              <FormSelect 
                 value={formData.status}
                 onChange={(e) => setFormData({...formData, status: e.target.value})}
-                className="w-full bg-[#FFFFFF] border border-[#0F172A0F] rounded-[16px] py-3.5 px-4 outline-none focus:border-[#111111]/30 hover:border-[#0F172A0F]-dark transition-all text-[#111111] font-bold"
               >
                 <option value="Ativo">Ativo</option>
                 <option value="Inativo">Inativo</option>
                 <option value="Em Risco">Em Risco</option>
-              </select>
-            </div>
+              </FormSelect>
+            </FormGroup>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <InputField 
-              label="SEGMENTO / SETOR" 
-              Icon={Briefcase} 
-              placeholder="Ex: Fintech, SaaS, E-commerce" 
-              value={formData.industry}
-              onChange={(e) => setFormData({...formData, industry: e.target.value})}
-            />
-            <InputField 
-              label="CNPJ / REGISTRO" 
-              Icon={FileDigit} 
-              placeholder="00.000.000/0000-00" 
-              value={formData.cnpj}
-              onChange={(e) => setFormData({...formData, cnpj: e.target.value})}
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormGroup>
+              <FormLabel>Segmento / Setor</FormLabel>
+              <FormInput 
+                placeholder="Ex: Fintech, SaaS, E-commerce" 
+                value={formData.industry}
+                onChange={(e) => setFormData({...formData, industry: e.target.value})}
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <FormLabel>CNPJ / Registro</FormLabel>
+              <FormInput 
+                placeholder="00.000.000/0000-00" 
+                value={formData.cnpj}
+                onChange={(e) => setFormData({...formData, cnpj: e.target.value})}
+              />
+            </FormGroup>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <InputField 
-              label="WEBSITE" 
-              Icon={Globe} 
+          <FormGroup>
+            <FormLabel>Website</FormLabel>
+            <FormInput 
               placeholder="https://www.empresa.com" 
               value={formData.website}
               onChange={(e) => setFormData({...formData, website: e.target.value})}
             />
-          </div>
-        </div>
+          </FormGroup>
 
-        {/* Footer */}
-        <div className="px-6 sm:px-8 py-4 sm:py-5 border-t border-[#0F172A0F] bg-[#FAFAFA] flex justify-between items-center rounded-b-[24px]">
-          <div>
-            {company && (
+          {/* Action buttons */}
+          <div className="flex items-center justify-between pt-4 border-t border-[#0F172A05]">
+            <div>
+              {company && (
+                <button 
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={loading}
+                  className="text-rose-500 hover:text-rose-700 text-[10px] font-bold flex items-center gap-1 uppercase tracking-wider"
+                >
+                   <Trash2 size={12} /> Excluir Empresa
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
               <button 
-                onClick={handleDelete}
-                disabled={loading}
-                className="text-red-500 hover:text-red-700 text-xs font-bold flex items-center gap-1 uppercase tracking-wider"
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
               >
-                 <Trash2 size={14} /> Excluir Empresa
+                Cancelar
               </button>
-            )}
+              <button 
+                type="submit"
+                disabled={loading || !formData.name}
+                className="px-5 py-2 text-xs font-bold text-white bg-[#111111] hover:bg-[#222222] rounded-xl shadow-sm hover:scale-[1.01] transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                {loading ? 'Salvando...' : (
+                  <>
+                    <Check size={14} strokeWidth={2.5} />
+                    <span>{company ? 'Salvar Alterações' : 'Criar Empresa'}</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
-          <div className="flex gap-3">
-            <button 
-              onClick={onClose}
-              className="px-6 py-3 rounded-[14px] text-sm font-bold text-[#111111] border border-[#0F172A0F] bg-[#FFFFFF] hover:bg-[#FAFAFA] transition-colors"
-            >
-              Cancelar
-            </button>
-            <button 
-              onClick={handleSubmit}
-              disabled={loading || !formData.name}
-              className="px-8 py-3 rounded-[14px] text-sm font-bold text-[#FFFFFF] bg-[#111111] shadow-[0_4px_14px_rgba(0,0,0,0.15)] hover:bg-black hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)] transition-all disabled:opacity-50"
-            >
-              {loading ? 'Salvando...' : (company ? 'Salvar Alterações' : 'Criar Empresa')}
-            </button>
-          </div>
-        </div>
+        </form>
     </ModalContainer>
-  );
-}
-
-function InputField({ label, Icon, placeholder, value, onChange }: { label: string, Icon: any, placeholder: string, value: string, onChange: (e: any) => void }) {
-  return (
-    <div className="flex flex-col gap-2 w-full">
-      <label className="text-[11px] font-bold tracking-widest uppercase text-[#64748B] px-1">{label}</label>
-      <div className="relative group">
-        <Icon className="absolute left-4 top-1/2 -translate-y-1/2 text-[#64748B] group-focus-within:text-[#111111] transition-colors" size={18} strokeWidth={2.5} />
-        <input 
-            type="text"
-            placeholder={placeholder}
-            value={value}
-            onChange={onChange}
-            className="w-full bg-[#FFFFFF] border border-[#0F172A0F] rounded-[16px] py-3.5 pl-12 pr-4 outline-none focus:border-[#111111]/30 hover:border-[#0F172A0F]-dark transition-all text-[#111111] font-medium placeholder:text-[#64748B]/50 shadow-[0_2px_8px_rgba(0,0,0,0.01)]"
-        />
-      </div>
-    </div>
   );
 }

@@ -51,33 +51,17 @@ export default function WorkspaceKPIs({ product }: { product: any }) {
       bg: 'bg-emerald-500/10'
     },
     {
-      title: 'Deploys',
-      value: kpiData?.deploys?.count || 0,
-      subtext: kpiData?.deploys?.lastDeploy ? `Último ${kpiData.deploys.lastDeploy}` : 'Nenhum',
-      icon: CloudLightning,
-      color: 'text-amber-500',
-      bg: 'bg-amber-500/10'
-    },
-    {
       title: 'Licenças Ativas',
       value: '0',
       subtext: 'Em desenvolvimento',
       icon: Key,
       color: 'text-rose-500',
       bg: 'bg-rose-500/10'
-    },
-    {
-      title: 'Downloads',
-      value: '0',
-      subtext: 'Módulo não conectado',
-      icon: Download,
-      color: 'text-cyan-500',
-      bg: 'bg-cyan-500/10'
     }
   ];
 
   return (
-    <div className="max-w-[1600px] mx-auto w-full grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+    <div className="max-w-[1600px] mx-auto w-full grid grid-cols-2 md:grid-cols-4 gap-4">
       {kpis.map((kpi, i) => (
         <div 
           key={i}

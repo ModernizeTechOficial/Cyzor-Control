@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { X, Building2, Package, Tag, DollarSign, Calendar, FileText } from 'lucide-react';
+import { X, Building2, Package, Tag, DollarSign, Calendar, FileText, Check, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { safeToISOString } from '../lib/dateUtils';
 import ModalContainer from './layout/ModalContainer.tsx';
+import { FormGroup, FormLabel, FormInput, FormSelect } from './ui/FormComponents';
 
 interface FinanceEntryModalProps {
   isOpen: boolean;
@@ -131,121 +132,158 @@ export default function FinanceEntryModal({ isOpen, onClose, onSuccess, entry }:
   };
 
   return (
-    <ModalContainer isOpen={isOpen} onClose={onClose} maxWidth="max-w-2xl">
-        {/* Header */}
-        <div className="px-6 sm:px-8 py-5 sm:py-6 border-b border-[#0F172A0F] flex items-center justify-between bg-[#FFFFFF] relative">
-           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#111111]/10 to-transparent"></div>
-           <div className="flex items-center gap-3 sm:gap-4 text-left">
-            <div className="w-10 sm:w-12 h-10 sm:h-12 rounded-[16px] bg-[#111111] flex items-center justify-center flex-shrink-0 shadow-md">
-               <DollarSign size={18} className="text-[#FFFFFF]" />
+    <ModalContainer isOpen={isOpen} onClose={onClose} maxWidth="max-w-xl">
+        {/* Modal Header */}
+        <div className="px-6 py-4.5 border-b border-[#0F172A05] flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <DollarSign size={14} strokeWidth={2.5} />
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-display font-bold text-[#111111] tracking-tight">
-                {entry ? 'Editar Lançamento' : 'Novo Lançamento'}
-              </h2>
-              <p className="text-xs sm:text-sm font-medium text-[#64748B]">
-                {entry ? 'Atualize as informações da transação.' : 'Registre uma nova transação financeira.'}
+              <h3 className="text-sm font-bold text-[#111111]">
+                {entry ? 'Editar Lançamento' : 'Novo Lançamento Financeiro'}
+              </h3>
+              <p className="text-[10px] font-medium text-[#64748B] mt-0.5">
+                {entry ? 'Atualize as informações da transação' : 'Registre uma nova movimentação no caixa'}
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="w-10 h-10 rounded-[14px] flex items-center justify-center hover:bg-[#FAFAFA] text-[#64748B] transition-colors">
-            <X size={20} />
+          <button 
+            onClick={onClose}
+            className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+          >
+            <X size={15} strokeWidth={2.5} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 sm:p-8 pb-10 flex flex-col gap-5 sm:gap-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-          <div className="flex flex-col gap-2 w-full">
-            <label className="text-[11px] font-bold tracking-widest uppercase text-[#64748B] px-1">Descrição</label>
-            <div className="relative group">
-              <FileText className="absolute left-4 top-1/2 -translate-y-1/2 text-[#64748B] group-focus-within:text-[#111111] transition-colors" size={18} />
-              <input value={description} onChange={e => setDescription(e.target.value)} type="text" className="w-full bg-[#FFFFFF] border border-[#0F172A0F] rounded-[16px] py-3.5 pl-12 pr-4 outline-none focus:border-[#111111]/30 transition-all text-[#111111] font-medium" placeholder="Ex: Pagamento AWS / Consultoria Tech" />
-            </div>
-          </div>
+        {/* Form Scrollable Section */}
+        <form onSubmit={handleSubmit} className="p-6 flex-1 overflow-y-auto flex flex-col gap-5 text-left">
+          {/* Description */}
+          <FormGroup>
+            <FormLabel required>Descrição</FormLabel>
+            <FormInput 
+              required
+              placeholder="Ex: Pagamento AWS / Consultoria Tech"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </FormGroup>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="flex flex-col gap-2 w-full">
-              <label className="text-[11px] font-bold tracking-widest uppercase text-[#64748B] px-1">Valor (R$)</label>
-              <div className="relative group">
-                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-[#64748B] group-focus-within:text-[#111111] transition-colors" size={18} />
-                <input value={amount} onChange={e => setAmount(e.target.value)} type="number" step="0.01" className="w-full bg-[#FFFFFF] border border-[#0F172A0F] rounded-[16px] py-3.5 pl-12 pr-4 outline-none focus:border-[#111111]/30 transition-all text-[#111111] font-medium" placeholder="0.00" />
-              </div>
-            </div>
-            <div className="flex flex-col gap-2 w-full">
-              <label className="text-[11px] font-bold tracking-widest uppercase text-[#64748B] px-1">Tipo</label>
-              <select value={type} onChange={e => setType(e.target.value)} className="w-full bg-[#FFFFFF] border border-[#0F172A0F] rounded-[16px] py-3.5 px-4 outline-none focus:border-[#111111]/30 transition-all text-[#111111] font-medium appearance-none">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <FormGroup>
+              <FormLabel required>Valor (R$)</FormLabel>
+              <FormInput 
+                type="number" 
+                step="0.01" 
+                required
+                placeholder="0.00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <FormLabel>Tipo</FormLabel>
+              <FormSelect value={type} onChange={(e) => setType(e.target.value)}>
                 <option value="RECEITA">Receita (+)</option>
                 <option value="DESPESA">Despesa (-)</option>
-              </select>
-            </div>
-            <div className="flex flex-col gap-2 w-full">
-              <label className="text-[11px] font-bold tracking-widest uppercase text-[#64748B] px-1">Status</label>
-              <select value={status} onChange={e => setStatus(e.target.value)} className="w-full bg-[#FFFFFF] border border-[#0F172A0F] rounded-[16px] py-3.5 px-4 outline-none focus:border-[#111111]/30 transition-all text-[#111111] font-medium appearance-none">
+              </FormSelect>
+            </FormGroup>
+
+            <FormGroup>
+              <FormLabel>Status</FormLabel>
+              <FormSelect value={status} onChange={(e) => setStatus(e.target.value)}>
                 <option value="PAGO">Pago</option>
                 <option value="PENDENTE">Pendente</option>
                 <option value="ATRASADO">Atrasado</option>
-              </select>
-            </div>
+              </FormSelect>
+            </FormGroup>
           </div>
 
-          <div className="flex flex-col gap-2 w-full">
-            <label className="text-[11px] font-bold tracking-widest uppercase text-[#64748B] px-1">Categoria</label>
-            <div className="relative group">
-              <Tag className="absolute left-4 top-1/2 -translate-y-1/2 text-[#64748B] group-focus-within:text-[#111111] transition-colors" size={18} />
-              <input value={category} onChange={e => setCategory(e.target.value)} type="text" className="w-full bg-[#FFFFFF] border border-[#0F172A0F] rounded-[16px] py-3.5 pl-12 pr-4 outline-none focus:border-[#111111]/30 transition-all text-[#111111] font-medium" placeholder="Ex: Infraestrutura, Salários, Freelance" />
-            </div>
+          <FormGroup>
+            <FormLabel>Categoria</FormLabel>
+            <FormInput 
+              placeholder="Ex: Infraestrutura, Salários, Freelance"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            />
+          </FormGroup>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormGroup>
+              <FormLabel>Empresa Vinculada</FormLabel>
+              <FormSelect value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
+                <option value="">Nenhuma / Workspace Geral</option>
+                {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </FormSelect>
+            </FormGroup>
+
+            <FormGroup>
+              <FormLabel>Projeto Vinculado</FormLabel>
+              <FormSelect value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+                <option value="">Nenhum Projeto</option>
+                {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </FormSelect>
+            </FormGroup>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="flex flex-col gap-2 w-full">
-              <label className="text-[11px] font-bold tracking-widest uppercase text-[#64748B] px-1">Empresa Vinculada</label>
-              <div className="relative group">
-                <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-[#64748B] group-focus-within:text-[#111111] transition-colors" size={18} />
-                <select value={companyId} onChange={e => setCompanyId(e.target.value)} className="w-full bg-[#FFFFFF] border border-[#0F172A0F] rounded-[16px] py-3.5 pl-12 pr-4 outline-none focus:border-[#111111]/30 transition-all text-[#111111] font-medium appearance-none">
-                  <option value="">Nenhuma / Workspace Geral</option>
-                  {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex items-center gap-2 pt-4">
+              <input 
+                type="checkbox" 
+                id="recurrent"
+                checked={isRecurrent} 
+                onChange={(e) => setIsRecurrent(e.target.checked)} 
+                className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <label htmlFor="recurrent" className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider cursor-pointer">Lançamento Recorrente</label>
             </div>
-            <div className="flex flex-col gap-2 w-full">
-              <label className="text-[11px] font-bold tracking-widest uppercase text-[#64748B] px-1">Projeto Vinculado</label>
-              <div className="relative group">
-                <Package className="absolute left-4 top-1/2 -translate-y-1/2 text-[#64748B] group-focus-within:text-[#111111] transition-colors" size={18} />
-                <select value={projectId} onChange={e => setProjectId(e.target.value)} className="w-full bg-[#FFFFFF] border border-[#0F172A0F] rounded-[16px] py-3.5 pl-12 pr-4 outline-none focus:border-[#111111]/30 transition-all text-[#111111] font-medium appearance-none">
-                  <option value="">Nenhum Projeto</option>
-                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-              </div>
-            </div>
+
+            <FormGroup>
+              <FormLabel>Data de Vencimento</FormLabel>
+              <FormInput 
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+              />
+            </FormGroup>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Action buttons */}
+          <div className="flex items-center justify-between pt-4 border-t border-[#0F172A05]">
+            <div>
+              {entry && (
+                <button 
+                  type="button" 
+                  onClick={handleDelete} 
+                  disabled={loading}
+                  className="text-rose-500 hover:text-rose-700 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 transition-colors"
+                >
+                  <Trash2 size={12} /> Excluir Lançamento
+                </button>
+              )}
+            </div>
             <div className="flex items-center gap-3">
-              <input type="checkbox" checked={isRecurrent} onChange={e => setIsRecurrent(e.target.checked)} className="w-5 h-5 rounded border-[#0F172A0F] text-[#111111] focus:ring-[#111111]" />
-              <label className="text-[11px] font-bold tracking-widest uppercase text-[#64748B]">Lançamento Recorrente</label>
+              <button 
+                type="button" 
+                onClick={onClose} 
+                className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button 
+                type="submit" 
+                disabled={loading || !description || !amount}
+                className="px-5 py-2 text-xs font-bold text-white bg-[#111111] hover:bg-[#222222] rounded-xl shadow-sm hover:scale-[1.01] transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                {loading ? 'Salvando...' : (
+                  <>
+                    <Check size={14} strokeWidth={2.5} />
+                    <span>{entry ? 'Salvar Lançamento' : 'Registrar Lançamento'}</span>
+                  </>
+                )}
+              </button>
             </div>
-            <div className="flex flex-col gap-2 w-full">
-              <label className="text-[11px] font-bold tracking-widest uppercase text-[#64748B] px-1">Data de Vencimento</label>
-              <div className="relative group">
-                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-[#64748B] group-focus-within:text-[#111111] transition-colors" size={18} />
-                <input value={dueDate} onChange={e => setDueDate(e.target.value)} type="date" className="w-full bg-[#FFFFFF] border border-[#0F172A0F] rounded-[16px] py-3.5 pl-12 pr-4 outline-none focus:border-[#111111]/30 transition-all text-[#111111] font-medium" />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mt-4 pb-4 sm:pb-0">
-             <div className="w-full sm:w-auto text-left">
-               {entry && (
-                 <button type="button" onClick={handleDelete} className="text-red-500 hover:text-red-700 text-xs font-bold uppercase tracking-wider block py-2">
-                   Excluir Lançamento
-                 </button>
-               )}
-             </div>
-             <div className="flex gap-3 w-full sm:w-auto">
-               <button type="button" onClick={onClose} className="flex-1 sm:flex-initial px-6 py-3 rounded-[14px] text-sm font-bold text-[#111111] bg-[#FFFFFF] hover:bg-[#FAFAFA] border border-[#0F172A0F] transition-colors">Cancelar</button>
-               <button type="submit" disabled={loading || !description || !amount} className="flex-1 sm:flex-initial px-8 py-3 rounded-[14px] text-sm font-bold text-[#FFFFFF] bg-[#111111] hover:bg-black shadow-[0_4px_14px_rgba(0,0,0,0.15)] transition-all disabled:opacity-50">
-                 {loading ? 'Salvando...' : (entry ? 'Salvar' : 'Registrar')}
-               </button>
-             </div>
           </div>
         </form>
     </ModalContainer>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from "motion/react";
 import { useAuth } from '../context/AuthContext.tsx';
 import { useBranding } from '../hooks/useBranding.ts';
+import { useNavigation } from '../context/NavigationContext.tsx';
 import { 
   LayoutDashboard, 
   Building2, 
@@ -38,6 +39,7 @@ export default function Sidebar({
 }) {
   const { activeWorkspace, dbUser, logout } = useAuth();
   const { iconUrl, iconSize, appName } = useBranding();
+  const { badges } = useNavigation();
   const currentPlan = dbUser?.currentPlan || 'free';
 
   const getTrialDaysLeft = () => {
@@ -67,7 +69,7 @@ export default function Sidebar({
         { id: 'empresas', label: 'Empresas', icon: Building2, view: 'empresas' as View },
         { id: 'clientes', label: 'Clientes', icon: Users, view: 'clientes' as View },
         { id: 'produtos', label: 'Produtos', icon: Package, view: 'produtos' as View },
-        { id: 'projetos', label: 'Projetos', icon: GitBranch, view: 'projetos' as View, badge: '3' },
+        { id: 'projetos', label: 'Projetos', icon: GitBranch, view: 'projetos' as View, badge: badges.projetos > 0 ? badges.projetos.toString() : undefined },
         { id: 'ideias', label: 'Ideias', icon: Lightbulb, view: 'ideias' as View },
         { id: 'documentacao', label: 'Documentação', icon: FileText, view: 'documentacao' as View }
       ]
@@ -76,7 +78,7 @@ export default function Sidebar({
       id: 'billing',
       title: 'Billing',
       items: [
-        { id: 'financeiro', label: 'Financeiro', icon: DollarSign, view: 'financeiro' as View, badge: '2' }
+        { id: 'financeiro', label: 'Financeiro', icon: DollarSign, view: 'financeiro' as View, badge: badges.financeiro > 0 ? badges.financeiro.toString() : undefined }
       ]
     },
     {
@@ -92,7 +94,7 @@ export default function Sidebar({
       id: 'security-ai',
       title: 'Security & AI',
       items: [
-        { id: 'ia', label: 'IA Intelligence', icon: BotMessageSquare, view: 'ia' as View, badge: '5' }
+        { id: 'ia', label: 'IA Intelligence', icon: BotMessageSquare, view: 'ia' as View, badge: badges.ia > 0 ? badges.ia.toString() : undefined }
       ]
     },
     {
@@ -228,7 +230,7 @@ export default function Sidebar({
                         )}
                       </div>
                     )}
-                    {isCollapsed && item.badge && currentView !== item.view && (
+                    {isCollapsed && item.badge && (
                       <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-neutral-900 rounded-full" />
                     )}
                   </button>

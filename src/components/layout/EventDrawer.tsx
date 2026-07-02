@@ -13,7 +13,9 @@ import {
   Info, 
   ChevronRight, 
   Clock, 
-  ExternalLink 
+  ExternalLink,
+  Building2,
+  Shield 
 } from 'lucide-react';
 import { useEvents, PlatformEvent } from '../../context/EventContext.tsx';
 
@@ -35,15 +37,15 @@ export default function EventDrawer({ isOpen, onClose, category, onNavigateToVie
   const getCategoryMeta = () => {
     switch (category) {
       case 'deploys':
-        return { label: 'Deploys & Workspaces', icon: Server, color: 'text-indigo-600' };
+        return { label: 'Workspaces & Instâncias', icon: Building2, color: 'text-indigo-600' };
       case 'users':
         return { label: 'Usuários & Clientes', icon: Users, color: 'text-[#06B6D4]' };
       case 'billing':
-        return { label: 'Faturamento & Stripe', icon: CreditCard, color: 'text-emerald-600' };
+        return { label: 'Assinaturas & Stripe', icon: CreditCard, color: 'text-emerald-600' };
       case 'infrastructure':
-        return { label: 'Infraestrutura Cloud', icon: Cpu, color: 'text-amber-500' };
+        return { label: 'Performance do Sistema', icon: Activity, color: 'text-amber-500' };
       case 'logs':
-        return { label: 'Logs & Auditoria', icon: Activity, color: 'text-[#8B5CF6]' };
+        return { label: 'Auditoria de Ações', icon: Shield, color: 'text-[#8B5CF6]' };
       default:
         return { label: 'Eventos em Tempo Real', icon: Activity, color: 'text-indigo-600' };
     }

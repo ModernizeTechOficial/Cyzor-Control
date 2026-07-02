@@ -69,11 +69,11 @@ export default function ProductStats({ totalProducts, activeProducts, devProduct
         bg="bg-amber-50/50"
       />
       <MetricCard 
-        title="Deploys Realizados"
-        value={deployCount}
-        trend="Geral"
+        title="Projetos Vinculados"
+        value={totalProjects}
+        trend="Ativos"
         trendUp={true}
-        sub="Histórico completo de releases"
+        sub="Projetos associados aos produtos"
         icon={Rocket}
         color="text-purple-600"
         bg="bg-purple-50/50"

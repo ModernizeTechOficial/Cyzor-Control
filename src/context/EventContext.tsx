@@ -64,11 +64,11 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
                 id: `deploy-${tenant.id}`,
                 category: 'deploys',
                 title: status === 'success' 
-                  ? `Deploy do Workspace "${tenant.name}" concluído` 
-                  : `Deploy do Workspace "${tenant.name}" aguardando aprovação`,
+                  ? `Provisionamento do Workspace "${tenant.name}" concluído` 
+                  : `Provisionamento do Workspace "${tenant.name}" aguardando DNS`,
                 description: status === 'success'
-                  ? `Build e upload de assets executados com sucesso na AWS.`
-                  : `Ambiente staging gerado. Necessário aprovação manual de DNS.`,
+                  ? `Instância de banco de dados e ambiente SaaS ativos no cluster.`
+                  : `Workspace gerado. Necessário verificação de apontamento de domínio.`,
                 workspaceName: tenant.name,
                 timestamp: dateStr,
                 status: status,
@@ -82,8 +82,8 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
             {
               id: 'deploy-fallback-1',
               category: 'deploys',
-              title: 'Deploy do Workspace "Empresa Alpha" concluído com sucesso',
-              description: 'Build e upload de assets executados com sucesso na AWS.',
+              title: 'Workspace "Empresa Alpha" provisionado com sucesso',
+              description: 'Banco de dados isolado e chaves de acesso geradas para o cliente Enterprise.',
               workspaceName: 'Empresa Alpha',
               timestamp: 'Hoje, 11:24',
               status: 'success',
@@ -92,8 +92,8 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
             {
               id: 'deploy-fallback-2',
               category: 'deploys',
-              title: 'Deploy do Workspace "Loja Beta" aguardando aprovação',
-              description: 'Ambiente staging gerado. Necessário aprovação manual de DNS.',
+              title: 'Aguardando verificação de domínio em "Loja Beta"',
+              description: 'O workspace está pronto, mas o CNAME ainda não foi propagado.',
               workspaceName: 'Loja Beta',
               timestamp: 'Hoje, 10:15',
               status: 'warning',
@@ -102,8 +102,8 @@ export function EventProvider({ children }: { children: React.ReactNode }) {
             {
               id: 'deploy-fallback-3',
               category: 'deploys',
-              title: 'Falha no build do Workspace "Gamma"',
-              description: 'O deploy do workspace falhou durante a etapa de minificação de assets.',
+              title: 'Erro de provisionamento no Workspace "Gamma"',
+              description: 'Falha ao criar o pool de conexões PostgreSQL para a nova instância.',
               workspaceName: 'Gamma S/A',
               timestamp: 'Ontem',
               status: 'error',

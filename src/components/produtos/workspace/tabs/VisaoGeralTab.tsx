@@ -1,12 +1,18 @@
 import { useState } from 'react';
 import { Edit3, Tag, Calendar, User, Building2, Save } from 'lucide-react';
+import { FormGroup, FormLabel, FormInput, FormTextarea, FormSelect } from '../../../ui/FormComponents';
 
 export default function VisaoGeralTab({ product, onSave, companies = [] }: any) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(product);
 
   const handleSave = () => {
-    if(onSave) onSave(formData);
+    if(onSave) {
+      onSave({
+        ...formData,
+        companyId: formData.companyId ? Number(formData.companyId) : null
+      });
+    }
     setIsEditing(false);
   };
 
@@ -45,19 +51,21 @@ export default function VisaoGeralTab({ product, onSave, companies = [] }: any) 
               </h3>
               <div className="flex flex-col gap-4 mt-2">
                 <DetailRow label="Empresa" value={product.empresa || 'Interno'} />
-                <DetailRow label="Categoria" value={product.categoria || 'SaaS'} />
+                <DetailRow label="Tipo de Produto" value={product.type || 'SaaS'} />
+                <DetailRow label="Categoria" value={product.categoria || 'Software'} />
                 <DetailRow label="Responsável" value="João Developer" />
               </div>
             </div>
 
             <div className="flex flex-col gap-3 p-6 rounded-2xl bg-[#FAFAFA] border border-[#0F172A0F]">
               <h3 className="text-sm font-bold uppercase tracking-widest text-[#64748B] flex items-center gap-2">
-                <Calendar size={16} /> Ciclo de Vida
+                <Calendar size={16} /> Ciclo de Vida & Mercado
               </h3>
               <div className="flex flex-col gap-4 mt-2">
+                <DetailRow label="Modelo de Preço" value={product.pricingModel || 'Sob consulta'} />
+                <DetailRow label="Público Alvo" value={product.targetAudience || 'Não definido'} />
                 <DetailRow label="Criado em" value={product.created_at || '10 Jan 2024'} />
-                <DetailRow label="Última atualização" value={product.updated || 'Hoje, 10:45'} />
-                <DetailRow label="Próxima Release" value="15 Jul 2024" />
+                <DetailRow label="Lançamento" value={product.launchDate ? new Date(product.launchDate).toLocaleDateString() : 'A definir'} />
               </div>
             </div>
           </div>
@@ -76,35 +84,90 @@ export default function VisaoGeralTab({ product, onSave, companies = [] }: any) 
           </div>
         </div>
       ) : (
-        <div className="flex flex-col gap-6 bg-[#FAFAFA] border border-[#0F172A0F] rounded-[24px] p-8">
-           <div className="flex flex-col gap-2">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-[#64748B]">Nome do Produto</label>
-              <input type="text" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} className="bg-white border border-[#0F172A0F] rounded-xl px-4 py-3 text-sm font-bold text-[#111111] outline-none focus:border-[#111111]/30 transition-colors" />
-           </div>
+        <div className="flex flex-col gap-5 bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+           <FormGroup>
+              <FormLabel>Nome do Produto</FormLabel>
+              <FormInput 
+                value={formData.name || ''} 
+                onChange={e => setFormData({...formData, name: e.target.value})} 
+                placeholder="Ex: Nome do Produto"
+              />
+           </FormGroup>
            
-           <div className="flex flex-col gap-2">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-[#64748B]">Descrição</label>
-              <textarea value={formData.desc || ''} onChange={e => setFormData({...formData, desc: e.target.value})} className="bg-white border border-[#0F172A0F] rounded-xl px-4 py-3 text-sm font-medium text-[#111111] outline-none focus:border-[#111111]/30 transition-colors min-h-[120px] resize-y" />
-           </div>
+           <FormGroup>
+              <FormLabel>Descrição</FormLabel>
+              <FormTextarea 
+                value={formData.desc || ''} 
+                onChange={e => setFormData({...formData, desc: e.target.value})} 
+                placeholder="Descreva as funcionalidades e objetivos deste produto..."
+                rows={4}
+              />
+           </FormGroup>
 
-           <div className="grid grid-cols-2 gap-6">
-              <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-bold uppercase tracking-widest text-[#64748B]">Empresa / Cliente</label>
-                <select value={formData.companyId || ''} onChange={e => setFormData({...formData, companyId: e.target.value})} className="bg-white border border-[#0F172A0F] rounded-xl px-4 py-3 text-sm font-bold text-[#111111] outline-none focus:border-[#111111]/30 transition-colors">
+           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <FormGroup>
+                <FormLabel>Empresa / Cliente</FormLabel>
+                <FormSelect 
+                  value={formData.companyId || ''} 
+                  onChange={e => setFormData({...formData, companyId: e.target.value})}
+                >
                   <option value="">Interno / Nenhuma</option>
                   {companies.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-bold uppercase tracking-widest text-[#64748B]">Status</label>
-                <select value={formData.status || ''} onChange={e => setFormData({...formData, status: e.target.value})} className="bg-white border border-[#0F172A0F] rounded-xl px-4 py-3 text-sm font-bold text-[#111111] outline-none focus:border-[#111111]/30 transition-colors">
+                </FormSelect>
+              </FormGroup>
+              <FormGroup>
+                <FormLabel>Status</FormLabel>
+                <FormSelect 
+                  value={formData.status || ''} 
+                  onChange={e => setFormData({...formData, status: e.target.value})}
+                >
                   <option value="Planejamento">Planejamento</option>
                   <option value="Desenvolvimento">Desenvolvimento</option>
                   <option value="Beta">Beta</option>
                   <option value="Produção">Produção</option>
-                </select>
-              </div>
+                  <option value="Arquivado">Arquivado</option>
+                </FormSelect>
+              </FormGroup>
            </div>
+
+           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <FormGroup>
+                <FormLabel>Tipo de Produto</FormLabel>
+                <FormSelect 
+                  value={formData.type || 'SaaS'} 
+                  onChange={e => setFormData({...formData, type: e.target.value})}
+                >
+                  <option value="SaaS">SaaS</option>
+                  <option value="Mobile App">Mobile App</option>
+                  <option value="Desktop App">Desktop App</option>
+                  <option value="API / SDK">API / SDK</option>
+                  <option value="Plataforma">Plataforma</option>
+                  <option value="Serviço Digital">Serviço Digital</option>
+                </FormSelect>
+              </FormGroup>
+              <FormGroup>
+                <FormLabel>Modelo de Precificação</FormLabel>
+                <FormSelect 
+                  value={formData.pricingModel || 'Assinatura'} 
+                  onChange={e => setFormData({...formData, pricingModel: e.target.value})}
+                >
+                  <option value="Assinatura">Assinatura</option>
+                  <option value="Licença Única">Licença Única</option>
+                  <option value="Freemium">Freemium</option>
+                  <option value="Gratuito">Gratuito</option>
+                  <option value="Consumo / Pay-per-use">Consumo / Pay-per-use</option>
+                </FormSelect>
+              </FormGroup>
+           </div>
+
+           <FormGroup>
+              <FormLabel>Público Alvo</FormLabel>
+              <FormInput 
+                value={formData.targetAudience || ''} 
+                onChange={e => setFormData({...formData, targetAudience: e.target.value})} 
+                placeholder="Ex: Empresas B2B de médio porte, Desenvolvedores, etc."
+              />
+           </FormGroup>
         </div>
       )}
 

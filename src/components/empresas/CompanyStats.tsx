@@ -6,9 +6,10 @@ interface CompanyStatsProps {
   activeCompanies: number;
   totalRevenue: number;
   totalProjects: number;
+  totalClients: number;
 }
 
-export default function CompanyStats({ totalCompanies, activeCompanies, totalRevenue, totalProjects }: CompanyStatsProps) {
+export default function CompanyStats({ totalCompanies, activeCompanies, totalRevenue, totalProjects, totalClients }: CompanyStatsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
       <MetricCard 
@@ -43,8 +44,8 @@ export default function CompanyStats({ totalCompanies, activeCompanies, totalRev
       />
       <MetricCard 
         title="Clientes"
-        value="420"
-        trend="+8 hoje"
+        value={totalClients}
+        trend="+2 hoje"
         trendUp={true}
         sub="Usuários ativos na plataforma"
         icon={Users}

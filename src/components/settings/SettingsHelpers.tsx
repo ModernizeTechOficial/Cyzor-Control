@@ -19,14 +19,14 @@ export function InputField({
 }) {
   return (
     <div className="flex flex-col gap-2 w-full">
-      <label className="text-[11px] font-bold tracking-widest uppercase text-[#64748B] px-1">{label}</label>
+      <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider px-1">{label}</label>
       {isTextarea ? (
         <textarea 
           value={value || ''} 
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           disabled={disabled}
-          className="w-full bg-[#FAFAFA] disabled:opacity-60 border border-[#0F172A0F] rounded-[16px] py-3.5 px-4 outline-none focus:border-[#111111]/30 transition-all text-[#111111] font-medium shadow-[0_2px_8px_rgba(0,0,0,0.01)] min-h-[100px] resize-none"
+          className="w-full bg-slate-50/40 disabled:opacity-60 border border-slate-200 rounded-xl py-3 px-4 outline-none focus:border-indigo-500 focus:bg-white transition-all text-sm font-medium text-[#111111] placeholder:text-slate-400 shadow-sm min-h-[100px] resize-none"
         />
       ) : (
         <input 
@@ -35,7 +35,7 @@ export function InputField({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           disabled={disabled}
-          className="w-full bg-[#FAFAFA] disabled:opacity-60 border border-[#0F172A0F] rounded-[16px] py-3.5 px-4 outline-none focus:border-[#111111]/30 transition-all text-[#111111] font-medium shadow-[0_2px_8px_rgba(0,0,0,0.01)]"
+          className="w-full bg-slate-50/40 disabled:opacity-60 border border-slate-200 rounded-xl py-2.5 px-4 outline-none focus:border-indigo-500 focus:bg-white transition-all text-sm font-medium text-[#111111] placeholder:text-slate-400 shadow-sm"
         />
       )}
     </div>
@@ -57,12 +57,12 @@ export function SelectField({
 }) {
   return (
     <div className="flex flex-col gap-2 w-full">
-      <label className="text-[11px] font-bold tracking-widest uppercase text-[#64748B] px-1">{label}</label>
+      <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider px-1">{label}</label>
       <select 
         value={value || ''} 
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className="w-full bg-[#FAFAFA] disabled:opacity-60 border border-[#0F172A0F] rounded-[16px] py-3.5 px-4 outline-none focus:border-[#111111]/30 transition-all text-[#111111] font-medium shadow-[0_2px_8px_rgba(0,0,0,0.01)] cursor-pointer"
+        className="w-full bg-slate-50/40 disabled:opacity-60 border border-slate-200 rounded-xl py-2.5 px-4 outline-none focus:border-indigo-500 focus:bg-white transition-all text-sm font-bold text-[#111111] shadow-sm cursor-pointer"
       >
         {options.map((opt, i) => {
           const isString = typeof opt === 'string';
@@ -139,10 +139,10 @@ export function BtnSave({
     <button 
       disabled={loading || disabled}
       onClick={onClick}
-      className="px-8 py-3.5 rounded-[16px] text-sm font-bold text-[#FFFFFF] bg-[#111111] hover:bg-black disabled:bg-[#111111]/50 shadow-[0_4px_14px_rgba(0,0,0,0.15)] transition-all flex items-center gap-2 cursor-pointer"
+      className="px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-[#111111] hover:bg-[#222222] disabled:opacity-50 shadow-sm transition-all flex items-center gap-2 cursor-pointer hover:scale-[1.01] active:scale-95"
     >
-      {loading ? <Loader2 className="animate-spin" size={16} /> : <Settings size={16} />}
-      {label}
+      {loading ? <Loader2 className="animate-spin" size={14} /> : <Settings size={14} />}
+      <span>{label}</span>
     </button>
   );
 }

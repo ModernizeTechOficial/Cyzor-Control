@@ -18,6 +18,7 @@ export default function EmpresasView() {
 
   // Data
   const [companies, setCompanies] = useState<any[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
   const [finance, setFinance] = useState<any[]>([]);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const { fetchWithAuth, activeWorkspace } = useAuth();
@@ -32,9 +33,10 @@ export default function EmpresasView() {
   const fetchCompanies = async () => {
     if (!activeWorkspace) return;
     try {
-      const [compRes, finRes] = await Promise.all([
+      const [compRes, finRes, cliRes] = await Promise.all([
         fetchWithAuth('/api/companies'),
         fetchWithAuth('/api/finance'),
+        fetchWithAuth('/api/clients'),
       ]);
       
       if (compRes.ok) {
@@ -48,6 +50,10 @@ export default function EmpresasView() {
           .filter((f: any) => f.type === 'RECEITA')
           .reduce((sum: number, entry: any) => sum + Number(entry.amount), 0);
         setTotalRevenue(revenue);
+      }
+      if (cliRes.ok) {
+        const cliData = await cliRes.json();
+        setClients(cliData);
       }
     } catch (err) {
       console.error(err);
@@ -126,12 +132,11 @@ export default function EmpresasView() {
         activeCompanies={activeCompaniesCount}
         totalRevenue={totalRevenue}
         totalProjects={totalProjectsCount}
+        totalClients={clients.length}
       />
 
-      <Charts />
-
-      <div className="flex flex-col xl:flex-row gap-8">
-        <div className="flex-1 flex flex-col gap-6">
+      <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-6">
           <CompanyFilters 
             searchTerm={searchTerm} setSearchTerm={setSearchTerm}
             statusFilter={statusFilter} setStatusFilter={setStatusFilter}
@@ -148,9 +153,17 @@ export default function EmpresasView() {
             viewMode={viewMode}
           />
         </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-9">
+            <Charts finance={finance} companies={companies} />
+          </div>
+          <div className="lg:col-span-3">
+            <CompanyActivity />
+          </div>
+        </div>
         
-        <div className="w-full xl:w-[380px] shrink-0 flex flex-col gap-8">
-          <CompanyActivity />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <UpcomingEvents />
           <FinancialSummary />
         </div>

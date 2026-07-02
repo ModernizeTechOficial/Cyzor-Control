@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ProjectExtended } from '../../types/project';
 import { User, Flag, Calendar, Building2, Layers, Briefcase, Users, Activity, CheckSquare, Clock } from 'lucide-react';
+import { FormGroup, FormLabel, FormInput, FormTextarea, FormSelect } from '../ui/FormComponents';
 
 interface AbaVisaoGeralProps {
   project: ProjectExtended;
@@ -35,8 +36,8 @@ export default function AbaVisaoGeral({ project, isEditing, onChange, companies 
       
       {/* 4 Indicators */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="bg-[#FFFFFF] border border-[#0F172A0F] rounded-[24px] p-6 shadow-[0_4px_20px_rgba(0,0,0,0.01)] flex flex-col gap-2">
-          <div className="flex justify-between items-center text-[#64748B]">
+        <div className="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm flex flex-col gap-2">
+          <div className="flex justify-between items-center text-slate-500">
             <span className="text-[11px] font-bold uppercase tracking-widest">Progresso Geral</span>
             <Activity size={16} />
           </div>
@@ -45,30 +46,30 @@ export default function AbaVisaoGeral({ project, isEditing, onChange, companies 
             <span className="text-xs font-semibold text-emerald-600">Completo</span>
           </div>
           {/* Progress Bar */}
-          <div className="w-full h-2 bg-[#FAFAFA] border border-[#0F172A0F] rounded-full overflow-hidden mt-3">
+          <div className="w-full h-2 bg-slate-50 border border-slate-100 rounded-full overflow-hidden mt-3">
             <div 
-              className="h-full bg-[#111111] transition-all duration-500 rounded-full" 
+              className="h-full bg-indigo-600 transition-all duration-500 rounded-full" 
               style={{ width: `${progressPercent}%` }}
             />
           </div>
         </div>
 
-        <div className="bg-[#FFFFFF] border border-[#0F172A0F] rounded-[24px] p-6 shadow-[0_4px_20px_rgba(0,0,0,0.01)] flex flex-col gap-2">
-          <div className="flex justify-between items-center text-[#64748B]">
+        <div className="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm flex flex-col gap-2">
+          <div className="flex justify-between items-center text-slate-500">
             <span className="text-[11px] font-bold uppercase tracking-widest">Tarefas no Backlog</span>
             <CheckSquare size={16} />
           </div>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-3xl font-display font-bold text-[#111111]">{totalTasks}</span>
-            <span className="text-xs text-[#64748B] font-medium">alocadas</span>
+            <span className="text-xs text-slate-500 font-medium">alocadas</span>
           </div>
-          <div className="text-[10px] text-[#64748B] font-medium mt-auto flex items-center gap-1">
+          <div className="text-[10px] text-slate-500 font-medium mt-auto flex items-center gap-1">
             <span className="font-bold text-[#111111]">{doneTasks}</span> concluídas • <span className="font-bold text-[#111111]">{openTasks}</span> abertas
           </div>
         </div>
 
-        <div className="bg-[#FFFFFF] border border-[#0F172A0F] rounded-[24px] p-6 shadow-[0_4px_20px_rgba(0,0,0,0.01)] flex flex-col gap-2">
-          <div className="flex justify-between items-center text-[#64748B]">
+        <div className="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm flex flex-col gap-2">
+          <div className="flex justify-between items-center text-slate-500">
             <span className="text-[11px] font-bold uppercase tracking-widest">Atrasos & Riscos</span>
             <Clock size={16} className={highPriorityTasks > 0 ? "text-amber-500" : ""} />
           </div>
@@ -76,25 +77,25 @@ export default function AbaVisaoGeral({ project, isEditing, onChange, companies 
             <span className="text-3xl font-display font-bold text-[#111111]">{highPriorityTasks}</span>
             <span className="text-xs text-amber-600 font-bold">{highPriorityTasks > 0 ? 'Alta prioridade' : 'Sem risco crítico'}</span>
           </div>
-          <div className="text-[10px] text-[#64748B] font-medium mt-auto">
+          <div className="text-[10px] text-slate-500 font-medium mt-auto">
             Tarefas urgentes sob acompanhamento
           </div>
         </div>
 
-        <div className="bg-[#FFFFFF] border border-[#0F172A0F] rounded-[24px] p-6 shadow-[0_4px_20px_rgba(0,0,0,0.01)] flex flex-col gap-2">
-          <div className="flex justify-between items-center text-[#64748B]">
+        <div className="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm flex flex-col gap-2">
+          <div className="flex justify-between items-center text-slate-500">
             <span className="text-[11px] font-bold uppercase tracking-widest">Membros</span>
             <Users size={16} />
           </div>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-3xl font-display font-bold text-[#111111]">{(project.team || []).length}</span>
-            <span className="text-xs text-[#64748B] font-medium">colaboradores</span>
+            <span className="text-xs text-slate-500 font-medium">colaboradores</span>
           </div>
           <div className="flex -space-x-2 overflow-hidden mt-auto pt-1">
             {(project.team || []).slice(0, 4).map((member, i) => (
               <div 
                 key={member.name} 
-                className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-[#FAFAFA] border border-[#0F172A0F] flex items-center justify-center text-[9px] font-bold text-[#111111] uppercase"
+                className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-slate-50 border border-slate-100 flex items-center justify-center text-[9px] font-bold text-[#111111] uppercase"
                 title={`${member.name} (${member.role})`}
               >
                 {member.avatar}
@@ -109,26 +110,27 @@ export default function AbaVisaoGeral({ project, isEditing, onChange, companies 
         
         {/* Left Column: Form / Info details */}
         <div className="lg:col-span-2 flex flex-col gap-6">
-          <div className="bg-[#FFFFFF] border border-[#0F172A0F] rounded-[24px] p-8 shadow-[0_4px_24px_rgba(0,0,0,0.01)] flex flex-col gap-6">
-            <h3 className="text-[11px] font-bold uppercase tracking-widest text-[#64748B] border-b border-[#0F172A0F] pb-3 flex items-center gap-2">
+          <div className="bg-white border border-slate-200 rounded-[24px] p-8 shadow-sm flex flex-col gap-6">
+            <h3 className="text-[11px] font-bold uppercase tracking-widest text-[#64748B] border-b border-slate-100 pb-3 flex items-center gap-2">
               <Layers size={14} /> Detalhes Gerais da Iniciativa
             </h3>
 
             {isEditing ? (
               <div className="flex flex-col gap-6">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-[#64748B]">Descrição do Projeto</label>
-                  <textarea 
+                <FormGroup>
+                  <FormLabel>Descrição do Projeto</FormLabel>
+                  <FormTextarea 
                     value={formData.description || ''}
                     onChange={(e) => handleChange('description', e.target.value)}
-                    className="w-full text-sm text-[#475569] leading-relaxed bg-[#FAFAFA] border border-[#0F172A0F] rounded-[16px] p-4 outline-none focus:border-[#111111]/30 transition-colors h-40 resize-none shadow-sm"
+                    placeholder="Descreva os objetivos, escopo e resultados esperados deste projeto..."
+                    rows={6}
                   />
-                </div>
+                </FormGroup>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold uppercase text-[#64748B] tracking-wide">Cliente / Empresa</label>
-                    <select
+                  <FormGroup>
+                    <FormLabel>Cliente / Empresa</FormLabel>
+                    <FormSelect
                       value={formData.companyId || ''}
                       onChange={(e) => {
                         const cid = Number(e.target.value);
@@ -137,56 +139,51 @@ export default function AbaVisaoGeral({ project, isEditing, onChange, companies 
                         setFormData(updated);
                         onChange(updated);
                       }}
-                      className="w-full text-sm font-semibold text-[#111111] bg-[#FAFAFA] border border-[#0F172A0F] rounded-[12px] p-3 outline-none focus:border-[#111111]/30"
                     >
                       <option value="">Selecionar Empresa</option>
                       {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                  </div>
+                    </FormSelect>
+                  </FormGroup>
 
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold uppercase text-[#64748B] tracking-wide">Prioridade</label>
-                    <select
+                  <FormGroup>
+                    <FormLabel>Prioridade</FormLabel>
+                    <FormSelect
                       value={formData.priority}
                       onChange={(e) => handleChange('priority', e.target.value)}
-                      className="w-full text-sm font-semibold text-[#111111] bg-[#FAFAFA] border border-[#0F172A0F] rounded-[12px] p-3 outline-none focus:border-[#111111]/30"
                     >
                       <option value="Baixa">Baixa</option>
                       <option value="Média">Média</option>
                       <option value="Alta">Alta</option>
                       <option value="Crítica">Crítica</option>
-                    </select>
-                  </div>
+                    </FormSelect>
+                  </FormGroup>
 
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold uppercase text-[#64748B] tracking-wide">Prazo Final</label>
-                    <input
+                  <FormGroup>
+                    <FormLabel>Prazo Final</FormLabel>
+                    <FormInput
                       type="date"
                       value={formData.dueDate ? formData.dueDate.substring(0, 10) : ''}
                       onChange={(e) => handleChange('dueDate', e.target.value)}
-                      className="w-full text-sm font-semibold text-[#111111] bg-[#FAFAFA] border border-[#0F172A0F] rounded-[12px] p-3 outline-none focus:border-[#111111]/30"
                     />
-                  </div>
+                  </FormGroup>
 
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold uppercase text-[#64748B] tracking-wide">Faturamento (R$)</label>
-                    <input
+                  <FormGroup>
+                    <FormLabel>Faturamento (R$)</FormLabel>
+                    <FormInput
                       type="number"
                       value={formData.budget || '0'}
                       onChange={(e) => handleChange('budget', e.target.value)}
-                      className="w-full text-sm font-semibold text-[#111111] bg-[#FAFAFA] border border-[#0F172A0F] rounded-[12px] p-3 outline-none focus:border-[#111111]/30"
                     />
-                  </div>
+                  </FormGroup>
 
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold uppercase text-[#64748B] tracking-wide">Coordenador / Owner</label>
-                    <input
+                  <FormGroup>
+                    <FormLabel>Coordenador / Owner</FormLabel>
+                    <FormInput
                       type="text"
                       value={formData.owner || ''}
                       onChange={(e) => handleChange('owner', e.target.value)}
-                      className="w-full text-sm font-semibold text-[#111111] bg-[#FAFAFA] border border-[#0F172A0F] rounded-[12px] p-3 outline-none focus:border-[#111111]/30"
                     />
-                  </div>
+                  </FormGroup>
                 </div>
               </div>
             ) : (
@@ -195,7 +192,7 @@ export default function AbaVisaoGeral({ project, isEditing, onChange, companies 
                   {project.description}
                 </p>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5 border-t border-[#0F172A0F] pt-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5 border-t border-slate-100 pt-6">
                   <div className="flex flex-col gap-1">
                     <span className="text-[10px] font-bold uppercase text-[#64748B] tracking-wide flex items-center gap-1.5">
                       <Building2 size={12} /> Cliente / Empresa
@@ -242,10 +239,10 @@ export default function AbaVisaoGeral({ project, isEditing, onChange, companies 
 
         {/* Right Column: Mini-checklist criteria of Project execution */}
         <div className="flex flex-col gap-6">
-          <div className="bg-[#FFFFFF] border border-[#0F172A0F] rounded-[24px] p-8 shadow-[0_4px_24px_rgba(0,0,0,0.01)] flex flex-col gap-6">
-            <h3 className="text-[11px] font-bold uppercase tracking-widest text-[#64748B] border-b border-[#0F172A0F] pb-3 flex justify-between items-center">
+          <div className="bg-white border border-slate-200 rounded-[24px] p-8 shadow-sm flex flex-col gap-6">
+            <h3 className="text-[11px] font-bold uppercase tracking-widest text-[#64748B] border-b border-slate-100 pb-3 flex justify-between items-center">
               <span>Critérios de Sucesso</span>
-              <span className="text-[#111111] bg-[#FAFAFA] border border-[#0F172A0F]/50 px-2 py-0.5 rounded text-[10px]">
+              <span className="text-[#111111] bg-slate-50 border border-slate-200 px-2 py-0.5 rounded text-[10px]">
                 {formData.criteria?.filter(c => c.completed).length || 0}/{formData.criteria?.length || 0}
               </span>
             </h3>
@@ -261,9 +258,9 @@ export default function AbaVisaoGeral({ project, isEditing, onChange, companies 
                       updatedCriteria[index] = { ...item, completed: e.target.checked };
                       handleChange('criteria', updatedCriteria);
                     }}
-                    className="mt-0.5 h-4 w-4 text-[#111111] border-[#0F172A0F] rounded focus:ring-black cursor-pointer accent-[#111111]"
+                    className="mt-0.5 h-4 w-4 text-[#111111] border-slate-200 rounded focus:ring-indigo-500 cursor-pointer accent-indigo-600"
                   />
-                  <span className={`text-xs font-semibold leading-tight ${item.completed ? 'text-[#64748B] line-through opacity-70' : 'text-[#111111]'}`}>
+                  <span className={`text-xs font-semibold leading-tight ${item.completed ? 'text-slate-400 line-through' : 'text-[#111111]'}`}>
                     {item.text}
                   </span>
                 </div>

@@ -2,8 +2,8 @@ import { Router } from "express";
 import { requireAuth, AuthRequest } from "../middleware/auth.ts";
 import { tenantMiddleware, TenantRequest } from "../middleware/tenant.ts";
 import { db } from "./index.ts";
-import { companies, clients, products, projects, tasks, ideas, documents, financeEntries, sprints, milestones, aiMemories, notifications, agendaEvents, users, workspaceMembers, workspaces, flows, notes, deploys } from "./schema.ts";
-import { eq, and, desc, sql, or, inArray } from "drizzle-orm";
+import { companies, clients, products, projects, tasks, ideas, documents, financeEntries, sprints, milestones, aiMemories, notifications, agendaEvents, users, workspaceMembers, workspaces, flows, notes, deploys, productLicenses } from "./schema.ts";
+import { eq, and, desc, sql, or, inArray, gte, lte, not } from "drizzle-orm";
 import { getUserSaaSState } from "./queries.ts";
 import { sendProjectNotificationEmail, testSmtpConnection } from "./mail.ts";
 
@@ -12,6 +12,49 @@ const apiRouter = Router();
 apiRouter.use((req, res, next) => {
   console.log(`[apiRouter Request] ${req.method} ${req.url}`);
   next();
+});
+
+// --- NAVIGATION BADGES ---
+apiRouter.get("/navigation/badges", requireAuth, tenantMiddleware as any, async (req: AuthRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    
+    // 1. Projects badge: Projects that are not completed or cancelled
+    const activeProjects = await db.select().from(projects).where(
+      and(
+        eq(projects.workspaceId, workspaceId),
+        not(inArray(sql`UPPER(${projects.status})`, ['CONCLUÍDO', 'CANCELADO']))
+      )
+    );
+    
+    // 2. Finance badge: Recent entries (e.g., from the last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const recentFinance = await db.select().from(financeEntries).where(
+      and(
+        eq(financeEntries.workspaceId, workspaceId),
+        gte(financeEntries.date, thirtyDaysAgo)
+      )
+    );
+
+    // 3. AI Insights badge: Recommendations/Risks from AI memory or just recent ones
+    // For now, let's count active memories that are highly important
+    const importantMemories = await db.select().from(aiMemories).where(
+      and(
+        eq(aiMemories.workspaceId, workspaceId),
+        gte(aiMemories.importance, 8)
+      )
+    );
+
+    res.json({
+      projetos: activeProjects.length,
+      financeiro: recentFinance.length,
+      ia: importantMemories.length || 3 // Fallback if no memories found for visual feedback
+    });
+  } catch (error: any) {
+    console.error("Error fetching navigation badges:", error);
+    res.status(500).json({ error: "Failed to fetch navigation badges" });
+  }
 });
 
 apiRouter.get("/branding", async (req, res) => {
@@ -473,13 +516,65 @@ apiRouter.get("/products", async (req: AuthRequest, res) => {
     res.status(500).json({ error: "Failed to fetch products" });
   }
 });
+
 apiRouter.post("/products", async (req: AuthRequest, res) => {
-  const data = await db.insert(products).values({ ...req.body, workspaceId: req.workspaceId! }).returning();
-  res.json(data[0]);
+  try {
+    const { name, description, status, companyId, launchDate, type, targetAudience, pricingModel, features } = req.body;
+    if (!name) {
+      return res.status(400).json({ error: "Product name is required" });
+    }
+
+    const data = await db.insert(products).values({
+      workspaceId: req.workspaceId!,
+      tenantId: req.tenantId as any,
+      name,
+      description: description || null,
+      status: status || 'Em Desenvolvimento',
+      companyId: companyId ? Number(companyId) : null,
+      launchDate: launchDate ? new Date(launchDate) : null,
+      type: type || 'SaaS',
+      targetAudience: targetAudience || null,
+      pricingModel: pricingModel || null,
+      features: features || []
+    }).returning();
+
+    res.json(data[0]);
+  } catch (error: any) {
+    console.error("Error creating product:", error);
+    res.status(500).json({ error: "Failed to create product", details: error.message });
+  }
 });
+
 apiRouter.put("/products/:id", async (req: AuthRequest, res) => {
-  const data = await db.update(products).set(req.body).where(and(eq(products.id, Number(req.params.id)), eq(products.workspaceId, req.workspaceId!))).returning();
-  res.json(data[0]);
+  try {
+    const productId = Number(req.params.id);
+    const { name, description, status, companyId, launchDate, type, targetAudience, pricingModel, features } = req.body;
+    
+    const updateValues: any = {};
+    if (name !== undefined) updateValues.name = name;
+    if (description !== undefined) updateValues.description = description;
+    if (status !== undefined) updateValues.status = status;
+    if (companyId !== undefined) updateValues.companyId = companyId ? Number(companyId) : null;
+    if (launchDate !== undefined) updateValues.launchDate = launchDate ? new Date(launchDate) : null;
+    if (type !== undefined) updateValues.type = type;
+    if (targetAudience !== undefined) updateValues.targetAudience = targetAudience;
+    if (pricingModel !== undefined) updateValues.pricingModel = pricingModel;
+    if (features !== undefined) updateValues.features = features;
+    updateValues.updatedAt = new Date();
+
+    const data = await db.update(products)
+      .set(updateValues)
+      .where(and(eq(products.id, productId), eq(products.workspaceId, req.workspaceId!)))
+      .returning();
+      
+    if (data.length === 0) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+    res.json(data[0]);
+  } catch (error: any) {
+    console.error("Error updating product:", error);
+    res.status(500).json({ error: "Failed to update product", details: error.message });
+  }
 });
 
 apiRouter.get("/products/:id/kpis", async (req: AuthRequest, res) => {
@@ -526,10 +621,14 @@ apiRouter.get("/products/:id/kpis", async (req: AuthRequest, res) => {
     // 5. Tasks/Ideas count as approximation for "Clients" / "Licenses" since we don't have those tables
     // Just mock the others or return 0 for what we don't have
     
+    // Actually now we have licenses
+    const licenseList = await db.select().from(productLicenses).where(and(eq(productLicenses.productId, productId), eq(productLicenses.workspaceId, req.workspaceId!)));
+    
     res.json({
       projects: { count: projectsCount },
       revenue: { total: revenue },
-      deploys: { count: deploysCount, lastDeploy: lastDeployStr }
+      deploys: { count: deploysCount, lastDeploy: lastDeployStr },
+      licenses: { count: licenseList.length }
     });
   } catch (error) {
     console.error("Error fetching product KPIs:", error);
@@ -917,7 +1016,50 @@ apiRouter.delete("/milestones/:id", async (req: AuthRequest, res) => {
     }
 });
 
-// --- DEPLOYS ---
+// --- PRODUCT LICENSES ---
+apiRouter.get("/products/:id/licenses", async (req: AuthRequest, res) => {
+  try {
+    const { productLicenses } = await import("./schema.ts");
+    const data = await db.select({
+      id: productLicenses.id,
+      key: productLicenses.key,
+      status: productLicenses.status,
+      type: productLicenses.type,
+      startsAt: productLicenses.startsAt,
+      expiresAt: productLicenses.expiresAt,
+      companyId: productLicenses.companyId,
+      companyName: companies.name
+    })
+    .from(productLicenses)
+    .leftJoin(companies, eq(productLicenses.companyId, companies.id))
+    .where(and(eq(productLicenses.productId, Number(req.params.id)), eq(productLicenses.workspaceId, req.workspaceId!)));
+    res.json(data);
+  } catch (error) {
+    console.error("Error fetching product licenses:", error);
+    res.status(500).json({ error: "Failed to fetch licenses" });
+  }
+});
+
+apiRouter.post("/products/:id/licenses", async (req: AuthRequest, res) => {
+  try {
+    const { productLicenses } = await import("./schema.ts");
+    const { key, status, type, expiresAt, companyId } = req.body;
+    const data = await db.insert(productLicenses).values({
+      workspaceId: req.workspaceId!,
+      tenantId: req.tenantId as any,
+      productId: Number(req.params.id),
+      key: key || `LIC-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
+      status: status || 'Ativa',
+      type: type || 'Comercial',
+      expiresAt: expiresAt ? new Date(expiresAt) : null,
+      companyId: companyId ? Number(companyId) : null
+    }).returning();
+    res.json(data[0]);
+  } catch (error: any) {
+    console.error("Error creating license:", error);
+    res.status(500).json({ error: "Failed to create license" });
+  }
+});
 apiRouter.get("/deploys", async (req: AuthRequest, res) => {
   const { productId } = req.query;
   const conditions = [eq(deploys.workspaceId, req.workspaceId!)];

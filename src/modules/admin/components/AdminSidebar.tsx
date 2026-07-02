@@ -127,41 +127,41 @@ export default function AdminSidebar({ isCollapsed, toggleSidebar, currentView, 
 
   const categories = [
     {
-      title: 'Platform',
+      title: 'SaaS Core',
       items: [
-        { id: 'admin', icon: LayoutDashboard, label: 'Admin Cyzor' },
-        { id: 'admin-tenants', icon: Server, label: 'SaaS Tenants' },
+        { id: 'admin', icon: LayoutDashboard, label: 'Admin Dashboard' },
+        { id: 'admin-tenants', icon: Building2, label: 'Workspaces SaaS' },
       ]
     },
     {
-      title: 'Business',
+      title: 'Management',
       items: [
         { id: 'admin-companies', icon: Briefcase, label: 'Empresas Clientes' },
         { id: 'admin-users', icon: Users, label: 'Usuários Globais' },
       ]
     },
     {
-      title: 'Billing',
+      title: 'Finance & Billing',
       items: [
         { id: 'admin-finance', icon: CreditCard, label: 'Resumo Financeiro' },
-        { id: 'admin-plans', icon: Package, label: 'Planos Catálogo' },
+        { id: 'admin-plans', icon: Package, label: 'Planos & Catálogo' },
         { id: 'admin-billing', icon: CreditCard, label: 'Stripe Gateway' },
       ]
     },
     {
-      title: 'Infrastructure',
+      title: 'System Health',
       items: [
-        { id: 'admin-infrastructure', icon: Cpu, label: 'Instâncias & Nodes', isBeta: true },
+        { id: 'admin-infrastructure', icon: Activity, label: 'Saúde & Performance', isBeta: true },
       ]
     },
     {
-      title: 'Security',
+      title: 'Audit & Safety',
       items: [
-        { id: 'admin-logs', icon: Activity, label: 'Logs & Auditoria', isBeta: true },
+        { id: 'admin-logs', icon: Shield, label: 'Logs de Auditoria', isBeta: true },
       ]
     },
     {
-      title: 'Developer',
+      title: 'Integrations',
       items: [
         { id: 'dev-playground', icon: Code, label: 'Webhooks & API', isBeta: true },
       ]

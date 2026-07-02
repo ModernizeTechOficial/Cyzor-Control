@@ -10,10 +10,8 @@ import ProductFilters from './produtos/ProductFilters';
 import ProductGrid from './produtos/ProductGrid';
 import ProductTable from './produtos/ProductTable';
 import ProductKanban from './produtos/ProductKanban';
-import ProductAnalytics from './produtos/ProductAnalytics';
 import ProductActivity from './produtos/ProductActivity';
 import ProductEvents from './produtos/ProductEvents';
-import ProductMetrics from './produtos/ProductMetrics';
 import ProductActionBar from './produtos/ProductActionBar';
 
 export default function ProdutosView() {
@@ -148,10 +146,8 @@ export default function ProdutosView() {
         totalProjects={projectsList.length}
       />
 
-      <ProductAnalytics />
-
       <div className="flex flex-col xl:flex-row gap-8">
-        <div className="flex-1 flex flex-col gap-6">
+        <div className="flex-1 min-w-0 flex flex-col gap-6">
           <ProductFilters 
             searchTerm={searchQuery} setSearchTerm={setSearchQuery}
             statusFilter={statusFilter} setStatusFilter={setStatusFilter}
@@ -185,12 +181,12 @@ export default function ProdutosView() {
               products={filteredProducts} 
               onSelect={(p) => setSelectedProduct(p)} 
               onRefresh={fetchData}
+              setProducts={setProducts}
             />
           )}
         </div>
         
         <div className="w-full xl:w-[380px] shrink-0 flex flex-col gap-8">
-          <ProductMetrics />
           <ProductActivity />
           <ProductEvents />
         </div>

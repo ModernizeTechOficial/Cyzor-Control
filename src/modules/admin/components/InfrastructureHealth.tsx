@@ -5,14 +5,14 @@ export default function InfrastructureHealth() {
   const services = [
     { name: 'Core API Gateway', latency: '42ms', uptime: '99.99%', status: 'Operational', incident: 'Nenhum' },
     { name: 'Cloud SQL (PostgreSQL)', latency: '8ms', uptime: '100.00%', status: 'Operational', incident: 'Nenhum' },
-    { name: 'Redis Cache Memory', latency: '2ms', uptime: '99.98%', status: 'Operational', incident: 'Nenhum' },
+    { name: 'Redis Cache (Sessões)', latency: '2ms', uptime: '99.98%', status: 'Operational', incident: 'Nenhum' },
     { name: 'S3 Asset Storage', latency: '12ms', uptime: '100.00%', status: 'Operational', incident: 'Nenhum' },
-    { name: 'Cyzor Edge CDN', latency: '18ms', uptime: '99.99%', status: 'Operational', incident: 'Nenhum' },
-    { name: 'RabbitMQ Message Queue', latency: '5ms', uptime: '99.95%', status: 'Operational', incident: '14 dias atrás' },
-    { name: 'Worker Processes', latency: 'N/A', uptime: '100.00%', status: 'Operational', incident: 'Nenhum' },
-    { name: 'Deploy Pipeline Engine', latency: '120s', uptime: '99.90%', status: 'Operational', incident: 'Nenhum' },
-    { name: 'SSL Certificate Manager', latency: 'N/A', uptime: '100.00%', status: 'Operational', incident: 'Nenhum' },
-    { name: 'Database Backups', latency: 'N/A', uptime: '100.00%', status: 'Backup Ativo', incident: 'Nenhum' }
+    { name: 'Cyzor Edge Delivery', latency: '18ms', uptime: '99.99%', status: 'Operational', incident: 'Nenhum' },
+    { name: 'Mensageria & Webhooks', latency: '5ms', uptime: '99.95%', status: 'Operational', incident: '14 dias atrás' },
+    { name: 'Workers de Automação', latency: 'N/A', uptime: '100.00%', status: 'Operational', incident: 'Nenhum' },
+    { name: 'Motor de Faturamento', latency: '120ms', uptime: '99.90%', status: 'Operational', incident: 'Nenhum' },
+    { name: 'Gerenciador de Domínios', latency: 'N/A', uptime: '100.00%', status: 'Operational', incident: 'Nenhum' },
+    { name: 'Backups de Segurança', latency: 'N/A', uptime: '100.00%', status: 'Backup Ativo', incident: 'Nenhum' }
   ];
 
   return (

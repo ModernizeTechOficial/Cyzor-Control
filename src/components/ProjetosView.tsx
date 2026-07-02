@@ -13,6 +13,7 @@ import { showSuccess, showError } from '../lib/alerts';
 import ProjectDetailsModal from './ProjectDetailsModal';
 import NewProjectModal from './NewProjectModal';
 import Markdown from 'react-markdown';
+import { FormGroup, FormLabel, FormInput, FormSelect, FormTextarea } from './ui/FormComponents';
 
 export default function ProjetosView() {
   const { fetchWithAuth, activeWorkspace, user } = useAuth();
@@ -784,26 +785,31 @@ export default function ProjetosView() {
 
                   {/* Wizard: Company */}
                   {wizardType === 'company' && (
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-4">
                       <h4 className="text-xs font-black text-neutral-900">Cadastrar Cliente / Empresa</h4>
-                      <input 
-                        type="text" 
-                        placeholder="Nome da corporação..." 
-                        value={wizardData.companyName}
-                        onChange={(e) => setWizardData({ ...wizardData, companyName: e.target.value })}
-                        className="bg-neutral-50 border border-neutral-200/60 p-2.5 rounded-lg text-xs outline-none focus:bg-white"
-                      />
-                      <select 
-                        value={wizardData.companyIndustry}
-                        onChange={(e) => setWizardData({ ...wizardData, companyIndustry: e.target.value })}
-                        className="bg-neutral-50 border border-neutral-200/60 p-2.5 rounded-lg text-xs outline-none cursor-pointer"
-                      >
-                        <option value="Consultoria">Consultoria</option>
-                        <option value="Automobilística">Automobilística</option>
-                        <option value="Tecnologia">Tecnologia</option>
-                        <option value="Financeira">Mercado Financeiro</option>
-                      </select>
-                      <button onClick={handleCreateCompany} className="bg-neutral-950 hover:bg-neutral-900 text-white rounded-lg p-2.5 text-xs font-bold transition-all">
+                      <FormGroup>
+                        <FormLabel required>Nome da corporação</FormLabel>
+                        <FormInput 
+                          placeholder="Ex: Nexus Group" 
+                          value={wizardData.companyName}
+                          onChange={(e) => setWizardData({ ...wizardData, companyName: e.target.value })}
+                        />
+                      </FormGroup>
+                      
+                      <FormGroup>
+                        <FormLabel>Segmento</FormLabel>
+                        <FormSelect 
+                          value={wizardData.companyIndustry}
+                          onChange={(e) => setWizardData({ ...wizardData, companyIndustry: e.target.value })}
+                        >
+                          <option value="Consultoria">Consultoria</option>
+                          <option value="Automobilística">Automobilística</option>
+                          <option value="Tecnologia">Tecnologia</option>
+                          <option value="Financeira">Mercado Financeiro</option>
+                        </FormSelect>
+                      </FormGroup>
+
+                      <button onClick={handleCreateCompany} className="bg-neutral-950 hover:bg-neutral-900 text-white rounded-xl p-2.5 text-xs font-bold transition-all mt-2">
                         Confirmar Cadastro
                       </button>
                     </div>
@@ -811,31 +817,39 @@ export default function ProjetosView() {
 
                   {/* Wizard: Document */}
                   {wizardType === 'document' && (
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-4">
                       <h4 className="text-xs font-black text-neutral-900">Registrar Documento</h4>
-                      <input 
-                        type="text" 
-                        placeholder="Título do Documento..." 
-                        value={wizardData.docTitle}
-                        onChange={(e) => setWizardData({ ...wizardData, docTitle: e.target.value })}
-                        className="bg-neutral-50 border border-neutral-200/60 p-2.5 rounded-lg text-xs outline-none focus:bg-white"
-                      />
-                      <textarea 
-                        placeholder="Conteúdo operacional inicial..." 
-                        rows={3}
-                        value={wizardData.docContent}
-                        onChange={(e) => setWizardData({ ...wizardData, docContent: e.target.value })}
-                        className="bg-neutral-50 border border-neutral-200/60 p-2.5 rounded-lg text-xs outline-none focus:bg-white resize-none"
-                      />
-                      <select
-                        value={wizardData.docProjectId}
-                        onChange={(e) => setWizardData({ ...wizardData, docProjectId: e.target.value })}
-                        className="bg-neutral-50 border border-neutral-200/60 p-2.5 rounded-lg text-xs outline-none cursor-pointer"
-                      >
-                        <option value="">Associar ao Projeto (Opcional)</option>
-                        {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                      </select>
-                      <button onClick={handleCreateDocument} className="bg-neutral-950 hover:bg-neutral-900 text-white rounded-lg p-2.5 text-xs font-bold transition-all">
+                      <FormGroup>
+                        <FormLabel required>Título do Documento</FormLabel>
+                        <FormInput 
+                          placeholder="Título do Documento..." 
+                          value={wizardData.docTitle}
+                          onChange={(e) => setWizardData({ ...wizardData, docTitle: e.target.value })}
+                        />
+                      </FormGroup>
+
+                      <FormGroup>
+                        <FormLabel>Conteúdo</FormLabel>
+                        <FormTextarea 
+                          placeholder="Conteúdo operacional inicial..." 
+                          rows={3}
+                          value={wizardData.docContent}
+                          onChange={(e) => setWizardData({ ...wizardData, docContent: e.target.value })}
+                        />
+                      </FormGroup>
+
+                      <FormGroup>
+                        <FormLabel>Associar ao Projeto (Opcional)</FormLabel>
+                        <FormSelect
+                          value={wizardData.docProjectId}
+                          onChange={(e) => setWizardData({ ...wizardData, docProjectId: e.target.value })}
+                        >
+                          <option value="">Nenhum</option>
+                          {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </FormSelect>
+                      </FormGroup>
+
+                      <button onClick={handleCreateDocument} className="bg-neutral-950 hover:bg-neutral-900 text-white rounded-xl p-2.5 text-xs font-bold transition-all mt-2">
                         Publicar Documento
                       </button>
                     </div>
@@ -843,33 +857,42 @@ export default function ProjetosView() {
 
                   {/* Wizard: Task */}
                   {wizardType === 'task' && (
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-4">
                       <h4 className="text-xs font-black text-neutral-900">Adicionar Tarefa a Projeto</h4>
-                      <select 
-                        value={wizardData.taskProjectId}
-                        onChange={(e) => setWizardData({ ...wizardData, taskProjectId: e.target.value })}
-                        className="bg-neutral-50 border border-neutral-200/60 p-2.5 rounded-lg text-xs outline-none cursor-pointer"
-                      >
-                        <option value="">Escolher o Projeto...</option>
-                        {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                      </select>
-                      <input 
-                        type="text" 
-                        placeholder="Descrição da ação..." 
-                        value={wizardData.taskTitle}
-                        onChange={(e) => setWizardData({ ...wizardData, taskTitle: e.target.value })}
-                        className="bg-neutral-50 border border-neutral-200/60 p-2.5 rounded-lg text-xs outline-none focus:bg-white"
-                      />
-                      <select 
-                        value={wizardData.taskPriority}
-                        onChange={(e) => setWizardData({ ...wizardData, taskPriority: e.target.value })}
-                        className="bg-neutral-50 border border-neutral-200/60 p-2.5 rounded-lg text-xs outline-none cursor-pointer"
-                      >
-                        <option value="Alta">Alta prioridade</option>
-                        <option value="Média">Prioridade Normal</option>
-                        <option value="Baixa">Disparável</option>
-                      </select>
-                      <button onClick={handleCreateTask} className="bg-neutral-950 hover:bg-neutral-900 text-white rounded-lg p-2.5 text-xs font-bold transition-all">
+                      
+                      <FormGroup>
+                        <FormLabel required>Escolher o Projeto</FormLabel>
+                        <FormSelect 
+                          value={wizardData.taskProjectId}
+                          onChange={(e) => setWizardData({ ...wizardData, taskProjectId: e.target.value })}
+                        >
+                          <option value="">Selecionar...</option>
+                          {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </FormSelect>
+                      </FormGroup>
+
+                      <FormGroup>
+                        <FormLabel required>Descrição da ação</FormLabel>
+                        <FormInput 
+                          placeholder="O que precisa ser feito?" 
+                          value={wizardData.taskTitle}
+                          onChange={(e) => setWizardData({ ...wizardData, taskTitle: e.target.value })}
+                        />
+                      </FormGroup>
+
+                      <FormGroup>
+                        <FormLabel>Prioridade</FormLabel>
+                        <FormSelect 
+                          value={wizardData.taskPriority}
+                          onChange={(e) => setWizardData({ ...wizardData, taskPriority: e.target.value })}
+                        >
+                          <option value="Alta">Alta prioridade</option>
+                          <option value="Média">Prioridade Normal</option>
+                          <option value="Baixa">Disparável</option>
+                        </FormSelect>
+                      </FormGroup>
+
+                      <button onClick={handleCreateTask} className="bg-neutral-950 hover:bg-neutral-900 text-white rounded-xl p-2.5 text-xs font-bold transition-all mt-2">
                         Vincular Tarefa
                       </button>
                     </div>

@@ -147,6 +147,10 @@ export const products = pgTable('products', {
   name: text('name').notNull(),
   description: text('description'),
   status: text('status').default('Em Desenvolvimento'),
+  type: text('type').default('SaaS'), // SaaS, Mobile App, Plataforma, etc.
+  targetAudience: text('target_audience'),
+  pricingModel: text('pricing_model'), // Assinatura, Licença Única, Gratuito
+  features: jsonb('features').default([]),
   launchDate: timestamp('launch_date'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
@@ -460,6 +464,26 @@ export const milestones = pgTable('milestones', {
   tenantIdx: index('milestones_tenant_idx').on(t.tenantId),
 }));
 
+// PRODUCT LICENSES
+export const productLicenses = pgTable('product_licenses', {
+  id: serial('id').primaryKey(),
+  tenantId: uuid('tenant_id').defaultRandom().notNull(),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  productId: integer('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+  companyId: integer('company_id').references(() => companies.id, { onDelete: 'set null' }),
+  key: text('license_key').notNull().unique(),
+  status: text('status').default('Ativa'), // Ativa, Expirada, Suspensa
+  type: text('type').default('Comercial'),
+  startsAt: timestamp('starts_at').defaultNow(),
+  expiresAt: timestamp('expires_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (t) => ({
+  wsIdx: index('prod_licenses_ws_idx').on(t.workspaceId),
+  prodIdx: index('prod_licenses_prod_idx').on(t.productId),
+  tenantIdx: index('prod_licenses_tenant_idx').on(t.tenantId),
+}));
+
 // --- RELATIONS ---
 
 export const tenantsRelations = relations(tenants, ({ many }) => ({
@@ -502,6 +526,7 @@ export const workspacesRelations = relations(workspaces, ({ one, many }) => ({
   agendaEvents: many(agendaEvents),
   flows: many(flows),
   aiProviders: many(aiProviders),
+  productLicenses: many(productLicenses),
   tenant: one(tenants, { fields: [workspaces.tenantId], references: [tenants.id] }),
 }));
 
@@ -547,6 +572,7 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   workspace: one(workspaces, { fields: [products.workspaceId], references: [workspaces.id] }),
   company: one(companies, { fields: [products.companyId], references: [companies.id] }),
   projects: many(projects),
+  licenses: many(productLicenses),
   tenant: one(tenants, { fields: [products.tenantId], references: [tenants.id] }),
 }));
 
@@ -576,6 +602,13 @@ export const tasksRelations = relations(tasks, ({ one }) => ({
   sprint: one(sprints, { fields: [tasks.sprintId], references: [sprints.id] }),
   assignee: one(users, { fields: [tasks.assigneeUid], references: [users.uid] }),
   tenant: one(tenants, { fields: [tasks.tenantId], references: [tenants.id] }),
+}));
+
+export const productLicensesRelations = relations(productLicenses, ({ one }) => ({
+  workspace: one(workspaces, { fields: [productLicenses.workspaceId], references: [workspaces.id] }),
+  product: one(products, { fields: [productLicenses.productId], references: [products.id] }),
+  company: one(companies, { fields: [productLicenses.companyId], references: [companies.id] }),
+  tenant: one(tenants, { fields: [productLicenses.tenantId], references: [tenants.id] }),
 }));
 
 // PLATFORM PLANS

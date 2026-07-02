@@ -1,27 +1,8 @@
 import { useState } from 'react';
 import { 
-  X, 
-  Building2, 
-  Package, 
-  GitBranch, 
-  Terminal, 
-  Server, 
-  GitMerge, 
-  DollarSign, 
-  FileText, 
-  Briefcase, 
-  Users, 
-  Shield, 
-  BookOpen, 
-  Settings, 
-  Landmark, 
-  Heart, 
-  Laptop, 
-  Workflow, 
-  Play, 
-  Cloud,
-  Layers
+  X, Building2, Package, GitBranch, Terminal, Server, GitMerge, DollarSign, FileText, Briefcase, Users, Shield, BookOpen, Settings, Landmark, Heart, Laptop, Workflow, Play, Cloud, Layers
 } from 'lucide-react';
+import { FormGroup, FormLabel, FormInput } from './ui/FormComponents';
 
 interface IconOption {
   id: string;
@@ -109,26 +90,23 @@ export default function NewCategoryModal({ isOpen, onClose, onAddCategory }: New
         {/* Body */}
         <div className="p-8 pb-10 flex flex-col gap-6 max-h-[60vh] overflow-y-auto">
           {/* Label / Input for category name */}
-          <div className="flex flex-col gap-2 w-full">
-            <label className="text-[11px] font-bold tracking-widest uppercase text-[#64748B] px-1">NOME DA CATEGORIA</label>
-            <div className="relative group">
-              <input 
-                  type="text"
-                  placeholder="Ex: Treinamentos, Compliance, Marketing..."
-                  value={categoryName}
-                  onChange={(e) => {
-                    setCategoryName(e.target.value);
-                    if (e.target.value.trim()) setError('');
-                  }}
-                  className="w-full bg-[#FFFFFF] border border-[#0F172A0F] rounded-[16px] py-4 px-5 outline-none focus:border-[#111111]/30 transition-all text-[#111111] font-semibold placeholder:text-[#64748B]/40 shadow-[0_2px_8px_rgba(0,0,0,0.01)]"
-              />
-            </div>
+          <FormGroup>
+            <FormLabel>NOME DA CATEGORIA</FormLabel>
+            <FormInput 
+                type="text"
+                placeholder="Ex: Treinamentos, Compliance, Marketing..."
+                value={categoryName}
+                onChange={(e) => {
+                  setCategoryName(e.target.value);
+                  if (e.target.value.trim()) setError('');
+                }}
+            />
             {error && <p className="text-xs font-semibold text-red-500 mt-1 px-1">{error}</p>}
-          </div>
+          </FormGroup>
 
           {/* Grid Selection For Icons */}
           <div className="flex flex-col gap-3">
-            <label className="text-[11px] font-bold tracking-widest uppercase text-[#64748B] px-1">SELECIONE UM ÍCONE RELEVANTE</label>
+            <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider px-1">SELECIONE UM ÍCONE RELEVANTE</label>
             <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-3 p-1">
               {SELECTABLE_ICONS.map((option) => {
                 const IconComponent = option.icon;
@@ -138,10 +116,10 @@ export default function NewCategoryModal({ isOpen, onClose, onAddCategory }: New
                     key={option.id}
                     type="button"
                     onClick={() => setSelectedIconId(option.id)}
-                    className={`aspect-square p-4 rounded-[18px] border transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer ${
+                    className={`aspect-square p-4 rounded-xl border transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer ${
                       isSelected 
-                        ? 'bg-[#111111] border-[#111111] text-white shadow-md' 
-                        : 'bg-[#FFFFFF] border-[#0F172A0F] text-[#64748B] hover:border-[#111111]/20 hover:bg-[#FAFAFA]'
+                        ? 'bg-[#111111] border-[#111111] text-white shadow-md scale-[1.05]' 
+                        : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-500 hover:bg-slate-50'
                     }`}
                     title={option.label}
                   >
