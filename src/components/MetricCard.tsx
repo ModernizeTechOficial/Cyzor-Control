@@ -1,55 +1,101 @@
 import React from 'react';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { motion } from 'motion/react';
+import { LineChart, Line, ResponsiveContainer } from 'recharts';
+
+interface TrendObject {
+  value: string;
+  type: 'up' | 'down' | 'neutral';
+  label?: string;
+}
 
 interface MetricCardProps {
-  title: string;
+  title?: string;
+  label?: string; // fallback/alias
   value: string | number;
   sub?: string;
+  contextText?: string; // fallback/alias
   icon: React.ElementType;
-  trend?: string;
-  trendUp?: boolean;
+  trend?: string | TrendObject;
+  trendUp?: boolean; // fallback for string-based trends
   color?: string;
   bg?: string;
   sparklinePath?: string;
+  sparkData?: { value: number }[];
   onClick?: () => void;
 }
 
-export default function MetricCard({ 
-  title, 
-  value, 
-  sub, 
-  icon: Icon, 
-  trend, 
-  trendUp = true, 
-  color = 'text-[#111111]', 
-  bg = 'bg-slate-100/60',
+export default function MetricCard({
+  title,
+  label,
+  value,
+  sub,
+  contextText,
+  icon: Icon,
+  trend,
+  trendUp = true,
+  color,
+  bg,
   sparklinePath,
+  sparkData,
   onClick
 }: MetricCardProps) {
+  const displayTitle = title || label || '';
+  const displaySub = sub || contextText || '';
+
+  // Parse trend prop to standard format
+  let trendObj: TrendObject | null = null;
+  if (trend) {
+    if (typeof trend === 'string') {
+      trendObj = {
+        value: trend,
+        type: trendUp ? 'up' : 'down',
+        label: trend
+      };
+    } else {
+      trendObj = trend;
+    }
+  }
+
   return (
     <motion.div
-      whileHover={onClick ? { y: -4, scale: 1.01 } : {}}
+      whileHover={{ y: -3, scale: 1.005 }}
       onClick={onClick}
-      className={`bg-white border border-[#0F172A08] rounded-[24px] p-6 flex flex-col justify-between min-h-[160px] shadow-[0_4px_24px_rgba(0,0,0,0.01)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.03)] transition-all group relative overflow-hidden text-left ${onClick ? 'cursor-pointer' : ''}`}
+      className={`bg-white border border-[#0F172A08] rounded-[20px] p-4 flex flex-col gap-3.5 shadow-[0_4px_20px_rgb(0,0,0,0.01)] transition-all hover:shadow-[0_12px_30px_rgb(0,0,0,0.025)] group relative overflow-hidden text-left h-full ${
+        onClick ? 'cursor-pointer' : 'cursor-default'
+      }`}
     >
-      {/* Subtle Gradient Background */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#FAFAFA] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-bl-[100px]" />
+      {/* Premium subtle light effect at top of card on hover */}
+      <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-blue-500/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       
-      <div className="flex justify-between items-start relative z-10">
-        <div className={`w-12 h-12 rounded-2xl ${bg} border border-[#0F172A05] flex items-center justify-center group-hover:scale-110 transition-transform duration-500`}>
-          <Icon size={22} className={color} />
+      {/* Background radial soft gradient */}
+      <div className="absolute -right-6 -top-6 w-24 h-24 bg-gradient-to-bl from-slate-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-full pointer-events-none" />
+
+      {/* Header: Icon & Sparkline */}
+      <div className="flex justify-between items-center relative z-10">
+        <div className={`w-8.5 h-8.5 rounded-xl bg-[#F8FAFC] border border-[#0F172A08] flex items-center justify-center group-hover:scale-105 group-hover:bg-white group-hover:shadow-sm transition-all duration-500`}>
+          <Icon size={14} className={color || 'text-[#111111]'} strokeWidth={1.5} />
         </div>
-        
-        {trend && (
-          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide ${trendUp ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'}`}>
-            {trendUp ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-            {trend}
+
+        {/* Dynamic Sparkline rendering: recharts or custom SVG */}
+        {sparkData && sparkData.length > 0 && (
+          <div className="h-6 w-16 opacity-30 group-hover:opacity-100 transition-all duration-700">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={sparkData}>
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#111111"
+                  strokeWidth={1.5}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         )}
 
-        {!trend && sparklinePath && (
-          <div className="w-16 h-8 flex items-center justify-center overflow-hidden opacity-80 group-hover:opacity-100 transition-opacity">
+        {!sparkData && sparklinePath && (
+          <div className="w-14 h-6 flex items-center justify-center overflow-hidden opacity-30 group-hover:opacity-100 transition-opacity duration-500">
             <svg className="w-full h-full text-slate-300 group-hover:text-[#111111] transition-colors" viewBox="0 0 80 20" fill="none">
               <path
                 d={sparklinePath}
@@ -63,15 +109,49 @@ export default function MetricCard({
           </div>
         )}
       </div>
-      
-      <div className="mt-6 relative z-10">
-        <h3 className="text-[#64748B] text-[10px] font-bold uppercase tracking-widest mb-1">{title}</h3>
-        <div className="flex items-baseline gap-2">
-          <span className="text-3xl font-display font-bold text-[#111111] tracking-tight">{value}</span>
+
+      {/* Main Content: Title, Value and Trend */}
+      <div className="flex flex-col gap-1 relative z-10">
+        <span className="text-[9px] font-black text-[#64748B] uppercase tracking-[0.15em] leading-none">
+          {displayTitle}
+        </span>
+        <div className="flex items-center gap-2 mt-0.5">
+          <span className="text-2xl font-display font-bold text-[#111111] tracking-tighter leading-none">
+            {value}
+          </span>
+
+          {trendObj && (
+            <motion.div
+              initial={{ opacity: 0, x: -3 }}
+              animate={{ opacity: 1, x: 0 }}
+              className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[8px] font-black tracking-tighter shrink-0 ${
+                trendObj.type === 'up'
+                  ? 'text-green-600 bg-green-50/50'
+                  : trendObj.type === 'down'
+                  ? 'text-red-600 bg-red-50/50'
+                  : 'text-[#64748B] bg-[#F8FAFC]'
+              }`}
+            >
+              {trendObj.type === 'up' && <TrendingUp size={8} strokeWidth={3} />}
+              {trendObj.type === 'down' && <TrendingDown size={8} strokeWidth={3} />}
+              {trendObj.type === 'neutral' && <Minus size={8} strokeWidth={3} />}
+              {trendObj.value}
+            </motion.div>
+          )}
         </div>
-        {sub && <p className="text-[#64748B] text-[13px] font-medium mt-2">{sub}</p>}
       </div>
+
+      {/* Footer / Context Text */}
+      {displaySub && (
+        <div className="flex flex-col gap-1 pt-2 border-t border-[#0F172A05] relative z-10 mt-auto">
+          <span className="text-[10px] font-bold text-[#64748B] tracking-tight leading-normal opacity-85 group-hover:opacity-100 transition-opacity truncate">
+            {trendObj?.label && trendObj.label !== trendObj.value && (
+              <span className="text-[#111111] font-extrabold">{trendObj.label} </span>
+            )}
+            {displaySub}
+          </span>
+        </div>
+      )}
     </motion.div>
   );
 }
-

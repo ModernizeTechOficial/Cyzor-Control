@@ -14,6 +14,7 @@ import { useMembers, useProjects } from '../../hooks/useCyzorQueries';
 import { SkeletonDashboard } from '../common/skeletons/SkeletonDashboard';
 import { useQueryClient } from '@tanstack/react-query';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import MetricCard from '../MetricCard';
 
 export default function EquipeDashboard() {
   const { fetchWithAuth } = useAuth();
@@ -74,33 +75,37 @@ export default function EquipeDashboard() {
     <div className="flex flex-col gap-8">
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard 
-          label="Membros Ativos" 
+        <MetricCard 
+          title="Membros Ativos" 
           value={stats.members.toString()} 
           icon={Users} 
-          color="blue"
-          trend="+2 este mês"
+          trend="+2"
+          trendUp={true}
+          contextText="membros ativos no workspace este mês"
         />
-        <StatCard 
-          label="Convites Pendentes" 
+        <MetricCard 
+          title="Convites Pendentes" 
           value={stats.activeInvitations.toString()} 
           icon={Mail} 
-          color="amber"
-          trend="Expira em 7 dias"
+          trend="Pendente"
+          trendUp={true}
+          contextText="aguardando aceitação por email"
         />
-        <StatCard 
-          label="Ações (24h)" 
+        <MetricCard 
+          title="Ações (24h)" 
           value={stats.actionsToday.toString()} 
           icon={Activity} 
-          color="emerald"
-          trend="+12% vs ontem"
+          trend="+12%"
+          trendUp={true}
+          contextText="de atividade registrada em log hoje"
         />
-        <StatCard 
-          label="Nível de Segurança" 
+        <MetricCard 
+          title="Nível de Segurança" 
           value="Máximo" 
           icon={ShieldCheck} 
-          color="indigo"
           trend="Auditado"
+          trendUp={true}
+          contextText="políticas de segurança e auditoria ativas"
         />
       </div>
 
@@ -187,30 +192,6 @@ export default function EquipeDashboard() {
             <UserPlus size={16} className="group-hover:scale-110 transition-transform" /> Convidar Membro
           </button>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function StatCard({ label, value, icon: Icon, color, trend }: any) {
-  const colors: any = {
-    blue: 'bg-blue-50 text-blue-600 border-blue-100',
-    amber: 'bg-amber-50 text-amber-600 border-amber-100',
-    emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-    indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100',
-  };
-
-  return (
-    <div className="bg-white border border-[#0F172A0F] rounded-[24px] p-6 shadow-[0_4px_20px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all group">
-      <div className="flex items-center justify-between mb-4">
-        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border ${colors[color]}`}>
-          <Icon size={22} strokeWidth={2.5} />
-        </div>
-        <span className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-widest group-hover:text-[#111111] transition-colors">{trend}</span>
-      </div>
-      <div className="flex flex-col">
-        <span className="text-2xl font-display font-bold text-[#111111] tracking-tight">{value}</span>
-        <span className="text-sm font-bold text-[#64748B] tracking-tight uppercase tracking-wider">{label}</span>
       </div>
     </div>
   );

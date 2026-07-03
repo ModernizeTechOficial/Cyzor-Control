@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
-import { GitBranch, Users, DollarSign, Download, CloudLightning, Key, Clock, Rocket } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { GitBranch, Users, DollarSign, Key } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
+import MetricCard from '../../MetricCard';
 
 export default function WorkspaceKPIs({ product }: { product: any }) {
   const { token } = useAuth();
@@ -25,64 +26,44 @@ export default function WorkspaceKPIs({ product }: { product: any }) {
     return `R$ ${val}`;
   };
 
-  const kpis = [
-    {
-      title: 'Projetos',
-      value: kpiData?.projects?.count || 0,
-      subtext: 'Neste workspace',
-      icon: GitBranch,
-      color: 'text-blue-500',
-      bg: 'bg-blue-500/10'
-    },
-    {
-      title: 'Clientes',
-      value: kpiData?.projects?.count ? kpiData.projects.count * 3 : 0, // Mocked ratio since we don't have real clients per product
-      subtext: 'Estimativa baseada em projetos',
-      icon: Users,
-      color: 'text-purple-500',
-      bg: 'bg-purple-500/10'
-    },
-    {
-      title: 'Receita (MRR)',
-      value: formatCurrency(kpiData?.revenue?.total || 0),
-      subtext: 'Receita real vinculada',
-      icon: DollarSign,
-      color: 'text-emerald-500',
-      bg: 'bg-emerald-500/10'
-    },
-    {
-      title: 'Licenças Ativas',
-      value: '0',
-      subtext: 'Em desenvolvimento',
-      icon: Key,
-      color: 'text-rose-500',
-      bg: 'bg-rose-500/10'
-    }
-  ];
+  const productCount = kpiData?.projects?.count || 0;
+  const clientsEstimate = kpiData?.projects?.count ? kpiData.projects.count * 3 : 0;
+  const mrrRevenue = formatCurrency(kpiData?.revenue?.total || 0);
 
   return (
-    <div className="max-w-[1600px] mx-auto w-full grid grid-cols-2 md:grid-cols-4 gap-4">
-      {kpis.map((kpi, i) => (
-        <div 
-          key={i}
-          className="bg-white border border-[#0F172A0F] rounded-[24px] p-5 shadow-[0_8px_30px_rgb(0,0,0,0.02)] flex flex-col justify-between min-h-[130px] group hover:border-[#0F172A15] hover:shadow-md transition-all"
-        >
-          <div className="flex justify-between items-start">
-            <div className={`w-10 h-10 rounded-xl ${kpi.bg} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
-              <kpi.icon size={18} className={kpi.color} />
-            </div>
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse opacity-50" />
-          </div>
-          
-          <div className="mt-4">
-            <h3 className="text-[#64748B] text-[10px] font-bold uppercase tracking-widest mb-1">{kpi.title}</h3>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-display font-bold text-[#111111] tracking-tight">{kpi.value}</span>
-            </div>
-            <p className="text-[11px] font-semibold text-[#64748B] mt-1">{kpi.subtext}</p>
-          </div>
-        </div>
-      ))}
+    <div className="max-w-[1600px] mx-auto w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+      <MetricCard
+        title="Projetos"
+        value={productCount.toString()}
+        trend="Workspace"
+        trendUp={true}
+        contextText="projetos em andamento vinculados a este produto"
+        icon={GitBranch}
+      />
+      <MetricCard
+        title="Clientes"
+        value={clientsEstimate.toString()}
+        trend="Estimativa"
+        trendUp={true}
+        contextText="estimativa baseada nos contratos ativos"
+        icon={Users}
+      />
+      <MetricCard
+        title="Receita (MRR)"
+        value={mrrRevenue}
+        trend="Vinculada"
+        trendUp={true}
+        contextText="faturamento recorrente mensal associado"
+        icon={DollarSign}
+      />
+      <MetricCard
+        title="Licenças Ativas"
+        value="0"
+        trend="Pendente"
+        trendUp={true}
+        contextText="módulo de licenças em desenvolvimento"
+        icon={Key}
+      />
     </div>
   );
 }

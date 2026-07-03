@@ -1,5 +1,6 @@
 import { Building2, Package, FolderGit2, Users, CreditCard, CheckSquare, ArrowUpRight } from 'lucide-react';
 import { motion } from 'motion/react';
+import MetricCard from '../MetricCard';
 
 interface KPIProps {
   metrics: {
@@ -97,54 +98,23 @@ export default function HomeKPIs({ metrics, setCurrentView }: KPIProps) {
       
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         {cards.map((card, i) => (
-          <motion.div
+          <MetricCard
             key={i}
-            whileHover={{ y: -2, scale: 1.01 }}
+            title={card.label}
+            value={card.value}
+            icon={card.icon}
+            trend={{
+              value: card.trend,
+              type: 'up',
+              label: card.trend
+            }}
+            contextText={card.comparison}
+            sparklinePath={card.sparklinePath}
             onClick={() => setCurrentView(card.view as any)}
-            className="bg-white border border-[#0F172A08] rounded-[24px] p-5 flex flex-col justify-between h-[160px] shadow-[0_4px_20px_rgba(0,0,0,0.01)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.02)] transition-all group cursor-pointer"
-          >
-            {/* Header: Icon & Sparkline */}
-            <div className="flex items-center justify-between gap-2">
-              <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${card.color}`}>
-                <card.icon size={16} strokeWidth={2} />
-              </div>
-              
-              {/* Discrete SVG Sparkline */}
-              <div className="w-16 h-8 flex items-center justify-center overflow-hidden opacity-80 group-hover:opacity-100 transition-opacity">
-                <svg className="w-full h-full text-slate-300 group-hover:text-blue-500 transition-colors" viewBox="0 0 80 20" fill="none">
-                  <path
-                    d={card.sparklinePath}
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
-            </div>
-
-            {/* Metrics & Trend */}
-            <div className="flex flex-col mt-4">
-              <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider leading-none">
-                {card.label}
-              </span>
-              <span className="text-2xl font-bold text-[#111111] tracking-tight mt-1 leading-none">
-                {card.value}
-              </span>
-              
-              <div className="flex items-center gap-1.5 mt-2">
-                <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-0.5">
-                  <ArrowUpRight size={10} strokeWidth={2.5} /> {card.trend}
-                </span>
-                <span className="text-[9px] text-[#94A3B8] font-medium tracking-tight">
-                  {card.comparison}
-                </span>
-              </div>
-            </div>
-          </motion.div>
+          />
         ))}
       </div>
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Building2, 
   Save, 
@@ -13,24 +13,104 @@ import {
 import { useAuth } from '../../context/AuthContext';
 
 export default function WorkspaceSettingsTab() {
-  const { activeWorkspace } = useAuth();
+  const { activeWorkspace, fetchWithAuth, syncSaaSState } = useAuth();
   const [formData, setFormData] = useState({
-    name: activeWorkspace?.name || '',
-    description: (activeWorkspace?.settings as any)?.description || '',
-    slug: activeWorkspace?.name?.toLowerCase().replace(/\s+/g, '-') || 'workspace-slug',
+    name: '',
+    description: '',
+    slug: 'workspace-slug',
     isPublic: false
   });
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        setLoading(true);
+        const res = await fetchWithAuth('/api/workspace-settings');
+        if (res.ok) {
+          const data = await res.json();
+          setFormData({
+            name: data.workspace?.name || '',
+            description: data.workspace?.settings?.description || '',
+            slug: data.workspace?.name?.toLowerCase().replace(/\s+/g, '-') || 'workspace-slug',
+            isPublic: false
+          });
+        }
+      } catch (err) {
+        console.error("Error loading workspace settings:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadSettings();
+  }, [activeWorkspace?.id]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
-    // Simulate API call
-    setTimeout(() => {
+    if (!formData.name.trim()) return;
+    try {
+      setSaving(true);
+      const res = await fetchWithAuth('/api/workspace-settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          settings: {
+            ...(activeWorkspace?.settings || {}),
+            description: formData.description
+          }
+        })
+      });
+      if (res.ok) {
+        await syncSaaSState();
+        alert('Configurações do Workspace atualizadas com sucesso!');
+      } else {
+        const err = await res.json();
+        alert(`Erro ao salvar: ${err.error || 'Erro desconhecido'}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Erro de conexão ao salvar as configurações.');
+    } finally {
       setSaving(false);
-      alert('Configurações do Workspace atualizadas com sucesso!');
-    }, 800);
+    }
   };
+
+  const handleDeleteWorkspace = async () => {
+    if (!activeWorkspace?.id) return;
+    const confirmDelete = confirm(
+      `ATENÇÃO: Tem certeza que deseja EXCLUIR permanentemente o workspace "${activeWorkspace.name}"?\nEsta ação é irreversível e apagará todos os dados associados.`
+    );
+    if (!confirmDelete) return;
+
+    try {
+      const res = await fetchWithAuth(`/api/workspaces/${activeWorkspace.id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        alert('Workspace excluído com sucesso!');
+        // Refresh the app's state so it switches active workspace or logs out
+        window.location.reload();
+      } else {
+        const err = await res.json();
+        alert(`Erro ao excluir: ${err.error || 'Erro desconhecido'}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Erro de conexão ao excluir o workspace.');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24 text-sm text-[#64748B] font-medium">
+        Carregando configurações do workspace...
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-8 h-full max-w-4xl">
@@ -149,7 +229,11 @@ export default function WorkspaceSettingsTab() {
                 Isso removerá permanentemente todos os projetos, produtos e dados associados a este workspace. Esta ação não pode ser desfeita.
               </p>
             </div>
-            <button type="button" className="bg-rose-600 text-white px-6 py-3 rounded-2xl text-xs font-bold hover:bg-rose-700 transition-all shadow-lg shadow-rose-600/10 whitespace-nowrap">
+            <button 
+              type="button" 
+              onClick={handleDeleteWorkspace}
+              className="bg-rose-600 text-white px-6 py-3 rounded-2xl text-xs font-bold hover:bg-rose-700 transition-all shadow-lg shadow-rose-600/10 whitespace-nowrap"
+            >
               Excluir Workspace
             </button>
           </div>

@@ -158,7 +158,10 @@ export default function ConvitesTab() {
                   >
                     <Trash2 size={14} /> Cancelar
                   </button>
-                  <button className="flex-1 py-2.5 rounded-xl bg-[#FAFAFA] text-xs font-bold text-[#111111] hover:bg-[#F1F5F9] transition-all flex items-center justify-center gap-1.5">
+                  <button 
+                    onClick={() => alert(`Convite para ${inv.email} reenviado!`)}
+                    className="flex-1 py-2.5 rounded-xl bg-[#FAFAFA] text-xs font-bold text-[#111111] hover:bg-[#F1F5F9] transition-all flex items-center justify-center gap-1.5"
+                  >
                     <RefreshCcw size={14} /> Reenviar
                   </button>
                 </>

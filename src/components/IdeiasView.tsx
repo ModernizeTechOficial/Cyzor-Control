@@ -10,8 +10,6 @@ import { Plus, Download, Upload } from 'lucide-react';
 import TimelineView, { TimelineItem } from './common/TimelineView';
 
 import IdeaStats from './ideias/IdeaStats';
-import IdeaInsights from './ideias/IdeaInsights';
-import IdeaCharts from './ideias/IdeaCharts';
 import ProductActionBar from './produtos/ProductActionBar';
 
 import BoardToolbar from './common/management/BoardToolbar';
@@ -330,82 +328,74 @@ export default function IdeiasView() {
         arquivadas={arquivadas}
       />
 
-      <IdeaCharts />
-
-      <main className="grid grid-cols-1 xl:grid-cols-5 gap-6 sm:gap-8 items-start">
-        <section className="xl:col-span-4 flex flex-col gap-5">
-          <BoardToolbar 
-            innerSearch={searchQuery}
-            setInnerSearch={setSearchQuery}
-            viewMode={viewMode}
-            setViewMode={setViewMode}
-            statusFilter={statusFilter}
-            setStatusFilter={setStatusFilter}
-          />
-          
-          <div className="w-full overflow-hidden">
-            {viewMode === 'kanban' && (
-              <BoardKanban 
-                columns={IDEIA_COLUMNS}
-                items={kanbanItems}
-                onDrop={handleDropKanban}
-                onItemClick={setSelectedIdea}
-                onAddClick={() => setIsNewModalOpen(true)}
-                emptyMessage="Nenhuma ideia nesta etapa."
-              />
-            )}
-
-            {viewMode === 'list' && (
-              <BoardList 
-                columns={[
-                  { key: 'title', label: 'Ideia' },
-                  { key: 'priority', label: 'Prioridade' },
-                  { key: 'status', label: 'Status' },
-                  { key: 'score', label: 'Score' }
-                ]}
-                items={filteredIdeas}
-                onItemClick={setSelectedIdea}
-                renderCell={(item, colKey) => {
-                  if (colKey === 'title') return <div className="font-bold text-neutral-900">{item.name}</div>;
-                  if (colKey === 'priority') return (
-                    <span className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded ${
-                      item.prioridade === 'Alta' ? 'bg-red-50 text-red-700 border border-red-100' :
-                      item.prioridade === 'Média' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
-                      'bg-slate-50 text-slate-700 border border-slate-100'
-                    }`}>
-                      {item.prioridade}
-                    </span>
-                  );
-                  if (colKey === 'status') {
-                    const col = IDEIA_COLUMNS.find(c => c.id === item.column);
-                    return <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${col?.badge || ''}`}>{col?.label || item.column}</span>;
-                  }
-                  if (colKey === 'score') return <span className="text-slate-500">{item.score}%</span>;
-                  return null;
-                }}
-              />
-            )}
-
-            {(viewMode === 'timeline' || viewMode === 'gantt') && (
-              <div className="w-full bg-white p-6 rounded-[24px] border border-[#0F172A08] shadow-sm">
-                <TimelineView 
-                  items={timelineItems}
-                  onUpdateItemDates={handleUpdateIdeaDates}
-                  onItemClick={(rawItem) => setSelectedIdea(rawItem)}
-                  onDeleteItem={(ideaId) => {
-                    setIdeas(prev => prev.filter(i => i.id !== ideaId));
-                  }}
-                  title="Cronograma do Banco de Ideias"
-                  emptyMessage="Nenhuma ideia capturada para exibir na linha do tempo."
-                />
-              </div>
-            )}
-          </div>
-        </section>
+      <main className="w-full flex flex-col gap-5">
+        <BoardToolbar 
+          innerSearch={searchQuery}
+          setInnerSearch={setSearchQuery}
+          viewMode={viewMode}
+          setViewMode={setViewMode}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+        />
         
-        <section className="flex flex-col gap-6 text-left xl:col-span-1">
-          <IdeaInsights />
-        </section>
+        <div className="w-full overflow-hidden">
+          {viewMode === 'kanban' && (
+            <BoardKanban 
+              columns={IDEIA_COLUMNS}
+              items={kanbanItems}
+              onDrop={handleDropKanban}
+              onItemClick={setSelectedIdea}
+              onAddClick={() => setIsNewModalOpen(true)}
+              emptyMessage="Nenhuma ideia nesta etapa."
+            />
+          )}
+
+          {viewMode === 'list' && (
+            <BoardList 
+              columns={[
+                { key: 'title', label: 'Ideia' },
+                { key: 'priority', label: 'Prioridade' },
+                { key: 'status', label: 'Status' },
+                { key: 'score', label: 'Score' }
+              ]}
+              items={filteredIdeas}
+              onItemClick={setSelectedIdea}
+              renderCell={(item, colKey) => {
+                if (colKey === 'title') return <div className="font-bold text-neutral-900">{item.name}</div>;
+                if (colKey === 'priority') return (
+                  <span className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                    item.prioridade === 'Alta' ? 'bg-red-50 text-red-700 border border-red-100' :
+                    item.prioridade === 'Média' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
+                    'bg-slate-50 text-slate-700 border border-slate-100'
+                  }`}>
+                    {item.prioridade}
+                  </span>
+                );
+                if (colKey === 'status') {
+                  const col = IDEIA_COLUMNS.find(c => c.id === item.column);
+                  return <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${col?.badge || ''}`}>{col?.label || item.column}</span>;
+                }
+                if (colKey === 'score') return <span className="text-slate-500">{item.score}%</span>;
+                return null;
+              }}
+            />
+          )}
+
+          {(viewMode === 'timeline' || viewMode === 'gantt') && (
+            <div className="w-full bg-white p-6 rounded-[24px] border border-[#0F172A08] shadow-sm">
+              <TimelineView 
+                items={timelineItems}
+                onUpdateItemDates={handleUpdateIdeaDates}
+                onItemClick={(rawItem) => setSelectedIdea(rawItem)}
+                onDeleteItem={(ideaId) => {
+                  setIdeas(prev => prev.filter(i => i.id !== ideaId));
+                }}
+                title="Cronograma do Banco de Ideias"
+                emptyMessage="Nenhuma ideia capturada para exibir na linha do tempo."
+              />
+            </div>
+          )}
+        </div>
       </main>
 
       <ProductActionBar selectedCount={selectedIds.length} onClear={() => setSelectedIds([])} />

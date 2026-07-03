@@ -24,6 +24,9 @@ export default function MembrosTab() {
   const [search, setSearch] = useState('');
   const [selectedMemberFor360, setSelectedMemberFor360] = useState<any>(null);
   const [activeModalTab, setActiveModalTab] = useState<'dados' | 'visao_360'>('dados');
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [newInvite, setNewInvite] = useState({ email: '', role: 'MEMBER' });
+  const [sendingInvite, setSendingInvite] = useState(false);
 
   const fetchMembers = async () => {
     try {
@@ -48,11 +51,43 @@ export default function MembrosTab() {
     try {
       const res = await fetchWithAuth(`/api/workspace/members/${memberId}`, {
         method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({ role: newRole })
       });
       if (res.ok) fetchMembers();
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleSendInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newInvite.email) return;
+    try {
+      setSendingInvite(true);
+      const res = await fetchWithAuth('/api/workspace/invitations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newInvite)
+      });
+      if (res.ok) {
+        setShowInviteModal(false);
+        setNewInvite({ email: '', role: 'MEMBER' });
+        alert('Convite enviado com sucesso!');
+        fetchMembers();
+      } else {
+        const err = await res.json();
+        alert(`Erro ao enviar convite: ${err.error || 'Erro desconhecido'}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao enviar o convite.');
+    } finally {
+      setSendingInvite(false);
     }
   };
 
@@ -88,7 +123,10 @@ export default function MembrosTab() {
             className="w-full bg-[#FAFAFB] border-none rounded-xl py-2.5 pl-11 pr-4 text-sm font-medium focus:ring-2 focus:ring-black/5 transition-all outline-none text-[#111111]"
           />
         </div>
-        <button className="flex items-center gap-2 bg-black text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-neutral-800 transition-all shadow-sm">
+        <button 
+          onClick={() => setShowInviteModal(true)}
+          className="flex items-center gap-2 bg-black text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-neutral-800 transition-all shadow-sm"
+        >
           <UserPlus size={16} /> Convidar Membro
         </button>
       </div>
@@ -285,6 +323,71 @@ export default function MembrosTab() {
             </div>
           )}
         </ModalContainer>
+      )}
+
+      {/* Invite Modal */}
+      {showInviteModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[32px] w-full max-w-md overflow-hidden shadow-[0_20px_70px_rgba(0,0,0,0.15)] animate-in zoom-in duration-200">
+            <div className="p-8 pb-0 flex items-center justify-between">
+              <div className="w-12 h-12 rounded-2xl bg-black flex items-center justify-center text-white shadow-lg">
+                <UserPlus size={24} />
+              </div>
+              <button 
+                onClick={() => setShowInviteModal(false)}
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors text-[#64748B]"
+              >
+                <X size={20} strokeWidth={2.5} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSendInvite} className="p-8 pt-6 flex flex-col gap-6">
+              <div>
+                <h3 className="text-xl font-bold text-[#111111] tracking-tight">Convidar para a Equipe</h3>
+                <p className="text-sm text-[#64748B] font-medium">O novo membro receberá um e-mail com o link de acesso</p>
+              </div>
+
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest px-1">E-mail do Convidado</label>
+                  <input 
+                    type="email" 
+                    required
+                    placeholder="exemplo@email.com"
+                    value={newInvite.email}
+                    onChange={(e) => setNewInvite({ ...newInvite, email: e.target.value })}
+                    className="w-full bg-[#FAFAFB] border border-[#0F172A0A] rounded-2xl p-4 text-sm font-bold focus:ring-2 focus:ring-black/5 outline-none transition-all"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest px-1">Papel / Permissões</label>
+                  <select 
+                    value={newInvite.role}
+                    onChange={(e) => setNewInvite({ ...newInvite, role: e.target.value })}
+                    className="w-full bg-[#FAFAFB] border border-[#0F172A0A] rounded-2xl p-4 text-sm font-bold focus:ring-2 focus:ring-black/5 outline-none transition-all appearance-none cursor-pointer"
+                  >
+                    <option value="MEMBER">Membro Padrão</option>
+                    <option value="ADMIN">Administrador</option>
+                    <option value="MANAGER">Gerente de Projeto</option>
+                    <option value="DEVELOPER">Desenvolvedor</option>
+                    <option value="DESIGNER">Designer</option>
+                    <option value="FINANCE">Financeiro</option>
+                    <option value="VIEWER">Apenas Leitura</option>
+                  </select>
+                </div>
+              </div>
+
+              <button 
+                type="submit"
+                disabled={sendingInvite}
+                className="w-full py-4 rounded-2xl bg-black text-white text-sm font-bold hover:bg-neutral-800 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-black/10"
+              >
+                {sendingInvite ? 'Enviando...' : 'Enviar Convite'}
+              </button>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -93,7 +93,7 @@ export default function BoardKanban({
                         exit={{ opacity: 0, scale: 0.9 }}
                         transition={{ duration: 0.2, ease: "easeInOut" }}
                         draggable
-                        onDragStart={(e) => handleDragStart(e, p.id)}
+                        onDragStartCapture={(e) => handleDragStart(e, p.id)}
                         className="bg-white p-4 rounded-xl border border-neutral-200/50 hover:border-neutral-300 shadow-[0_1px_3px_rgba(0,0,0,0.01)] hover:shadow-sm cursor-grab active:cursor-grabbing transition-all text-left relative group"
                       >
                         {/* Starred Favorite */}

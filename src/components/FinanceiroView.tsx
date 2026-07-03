@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
+import { jsPDF } from 'jspdf';
+import { useBranding } from '../hooks/useBranding';
 import MetricCard from './MetricCard';
 import StandardHeader from './layout/StandardHeader';
 import FinanceEntryModal from './FinanceEntryModal';
@@ -24,6 +26,7 @@ export default function FinanceiroView() {
   const [projects, setProjects] = useState<any[]>([]);
   useEffect(() => { if (projectsData) setProjects(projectsData); }, [projectsData]);
   const { fetchWithAuth, activeWorkspace } = useAuth();
+  const { iconUrl, appName } = useBranding();
   
   const fetchData = async () => {
     if (!activeWorkspace) return;
@@ -133,6 +136,249 @@ export default function FinanceiroView() {
 
   const formatCurrency = (val: number) => `R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+  const printTableHeader = (doc: jsPDF, currentY: number) => {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.5);
+    doc.setTextColor(100, 116, 139); // #64748B
+    
+    doc.text("DATA", 20, currentY);
+    doc.text("DESCRIÇÃO", 40, currentY);
+    doc.text("CATEGORIA", 100, currentY);
+    doc.text("EMPRESA", 135, currentY);
+    doc.text("VALOR", 170, currentY, { align: "right" });
+    doc.text("STATUS", 190, currentY, { align: "right" });
+    
+    doc.setDrawColor(226, 232, 240); // #E2E8F0
+    doc.setLineWidth(0.4);
+    doc.line(20, currentY + 2.5, 190, currentY + 2.5);
+    return currentY + 7.5;
+  };
+
+  const getBase64Image = (imgUrl: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.setAttribute('crossOrigin', 'anonymous');
+      img.src = imgUrl;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          try {
+            const dataURL = canvas.toDataURL('image/png');
+            resolve(dataURL);
+          } catch (e) {
+            reject(e);
+          }
+        } else {
+          reject(new Error('Canvas context is null'));
+        }
+      };
+      img.onerror = (e) => reject(e);
+    });
+  };
+
+  const handleExportPDF = async () => {
+    try {
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const now = new Date();
+      const formattedDate = now.toLocaleDateString('pt-BR') + ' às ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+      // Brand Icon / Logo & Title Shift
+      let titleX = 20;
+      let hasCustomImage = false;
+
+      if (iconUrl) {
+        try {
+          const base64Img = await getBase64Image(iconUrl);
+          doc.addImage(base64Img, 'PNG', 20, 18, 11, 11);
+          hasCustomImage = true;
+          titleX = 35; // Shift title text to right to balance layout
+        } catch (e) {
+          console.warn("Failed to load branding iconUrl, falling back to vector logo", e);
+        }
+      }
+
+      if (!hasCustomImage) {
+        // Draw elegant vector branding placeholder
+        // Rounded dark card
+        doc.setFillColor(17, 17, 17); // #111111
+        doc.roundedRect(20, 18, 11, 11, 2.5, 2.5, "F");
+        
+        // Left accent bar inside logo
+        doc.setFillColor(59, 130, 246); // Blue accent dot/bar #3B82F6
+        doc.rect(20.5, 18.5, 1.2, 1.2, "F");
+
+        // Dynamic first letter of appName
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        const letter = (appName || "C").charAt(0).toUpperCase();
+        doc.text(letter, 25.5, 26, { align: "center" });
+
+        titleX = 35; // Shift title text to right to balance layout
+      }
+
+      // Brand Title
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(18);
+      doc.setTextColor(17, 17, 17); // #111111
+      doc.text((appName || "CYZOR CONTROL").toUpperCase(), titleX, 25);
+
+      // Report Subtitle
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(100, 116, 139); // #64748B
+      doc.text("Relatório de Saúde Financeira & Transações", titleX, 29.5);
+
+      // Workspace Info & Date
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184); // #94A3B8
+      doc.text(`Workspace: ${activeWorkspace?.name || 'Geral'}`, 190, 25, { align: 'right' });
+      doc.text(`Gerado em: ${formattedDate}`, 190, 30, { align: 'right' });
+
+      // Divider Line
+      doc.setDrawColor(241, 245, 249); // #F1F5F9
+      doc.setLineWidth(0.8);
+      doc.line(20, 37, 190, 37);
+
+      // KPI Section Title
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(17, 17, 17); // #111111
+      doc.text("Resumo de Indicadores", 20, 48);
+
+      // Render custom KPI Grid
+      const kpis = [
+        { label: "RECEITA MENSAL", val: formatCurrency(revenueMensal), color: [16, 185, 129] }, // emerald
+        { label: "RECEITA ANUAL", val: formatCurrency(revenueAnual), color: [79, 70, 229] }, // indigo
+        { label: "CUSTOS MENSAIS", val: formatCurrency(custoMensal), color: [225, 29, 72] }, // rose
+        { label: "LUCRO LÍQUIDO", val: formatCurrency(lucroEstimado), color: [37, 99, 235] }, // blue
+        { label: "PIPELINE PROJ.", val: formatCurrency(projetoRevenue), color: [71, 85, 105] } // slate
+      ];
+
+      let xOffset = 20;
+      kpis.forEach((kpi) => {
+        // Draw card background
+        doc.setFillColor(250, 250, 251); // #FAFAFB
+        doc.roundedRect(xOffset, 53, 31, 18, 3, 3, "F");
+
+        // Top border accent
+        doc.setFillColor(kpi.color[0], kpi.color[1], kpi.color[2]);
+        doc.rect(xOffset, 53, 31, 1.5, "F");
+
+        // Label
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(6.5);
+        doc.setTextColor(100, 116, 139); // #64748B
+        doc.text(kpi.label, xOffset + 2, 59);
+
+        // Value
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8.5);
+        doc.setTextColor(17, 17, 17); // #111111
+        const valText = kpi.val.replace("R$ ", "");
+        doc.text(`R$ ${valText}`, xOffset + 2, 66);
+
+        xOffset += 35;
+      });
+
+      // Transaction Section Title
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(17, 17, 17); // #111111
+      doc.text("Últimas Transações", 20, 85);
+
+      // Table Header Setup
+      let currentY = 92;
+      currentY = printTableHeader(doc, currentY);
+
+      // Rows
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.5);
+      
+      tableData.forEach((row, index) => {
+        // Check if page overflow
+        if (currentY > 270) {
+          doc.addPage();
+          // Print page header on new page
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(10);
+          doc.setTextColor(17, 17, 17);
+          doc.text("CYZOR CONTROL - Relatório de Transações (Cont.)", 20, 20);
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(7);
+          doc.setTextColor(148, 163, 184);
+          doc.text(`Página ${doc.getNumberOfPages()}`, 190, 20, { align: 'right' });
+          
+          doc.setDrawColor(241, 245, 249);
+          doc.setLineWidth(0.5);
+          doc.line(20, 23, 190, 23);
+
+          currentY = printTableHeader(doc, 28);
+        }
+
+        const isPositive = row.type === 'RECEITA';
+        const dateStr = new Date(row.date || Date.now()).toLocaleDateString('pt-BR');
+        const descStr = row.description || '-';
+        const categoryStr = row.category || 'Geral';
+        const companyStr = row.company || '-';
+        const amountStr = (isPositive ? '+ ' : '- ') + formatCurrency(Number(row.amount));
+
+        // Background alternate row color
+        if (index % 2 === 0) {
+          doc.setFillColor(252, 252, 253); // #FCFCFD
+          doc.rect(20, currentY - 5.5, 170, 7.5, "F");
+        }
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(17, 17, 17);
+        doc.text(dateStr, 20, currentY);
+
+        doc.setFont("helvetica", "normal");
+        doc.text(descStr.length > 28 ? descStr.substring(0, 26) + "..." : descStr, 40, currentY);
+        doc.text(categoryStr.length > 15 ? categoryStr.substring(0, 13) + "..." : categoryStr, 100, currentY);
+        doc.text(companyStr.length > 18 ? companyStr.substring(0, 16) + "..." : companyStr, 135, currentY);
+
+        // Valor
+        doc.setFont("helvetica", "bold");
+        if (isPositive) {
+          doc.setTextColor(16, 185, 129); // Green
+        } else {
+          doc.setTextColor(225, 29, 72); // Rose
+        }
+        doc.text(amountStr, 170, currentY, { align: "right" });
+
+        // Status
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(16, 185, 129);
+        doc.text("Liquidado", 190, currentY, { align: "right" });
+
+        currentY += 7.5;
+      });
+
+      // Footer signature
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      doc.setTextColor(148, 163, 184); // #94A3B8
+      doc.text("Cyzor Control - Gestão Corporativa Avançada de Alta Performance", 105, 288, { align: 'center' });
+
+      doc.save(`relatorio_financeiro_${activeWorkspace?.name?.toLowerCase().replace(/\s+/g, '_') || 'workspace'}.pdf`);
+    } catch (err) {
+      console.error("Failed to generate PDF report:", err);
+      alert("Houve um erro ao gerar o relatório em PDF. Por favor, tente novamente.");
+    }
+  };
+
     return (
       <div className="w-full mx-auto pb-12 flex flex-col gap-10 animate-in fade-in duration-500 relative text-left px-4 sm:px-6 lg:px-10">
         <StandardHeader 
@@ -141,7 +387,7 @@ export default function FinanceiroView() {
           actions={[
             {
               label: 'Exportar',
-              onClick: () => {},
+              onClick: handleExportPDF,
               variant: 'secondary'
             },
             {

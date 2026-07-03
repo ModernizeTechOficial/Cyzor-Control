@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   GitBranch, Plus, Search, Sparkles, TrendingUp, Users, 
   ChevronRight, Calendar, Star, MessageSquare, Send, Check, Settings, 
   RefreshCw, Layers, Shield, DollarSign, Clock, AlertCircle, X,
-  Filter, ArrowUpRight, CheckSquare, ChevronLeft, LogIn, User, CheckCircle2
+  Filter, ArrowUpRight, CheckSquare, ChevronLeft, User, CheckCircle2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useProjects, useCompanies, useTasks, useFinance, useDocuments, useMembers } from '../hooks/useCyzorQueries';
@@ -12,9 +12,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import StandardHeader from './layout/StandardHeader';
 import MetricCard from './MetricCard';
-import { showSuccess, showError } from '../lib/alerts';
+import { showError, showSuccess } from '../lib/alerts';
+import Swal from 'sweetalert2';
 import ProjectDetailsModal from './ProjectDetailsModal';
 import NewProjectModal from './NewProjectModal';
+import ProjectList from './ProjectList';
+import BoardKanban from './common/management/BoardKanban';
+import BoardToolbar from './common/management/BoardToolbar';
+import TimelineView from './common/TimelineView';
+import AbaTimeline from './project-tabs/AbaTimeline';
 import Markdown from 'react-markdown';
 import { FormGroup, FormLabel, FormInput, FormSelect, FormTextarea } from './ui/FormComponents';
 
@@ -46,6 +52,7 @@ export default function ProjetosView() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedColumnId, setSelectedColumnId] = useState<string | undefined>(undefined);
   const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [currentView, setCurrentView] = useState<'kanban' | 'list' | 'timeline' | 'gantt'>('kanban');
   
   // Global & Kanban search/filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -170,6 +177,7 @@ export default function ProjetosView() {
   };
 
   const handleDrop = async (e: React.DragEvent, targetColumn: string) => {
+    e.preventDefault();
     const projectIdStr = e.dataTransfer.getData('projectId');
     if (!projectIdStr) return;
 
@@ -188,11 +196,22 @@ export default function ProjetosView() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus })
       });
-      if (!res.ok) throw new Error();
-      showSuccess(`Status de "${movedProject.name}" atualizado.`);
+      
+      if (res.ok) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Projeto atualizado!',
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 2000
+        });
+      } else {
+        throw new Error();
+      }
     } catch {
       showError('Não foi possível persistir a alteração no servidor.');
-      syncPlatformData(); // Relock state
+      syncPlatformData(); // Revert
     }
   };
 
@@ -332,6 +351,24 @@ export default function ProjetosView() {
     const matchesClient = clientFilter === 'Todos' || p.companyId?.toString() === clientFilter || p.company === clientFilter;
     return matchesSearch && matchesPriority && matchesClient;
   });
+
+  // Memoized kanban items for stability
+  const kanbanItems = useMemo(() => {
+    return filteredProjects.map(p => ({
+      id: p.id,
+      title: p.name,
+      subtitle: p.company || p.companyName || 'CYZOR Cliente',
+      owner: p.owner,
+      priority: p.priority,
+      dueDate: p.dueDate,
+      progress: Number(p.progress || 0),
+      budgetOrValue: Number(p.budget || 0),
+      budgetLabel: 'Faturamento',
+      isStarred: favorites.includes(p.id),
+      status: mapStatusToColumn(p.status),
+      raw: p
+    }));
+  }, [filteredProjects, favorites]);
 
   // Hot Smart Search filtering for global header bar
   const getSmartSearchResults = () => {
@@ -483,242 +520,91 @@ export default function ProjetosView() {
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━
           KANBAN BOARD & COMPACT SIDEBAR
           ━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <main className="px-6 sm:px-8 py-6 grid grid-cols-1 xl:grid-cols-5 gap-6 sm:gap-8 items-start">
+      <main className="px-6 sm:px-8 py-6 flex flex-col gap-5">
         
-        {/* KANBAN SECTION - COVERS 80% AREA (4 OUT OF 5 COLUMNS) */}
-        <section className="xl:col-span-4 flex flex-col gap-5">
+        {/* KANBAN SECTION - FULL WIDTH */}
+        <section className="w-full flex flex-col gap-5">
           
-          {/* Controls, Filters & Sorters */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-neutral-100">
-            <div className="flex items-center gap-2 text-neutral-400">
-              <Filter size={13} />
-              <span className="text-[10px] font-black uppercase tracking-wider">Filtros Ativos</span>
-            </div>
+          <BoardToolbar 
+            innerSearch={innerSearch}
+            setInnerSearch={setInnerSearch}
+            viewMode={currentView}
+            setViewMode={setCurrentView}
+            priorityFilter={priorityFilter}
+            setPriorityFilter={setPriorityFilter}
+            clientFilter={clientFilter}
+            setClientFilter={setClientFilter}
+            clients={companies}
+          />
 
-            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-              <input 
-                type="text" 
-                placeholder="Filtro rápido..." 
-                value={innerSearch}
-                onChange={(e) => setInnerSearch(e.target.value)}
-                className="bg-neutral-50 hover:bg-neutral-100/70 focus:bg-white focus:border-neutral-300 border border-neutral-200/55 rounded-lg px-2.5 py-1 text-xs outline-none transition-all font-semibold max-w-[150px]"
-              />
-
-              <select
-                value={priorityFilter}
-                onChange={(e) => setPriorityFilter(e.target.value)}
-                className="bg-[#FAFAFA] border border-neutral-200/50 rounded-lg px-2.5 py-1 text-xs font-bold text-neutral-600 outline-none cursor-pointer"
-              >
-                <option value="Todas">Prioridades</option>
-                <option value="Alta">Alta</option>
-                <option value="Média">Média</option>
-                <option value="Baixa">Baixa</option>
-              </select>
-
-              <select
-                value={clientFilter}
-                onChange={(e) => setClientFilter(e.target.value)}
-                className="bg-[#FAFAFA] border border-neutral-200/50 rounded-lg px-2.5 py-1 text-xs font-bold text-neutral-600 outline-none cursor-pointer"
-              >
-                <option value="Todos">Clientes</option>
-                {companies.map(c => (
-                  <option key={c.id} value={c.id || c.name}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Kanban Flow Container */}
-          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin">
-            {KANBAN_COLUMNS.map((col) => {
-              const columnProjects = filteredProjects.filter(p => mapStatusToColumn(p.status) === col.id);
-
-              return (
-                <div 
-                  key={col.id}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => handleDrop(e, col.id)}
-                  className="flex-shrink-0 w-72 bg-[#FAFAFA]/50 rounded-2xl p-3 border border-neutral-100 flex flex-col min-h-[520px]"
-                >
-                  {/* Header */}
-                  <div className="flex items-center justify-between mb-3 px-1 text-left">
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${col.badge}`}>
-                        {col.label}
-                      </span>
-                      <span className="text-[10px] font-extrabold text-neutral-400">({columnProjects.length})</span>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        setSelectedColumnId(col.id);
-                        setIsModalOpen(true);
-                      }}
-                      className="w-5 h-5 rounded-md hover:bg-neutral-100/80 text-neutral-400 hover:text-neutral-900 flex items-center justify-center transition-all cursor-pointer border border-transparent hover:border-neutral-200/50"
-                      title={`Adicionar projeto em ${col.label}`}
-                    >
-                      <Plus size={12} />
-                    </button>
-                  </div>
-
-                  {/* Cards stack */}
-                  <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[580px] pr-1 scrollbar-none flex-1">
-                    {columnProjects.length > 0 ? (
-                      columnProjects.map((p) => {
-                        const isStarred = favorites.includes(p.id);
-                        const progress = Number(p.progress || 0);
-                        
-                        return (
-                          <div 
-                            key={p.id}
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, p.id)}
-                            className="bg-white p-4 rounded-xl border border-neutral-200/50 hover:border-neutral-300 shadow-[0_1px_3px_rgba(0,0,0,0.01)] hover:shadow-sm cursor-grab active:cursor-grabbing transition-all text-left relative group"
-                          >
-                            {/* Starred Favorite */}
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id); }}
-                              className="absolute top-3 right-3 text-neutral-300 hover:text-amber-500 transition-colors"
-                            >
-                              <Star size={13} fill={isStarred ? "currentColor" : "none"} className={isStarred ? "text-amber-500" : ""} />
-                            </button>
-
-                            {/* Client & Title */}
-                            <span className="text-[9px] font-bold text-neutral-400 block tracking-wide uppercase">
-                              {p.company || p.companyName || 'CYZOR Cliente'}
-                            </span>
-                            <h4 
-                              onClick={() => setSelectedProject(p)}
-                              className="text-xs font-black text-neutral-900 mt-1 hover:underline cursor-pointer tracking-tight"
-                            >
-                              {p.name}
-                            </h4>
-
-                            <div className="flex items-center gap-1 mt-1 text-[9px] text-neutral-500 font-medium italic">
-                              <User size={10} className="text-neutral-400" />
-                              {p.owner || 'Sem dono'}
-                            </div>
-
-                            {/* Priority Status indicator */}
-                            <div className="flex items-center gap-2 mt-2.5">
-                              <span className={`text-[8px] font-black tracking-wider uppercase px-1.5 py-0.5 rounded-md ${
-                                p.priority === 'Alta' ? 'bg-red-50 text-red-700' : 'bg-neutral-50 text-neutral-600'
-                              }`}>
-                                {p.priority || 'Normal'}
-                              </span>
-                              
-                              {p.dueDate && (
-                                <span className="text-[9px] font-semibold text-neutral-400 flex items-center gap-1">
-                                  <Calendar size={10} />
-                                  {new Date(p.dueDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Interactive Progress Bar */}
-                            <div className="mt-3.5">
-                              <div className="flex items-center justify-between text-[10px] text-neutral-500 font-bold mb-1">
-                                <span>Progresso</span>
-                                <span>{progress}%</span>
-                              </div>
-                              <div className="w-full h-1 bg-neutral-100 rounded-full overflow-hidden">
-                                <div className="h-full bg-neutral-950 rounded-full" style={{ width: `${progress}%` }} />
-                              </div>
-                            </div>
-
-                            {/* Team initials display */}
-                            <div className="mt-4 pt-3 border-t border-neutral-100 flex items-center justify-between">
-                              <span className="text-[9px] font-bold text-neutral-400 uppercase">Faturamento</span>
-                              <span className="text-xs font-black text-neutral-900">
-                                R$ {Number(p.budget || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div className="flex flex-col items-center justify-center py-10 border border-dashed border-neutral-200/50 rounded-xl text-center">
-                        <span className="text-[9px] font-black tracking-widest text-neutral-300 uppercase">Vazio</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-        </section>
-
-        {/* COMPACT CYZOR SIDEBAR - 20% AREA (1 OUT OF 5 COLUMNS) */}
-        <section className="flex flex-col gap-6 text-left">
-          
-          {/* CRITICAL ALERTS */}
-          <div className="border border-neutral-100 rounded-2xl p-5 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.01)]">
-            <h3 className="text-[9px] font-black tracking-wider text-neutral-400 uppercase mb-3 flex items-center gap-1.5">
-              <Shield size={12} className="text-neutral-900" />
-              Alertas Operacionais
-            </h3>
-            <div className="flex flex-col gap-2.5">
-              {riskProjects.length > 0 ? (
-                <div className="p-3 bg-red-50/50 border border-red-100/50 rounded-xl">
-                  <span className="text-[8px] font-black uppercase text-red-600 block mb-0.5">Prazo Ameaçado</span>
-                  <p className="text-xs font-bold text-red-800 leading-snug">{riskProjects.length} projeto(s) com prioridade ALTA travados.</p>
-                </div>
-              ) : (
-                <div className="p-3 bg-neutral-50 border border-neutral-100 rounded-xl flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-                  <p className="text-xs font-bold text-neutral-700">Fluxos de prazos estabilizados.</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* UPCOMING EVENTS & DELIVERIES */}
-          <div className="border border-neutral-100 rounded-2xl p-5 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.01)]">
-            <h3 className="text-[9px] font-black tracking-wider text-neutral-400 uppercase mb-3.5 flex items-center gap-1.5">
-              <Clock size={12} />
-              Próximas Entregas
-            </h3>
-            <div className="relative border-l border-neutral-100 pl-3 ml-1.5 flex flex-col gap-4">
-              {projects.length > 0 ? (
-                projects.slice(0, 3).map((p, idx) => (
-                  <div key={p.id} className="relative group cursor-pointer" onClick={() => setSelectedProject(p)}>
-                    <span className="absolute -left-[16.5px] top-1 w-2 h-2 rounded-full bg-neutral-900 border border-white" />
-                    <span className="text-[8px] font-black text-neutral-400 uppercase tracking-widest block">
-                      {idx === 0 ? 'Hoje' : idx === 1 ? 'Amanhã' : 'Em breve'}
-                    </span>
-                    <span className="text-xs font-bold text-neutral-800 leading-tight block hover:underline mt-0.5">{p.name}</span>
-                  </div>
-                ))
-              ) : (
-                <p className="text-xs text-neutral-400 font-semibold">Sem entregas agendadas.</p>
-              )}
-            </div>
-          </div>
-
-          {/* LIVE ACTIVITY */}
-          <div className="border border-neutral-100 rounded-2xl p-5 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.01)]">
-            <h3 className="text-[9px] font-black tracking-wider text-neutral-400 uppercase mb-3 flex items-center gap-1.5">
-              <Layers size={12} />
-              Atividade Recente
-            </h3>
-            <div className="flex flex-col gap-3.5 text-xs">
-              <div className="flex items-start gap-2">
-                <span className="text-[10px] mt-0.5">🚀</span>
-                <div className="flex-1">
-                  <p className="font-bold text-neutral-800 leading-snug">Cyzor Engine ativa no ambiente de produção.</p>
-                  <span className="text-[8px] text-neutral-400 font-black uppercase">Agora</span>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2">
-                <span className="text-[10px] mt-0.5">✓</span>
-                <div className="flex-1">
-                  <p className="font-bold text-neutral-800 leading-snug">Auditoria geral concluída sem erros fatais.</p>
-                  <span className="text-[8px] text-neutral-400 font-black uppercase">Há 2 horas</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* View Container */}
+          {currentView === 'kanban' && (
+            <BoardKanban
+              columns={KANBAN_COLUMNS}
+              items={kanbanItems}
+              onDrop={(e, colId) => handleDrop(e, colId)}
+              onItemClick={setSelectedProject}
+              onToggleFavorite={toggleFavorite}
+              onAddClick={(colId) => {
+                setSelectedColumnId(colId);
+                setIsModalOpen(true);
+              }}
+              emptyMessage="Vazio"
+              disableLayoutAnimation={true}
+            />
+          )}
+          {currentView === 'list' && <ProjectList projects={filteredProjects} />}
+          {currentView === 'timeline' && (
+            <TimelineView
+              items={filteredProjects.map(p => ({
+                id: p.id,
+                name: p.name,
+                startDate: p.startDate || '2026-07-01',
+                endDate: p.dueDate || '2026-07-08',
+                status: p.status,
+                statusLabel: p.status,
+                priority: p.priority,
+                assignee: p.owner || 'Não atribuído',
+                progress: Number(p.progress || 0),
+                rawItem: p
+              }))}
+              onUpdateItemDates={async (itemId, s, e) => {
+                await fetchWithAuth(`/api/projects/${itemId}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ startDate: s, dueDate: e })
+                });
+                syncPlatformData();
+              }}
+              onItemClick={setSelectedProject}
+            />
+          )}
+          {currentView === 'gantt' && (
+            <TimelineView
+              items={filteredProjects.map(p => ({
+                id: p.id,
+                name: p.name,
+                startDate: p.startDate || '2026-07-01',
+                endDate: p.dueDate || '2026-07-08',
+                status: p.status,
+                statusLabel: p.status,
+                priority: p.priority,
+                assignee: p.owner || 'Não atribuído',
+                progress: Number(p.progress || 0),
+                rawItem: p
+              }))}
+              onUpdateItemDates={async (itemId, s, e) => {
+                await fetchWithAuth(`/api/projects/${itemId}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ startDate: s, dueDate: e })
+                });
+                syncPlatformData();
+              }}
+              onItemClick={setSelectedProject}
+              title="Gantt do Projeto"
+            />
+          )}
 
         </section>
 

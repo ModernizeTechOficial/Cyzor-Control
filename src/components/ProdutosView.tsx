@@ -10,8 +10,6 @@ import Swal from 'sweetalert2';
 import StandardHeader from './layout/StandardHeader';
 import { Plus } from 'lucide-react';
 import ProductStats from './produtos/ProductStats';
-import ProductActivity from './produtos/ProductActivity';
-import ProductEvents from './produtos/ProductEvents';
 import ProductActionBar from './produtos/ProductActionBar';
 import TimelineView, { TimelineItem } from './common/TimelineView';
 
@@ -292,81 +290,74 @@ export default function ProdutosView() {
         totalProjects={projectsList.length}
       />
 
-      <main className="grid grid-cols-1 xl:grid-cols-5 gap-6 sm:gap-8 items-start">
-        <section className="xl:col-span-4 flex flex-col gap-5">
-          <BoardToolbar 
-            innerSearch={searchQuery}
-            setInnerSearch={setSearchQuery}
-            viewMode={viewMode as any}
-            setViewMode={setViewMode as any}
-            statusFilter={statusFilter}
-            setStatusFilter={setStatusFilter}
-            clientFilter={companyFilter}
-            setClientFilter={setCompanyFilter}
-            clients={companies}
-          />
-          
-          <div className="w-full overflow-hidden">
-            {viewMode === 'kanban' && (
-              <BoardKanban 
-                columns={PRODUTOS_COLUMNS}
-                items={kanbanItems}
-                onDrop={handleDropKanban}
-                onItemClick={setSelectedProduct}
-                onAddClick={() => setIsNewModalOpen(true)}
-                emptyMessage="Nenhum produto nesta etapa."
-                disableLayoutAnimation={true}
-              />
-            )}
-
-            {viewMode === 'list' && (
-              <BoardList 
-                columns={[
-                  { key: 'title', label: 'Produto' },
-                  { key: 'empresa', label: 'Cliente' },
-                  { key: 'status', label: 'Status' },
-                  { key: 'progress', label: 'Progresso' }
-                ]}
-                items={filteredProducts}
-                onItemClick={setSelectedProduct}
-                renderCell={(item, colKey) => {
-                  if (colKey === 'title') return <div className="font-bold text-neutral-900">{item.name}</div>;
-                  if (colKey === 'empresa') return <div className="text-slate-600 font-semibold">{item.empresa || '-'}</div>;
-                  if (colKey === 'status') {
-                    const mappedStatus = item.status?.toUpperCase() === 'EM DESENVOLVIMENTO' ? 'Em Desenvolvimento' : item.status;
-                    const col = PRODUTOS_COLUMNS.find(c => c.id === mappedStatus);
-                    return <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${col?.badge || 'bg-slate-100 text-slate-600'}`}>{col?.label || item.status}</span>;
-                  }
-                  if (colKey === 'progress') {
-                     const progress = item.projectsCount ? Math.min(100, item.projectsCount * 25) : 30;
-                     return <span className="text-slate-500">{progress}%</span>;
-                  }
-                  return null;
-                }}
-              />
-            )}
-
-            {(viewMode === 'timeline' || viewMode === 'gantt') && (
-              <div className="w-full bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm">
-                <TimelineView 
-                  items={timelineItems}
-                  onUpdateItemDates={handleUpdateProductDates}
-                  onItemClick={(rawItem) => setSelectedProduct(rawItem)}
-                  onDeleteItem={(productId) => {
-                    setProducts(prev => prev.filter(p => p.id !== productId));
-                  }}
-                  title="Linha do Tempo dos Produtos"
-                  emptyMessage="Nenhum produto cadastrado para exibir na linha do tempo."
-                />
-              </div>
-            )}
-          </div>
-        </section>
+      <main className="w-full flex flex-col gap-5">
+        <BoardToolbar 
+          innerSearch={searchQuery}
+          setInnerSearch={setSearchQuery}
+          viewMode={viewMode as any}
+          setViewMode={setViewMode as any}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          clientFilter={companyFilter}
+          setClientFilter={setCompanyFilter}
+          clients={companies}
+        />
         
-        <section className="flex flex-col gap-6 text-left xl:col-span-1">
-          <ProductActivity />
-          <ProductEvents />
-        </section>
+        <div className="w-full overflow-hidden">
+          {viewMode === 'kanban' && (
+            <BoardKanban 
+              columns={PRODUTOS_COLUMNS}
+              items={kanbanItems}
+              onDrop={handleDropKanban}
+              onItemClick={setSelectedProduct}
+              onAddClick={() => setIsNewModalOpen(true)}
+              emptyMessage="Nenhum produto nesta etapa."
+              disableLayoutAnimation={true}
+            />
+          )}
+
+          {viewMode === 'list' && (
+            <BoardList 
+              columns={[
+                { key: 'title', label: 'Produto' },
+                { key: 'empresa', label: 'Cliente' },
+                { key: 'status', label: 'Status' },
+                { key: 'progress', label: 'Progresso' }
+              ]}
+              items={filteredProducts}
+              onItemClick={setSelectedProduct}
+              renderCell={(item, colKey) => {
+                if (colKey === 'title') return <div className="font-bold text-neutral-900">{item.name}</div>;
+                if (colKey === 'empresa') return <div className="text-slate-600 font-semibold">{item.empresa || '-'}</div>;
+                if (colKey === 'status') {
+                  const mappedStatus = item.status?.toUpperCase() === 'EM DESENVOLVIMENTO' ? 'Em Desenvolvimento' : item.status;
+                  const col = PRODUTOS_COLUMNS.find(c => c.id === mappedStatus);
+                  return <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${col?.badge || 'bg-slate-100 text-slate-600'}`}>{col?.label || item.status}</span>;
+                }
+                if (colKey === 'progress') {
+                   const progress = item.projectsCount ? Math.min(100, item.projectsCount * 25) : 30;
+                   return <span className="text-slate-500">{progress}%</span>;
+                }
+                return null;
+              }}
+            />
+          )}
+
+          {(viewMode === 'timeline' || viewMode === 'gantt') && (
+            <div className="w-full bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm">
+              <TimelineView 
+                items={timelineItems}
+                onUpdateItemDates={handleUpdateProductDates}
+                onItemClick={(rawItem) => setSelectedProduct(rawItem)}
+                onDeleteItem={(productId) => {
+                  setProducts(prev => prev.filter(p => p.id !== productId));
+                }}
+                title="Linha do Tempo dos Produtos"
+                emptyMessage="Nenhum produto cadastrado para exibir na linha do tempo."
+              />
+            </div>
+          )}
+        </div>
       </main>
 
       <ProductActionBar selectedCount={selectedIds.length} onClear={() => setSelectedIds([])} />
