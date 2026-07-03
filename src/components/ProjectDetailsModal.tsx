@@ -20,6 +20,12 @@ import AbaHistorico from './project-tabs/AbaHistorico';
 import DocEditorModal from './DocEditorModal';
 import LocalPdfViewerModal from './LocalPdfViewerModal';
 import LocalImageViewerModal from './LocalImageViewerModal';
+import CodeEditorProfessional from './CodeEditorProfessional';
+import SpreadsheetProfessional from './SpreadsheetProfessional';
+import PresentationProfessional from './PresentationProfessional';
+import ImageEditorProfessional from './ImageEditorProfessional';
+import PdfViewerProfessional from './PdfViewerProfessional';
+import { getDocTypeConfig } from '../lib/documentRegistry';
 
 interface ProjectDetailsModalProps {
   project: any;
@@ -38,6 +44,10 @@ export default function ProjectDetailsModal({ project, isOpen, onClose, onSave }
   const [isDocEditorOpen, setIsDocEditorOpen] = useState(false);
   const [isPdfViewerOpen, setIsPdfViewerOpen] = useState(false);
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [isCodeEditorOpen, setIsCodeEditorOpen] = useState(false);
+  const [isSpreadsheetEditorOpen, setIsSpreadsheetEditorOpen] = useState(false);
+  const [isPresentationEditorOpen, setIsPresentationEditorOpen] = useState(false);
+  const [isImageEditorOpen, setIsImageEditorOpen] = useState(false);
   const [companies, setCompanies] = useState<any[]>([]);
 
   useEffect(() => {
@@ -52,6 +62,61 @@ export default function ProjectDetailsModal({ project, isOpen, onClose, onSave }
     fetchCompanies();
   }, [fetchWithAuth]);
 
+  const handleSaveCustomDoc = async (updatedDoc: any) => {
+    try {
+      const dbPayload = {
+        title: updatedDoc.title,
+        content: typeof updatedDoc.content === 'object' ? JSON.stringify(updatedDoc.content) : updatedDoc.content,
+        folder: updatedDoc.folder || 'Planejamento',
+        projectId: editedProject?.id || null,
+        isFavorite: updatedDoc.isFavorite || false,
+        url: updatedDoc.url || '',
+        type: updatedDoc.type || getDocTypeConfig(updatedDoc).id
+      };
+
+      let res;
+      if (updatedDoc.id) {
+        res = await fetchWithAuth(`/api/documents/${updatedDoc.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dbPayload)
+        });
+      } else {
+        res = await fetchWithAuth('/api/documents', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dbPayload)
+        });
+      }
+
+      if (res && res.ok) {
+        // Refresh documents in project view immediately
+        const fetchDocs = async () => {
+            if (editedProject) {
+               const r = await fetchWithAuth(`/api/documents?projectId=${editedProject.id}`);
+               if (r.ok) {
+                  const allDocs = await r.json();
+                  const pDocs = allDocs.map((d: any) => ({
+                      id: d.id,
+                      title: d.title,
+                      category: d.folder || 'Planejamento',
+                      size: d.size || '0 KB',
+                      uploadedBy: 'Sistema',
+                      date: d.createdAt ? new Date(d.createdAt).toLocaleDateString('pt-BR') : 'Hoje',
+                      url: d.url,
+                      content: d.content
+                  }));
+                  setEditedProject(prev => prev ? { ...prev, docs: pDocs } : null);
+               }
+            }
+        };
+        await fetchDocs();
+      }
+    } catch (err) {
+      console.error('Error saving custom document in ProjectDetailsModal:', err);
+    }
+  };
+
   const handleOpenDoc = async (docId?: number) => {
     if (!editedProject) return;
     if (docId) {
@@ -61,19 +126,24 @@ export default function ProjectDetailsModal({ project, isOpen, onClose, onSave }
                 const allDocs = await res.json();
                 const doc = allDocs.find((d: any) => d.id === docId);
                 if (doc) {
-                    const fileName = doc.title?.toLowerCase() || '';
-                    const isPdf = fileName.endsWith('.pdf');
-                    const isImage = fileName.endsWith('.png') || fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.svg') || fileName.endsWith('.webp');
+                    const typeConfig = getDocTypeConfig(doc);
+                    const docType = typeConfig.id; // 'rich-text', 'spreadsheet', 'presentation', 'code', 'image', 'pdf'
                     
                     setEditingDoc({
                        ...doc,
                        category: doc.folder // Adapt structure for Editor
                     });
 
-                    if (isPdf) {
+                    if (docType === 'pdf') {
                         setIsPdfViewerOpen(true);
-                    } else if (isImage) {
+                    } else if (docType === 'image') {
                         setIsImageViewerOpen(true);
+                    } else if (docType === 'code') {
+                        setIsCodeEditorOpen(true);
+                    } else if (docType === 'spreadsheet') {
+                        setIsSpreadsheetEditorOpen(true);
+                    } else if (docType === 'presentation') {
+                        setIsPresentationEditorOpen(true);
                     } else {
                         setIsDocEditorOpen(true);
                     }
@@ -521,6 +591,45 @@ export default function ProjectDetailsModal({ project, isOpen, onClose, onSave }
         isOpen={isImageViewerOpen}
         onClose={() => {
           setIsImageViewerOpen(false);
+          setEditingDoc(null);
+        }}
+      />
+    )}
+
+    {isCodeEditorOpen && editingDoc && (
+      <CodeEditorProfessional
+        doc={editingDoc}
+        onSave={(data) => {
+          handleSaveCustomDoc(data);
+        }}
+        onClose={() => {
+          setIsCodeEditorOpen(false);
+          setEditingDoc(null);
+        }}
+      />
+    )}
+
+    {isSpreadsheetEditorOpen && editingDoc && (
+      <SpreadsheetProfessional
+        doc={editingDoc}
+        onSave={(data) => {
+          handleSaveCustomDoc(data);
+        }}
+        onClose={() => {
+          setIsSpreadsheetEditorOpen(false);
+          setEditingDoc(null);
+        }}
+      />
+    )}
+
+    {isPresentationEditorOpen && editingDoc && (
+      <PresentationProfessional
+        doc={editingDoc}
+        onSave={(data) => {
+          handleSaveCustomDoc(data);
+        }}
+        onClose={() => {
+          setIsPresentationEditorOpen(false);
           setEditingDoc(null);
         }}
       />

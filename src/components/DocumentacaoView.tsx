@@ -54,6 +54,11 @@ import PdfViewerProfessional from './PdfViewerProfessional';
 import CodeEditorProfessional from './CodeEditorProfessional';
 import LocalPdfViewerModal from './LocalPdfViewerModal';
 import LocalImageViewerModal from './LocalImageViewerModal';
+import { 
+  getDocTypeConfig, 
+  DOCUMENT_TYPES, 
+  CORPORATE_TEMPLATES 
+} from '../lib/documentRegistry';
 import { useAuth } from '../context/AuthContext';
 import { useDocuments, useProjects } from '../hooks/useCyzorQueries';
 import { SkeletonDashboard } from './common/skeletons/SkeletonDashboard';
@@ -155,6 +160,7 @@ export default function DocumentacaoView() {
   const [isCustomCreatorOpen, setIsCustomCreatorOpen] = useState(false);
   const [customCreatorName, setCustomCreatorName] = useState('');
   const [customCreatorFolder, setCustomCreatorFolder] = useState('Geral');
+  const [selectedType, setSelectedType] = useState<string>('rich-text');
   
   // photoshop .psd blocker states
   const [psdErrorModalOpen, setPsdErrorModalOpen] = useState(false);
@@ -456,27 +462,8 @@ export default function DocumentacaoView() {
   const recents = [...filteredDocs].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
   const getDocSpecialistType = (docObj: any): 'image' | 'spreadsheet' | 'presentation' | 'pdf' | 'code' | 'rich-text' => {
-    if (!docObj) return 'rich-text';
-    const name = (docObj.title || '').toLowerCase().trim();
-    const folder = (docObj.folder || '').toLowerCase();
-    const type = docObj.type || '';
-    
-    if (name.match(/\.(png|jpg|jpeg|webp|svg|gif|bmp|tiff)$/) || type === 'image') {
-      return 'image';
-    }
-    if (name.match(/\.(xlsx|xls|csv|ods)$/) || type === 'spreadsheet') {
-      return 'spreadsheet';
-    }
-    if (name.match(/\.(pptx|ppt|odp)$/) || type === 'presentation') {
-      return 'presentation';
-    }
-    if (name.match(/\.pdf$/) || type === 'pdf' || folder === 'contratos') {
-      return 'pdf';
-    }
-    if (name.match(/\.(json|xml|yaml|sql|log|ts|js|tsx|jsx|css|html|py|rb|go|php)$/) || type === 'code' || folder === 'codigo' || folder === 'código') {
-      return 'code';
-    }
-    return 'rich-text';
+    const config = getDocTypeConfig(docObj);
+    return config.editorId as any;
   };
 
   const handleSaveCustomDoc = async (updatedDoc: any) => {
@@ -487,7 +474,8 @@ export default function DocumentacaoView() {
         folder: updatedDoc.folder || 'Geral',
         projectId: updatedDoc.projectId ? Number(updatedDoc.projectId) : null,
         isFavorite: updatedDoc.isFavorite || false,
-        url: updatedDoc.url || ''
+        url: updatedDoc.url || '',
+        type: updatedDoc.type || getDocTypeConfig(updatedDoc).id
       };
 
       let res;
@@ -529,7 +517,60 @@ export default function DocumentacaoView() {
 
   const handleNewDoc = () => {
     setSelectedDoc(null);
+    setSelectedType('rich-text');
+    setCustomCreatorFolder('Geral');
+    setCustomCreatorName('');
+    (window as any)._activeTemplateContent = '';
     setIsCustomCreatorOpen(true);
+  };
+
+  const handleCreateAndOpenDoc = async () => {
+    if (!customCreatorName.trim()) return;
+    if (customCreatorName.toLowerCase().endsWith('.psd')) {
+      setAttemptedPsdName(customCreatorName);
+      setPsdErrorModalOpen(true);
+      setIsCustomCreatorOpen(false);
+      setCustomCreatorName('');
+      return;
+    }
+
+    try {
+      const selectedConfig = DOCUMENT_TYPES[selectedType];
+      const defaultContent = (window as any)._activeTemplateContent || '';
+      
+      const dbPayload = {
+        title: customCreatorName,
+        content: defaultContent,
+        folder: customCreatorFolder || selectedConfig.defaultFolder,
+        projectId: null,
+        isFavorite: false,
+        url: '',
+        type: selectedType
+      };
+
+      const res = await fetchWithAuth('/api/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dbPayload)
+      });
+
+      if (res.ok) {
+        const createdDoc = await res.json();
+        setCustomCreatorName('');
+        (window as any)._activeTemplateContent = '';
+        setIsCustomCreatorOpen(false);
+        setSelectedDoc(createdDoc);
+        setIsEditorOpen(true);
+        fetchDocuments();
+      } else {
+        const { showError } = await import('../lib/alerts');
+        showError('Falha ao criar o documento.');
+      }
+    } catch (err) {
+      console.error('Error creating document:', err);
+      const { showError } = await import('../lib/alerts');
+      showError('Erro de conexão ao criar o documento.');
+    }
   };
 
   const handleAddCategory = (categoryName: string, iconId: string) => {
@@ -1326,88 +1367,14 @@ export default function DocumentacaoView() {
             <div className="flex flex-col gap-2 bg-amber-500/5 border border-amber-500/10 p-4 rounded-2xl">
               <span className="text-[10px] font-bold text-amber-800 uppercase tracking-widest block">Central de Modelos Corporativos (1-Clique)</span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
-                {[
-                  {
-                    title: 'Modelo de Escopo de Projeto',
-                    folder: 'Planejamento',
-                    desc: 'Escopo completo, entregáveis e responsabilidades',
-                    content: `# Escopo do Projeto: [Nome do Projeto]
-
-## 1. Objetivos do Negócio
-[Descreva qual problema de negócio este projeto resolve e qual o impacto esperado]
-
-## 2. Entregas Principais (Deliverables)
-- **Fase 1: Concepção & UI/UX** — Mockups interativos e fluxogramas validados.
-- **Fase 2: Arquitetura & APIs** — Modelagem do banco de dados e endpoints.
-- **Fase 3: Desenvolvimento Core** — Implementação dos módulos principais.
-- **Fase 4: QA & Homologação** — Testes end-to-end, carga e segurança.
-
-## 3. Matriz de Responsabilidades
-| Recurso | Função | Responsabilidade Principal |
-| :--- | :--- | :--- |
-| [Nome] | Product Manager | Gerenciamento de Escopo e Prazos |
-| [Nome] | Tech Lead | Arquitetura de Software e Code Review |
-| [Nome] | Frontend Dev | Interfaces e Experiência do Usuário |
-| [Nome] | Backend Dev | APIs, Integrações e Banco de Dados |`
-                  },
-                  {
-                    title: 'SLA - Acordo de Nível de Serviço',
-                    folder: 'Contratos',
-                    desc: 'Disponibilidade, severidade e tempos de resposta',
-                    content: `# Acordo de Nível de Serviço (SLA)
-
-## 1. Objetivos do SLA
-Este acordo define os níveis de serviço e garantias operacionais para a plataforma Cyzor Control.
-
-## 2. Metas de Disponibilidade (Uptime)
-- **Disponibilidade Mensal**: 99.9% (excluindo janelas de manutenção agendadas)
-- **Manutenção Programada**: Avisada com no mínimo 48 horas de antecedência, executada exclusivamente entre 00:00 e 04:00 (BRT).
-
-## 3. Matriz de Severidade & Tempo de Resposta
-| Severidade | Descrição | Resposta Inicial | Solução de Contorno |
-| :--- | :--- | :--- | :--- |
-| **Severidade 1 (Crítica)** | Sistema completamente indisponível | < 15 Minutos | < 2 Horas |
-| **Severidade 2 (Alta)** | Funcionalidade essencial inoperante | < 1 Hora | < 6 Horas |
-| **Severidade 3 (Média)** | Erro pontual com solução alternativa | < 4 Horas | < 24 Horas |`
-                  },
-                  {
-                    title: 'C4 Model — Arquitetura de Sistemas',
-                    folder: 'Técnicos',
-                    desc: 'Arquitetura técnica organizada em camadas',
-                    content: `# C4 Model — Arquitetura da Plataforma
-
-## 1. Nível 1: Diagrama de Contexto de Sistema
-[Insira o diagrama de contexto mostrando como os usuários interagem com o ecossistema Cyzor]
-
-## 2. Nível 2: Diagrama de Containers
-- **Web App (React/Vite)**: Camada de interface SPA com layouts responsivos e sincronismo via APIs REST.
-- **Backend API (Node.js/Express)**: Servidor de aplicação que encapsula as regras de negócio, notificações, e integração com IA.
-- **Relational DB (PostgreSQL)**: Persistência de dados operacionais e tabelas estruturadas de Workspace.
-
-## 3. Nível 3: Diagrama de Componentes
-- **Auth Service**: Validação de tokens e controle de sessão via Firebase.`
-                  },
-                  {
-                    title: 'Matriz de Riscos Corporativos',
-                    folder: 'Processos',
-                    desc: 'Mapeamento de probabilidade, impactos e mitigações',
-                    content: `# Matriz de Riscos Corporativos
-
-## 1. Avaliação de Riscos
-Abaixo estão mapeados os principais riscos do trimestre e suas respectivas estratégias de resposta.
-
-| ID | Descrição do Risco | Probabilidade | Impacto | Nível de Risco | Ação Mitigadora | Responsável |
-| :--- | :--- | :---: | :---: | :---: | :--- | :--- |
-| **R-01** | Atraso na entrega da API de Relatórios | Média | Alto | **ALTO** | Quebrar entregas em sub-sprints diárias com mockups. | Tech Lead |
-| **R-02** | Sobrecarga de chamados no suporte | Alta | Médio | **MÉDIO** | Implementar FAQ automatizada na central de ajuda. | CS Manager |`
-                  }
-                ].map((tmpl, tIdx) => (
+                {CORPORATE_TEMPLATES.map((tmpl) => (
                   <button
-                    key={`tmpl-${tIdx}`}
+                    key={tmpl.id}
                     type="button"
                     onClick={() => {
                       setCustomCreatorName(tmpl.title);
                       setCustomCreatorFolder(tmpl.folder);
+                      setSelectedType(tmpl.documentType);
                       (window as any)._activeTemplateContent = tmpl.content;
                     }}
                     className="p-3 bg-white border border-slate-200 hover:border-amber-500 rounded-xl text-left transition-all hover:bg-amber-500/5 group"
@@ -1423,18 +1390,21 @@ Abaixo estão mapeados os principais riscos do trimestre e suas respectivas estr
               {[
                 { id: 'rich-text', name: 'Procedimento', folder: 'Geral', desc: 'Rich Text & Capa', color: 'bg-indigo-50 border-indigo-200 text-indigo-650', icon: FileText },
                 { id: 'spreadsheet', name: 'Planilha', folder: 'Comercial', desc: 'Fórmulas & Gráficos', color: 'bg-emerald-50 border-emerald-200 text-emerald-650', icon: FileSpreadsheet },
-                { id: 'presentation', name: 'Pitch Slide', folder: 'Planejamento', desc: 'Marketing Deck', color: 'bg-indigo-50/50 border-indigo-200/60 text-indigo-600', icon: FileText },
+                { id: 'presentation', name: 'Pitch Slide', folder: 'Planejamento', desc: 'Marketing Deck', color: 'bg-indigo-50/50 border-indigo-200/60 text-indigo-600', icon: Sliders },
                 { id: 'code', name: 'Script Código', folder: 'Código', desc: 'TypeScript & SQL', color: 'bg-teal-50 border-teal-200 text-teal-650', icon: FileCode },
                 { id: 'image', name: 'Editor Imagem', folder: 'Design', desc: 'Ajuste IA & Brush', color: 'bg-cyan-50 border-cyan-200 text-cyan-650', icon: FileImage },
                 { id: 'pdf', name: 'Leitor PDF', folder: 'Contratos', desc: 'Assinar & Rubricas', color: 'bg-rose-50 border-rose-200 text-rose-650', icon: FileText },
               ].map(formatItem => {
                 const IconComp = formatItem.icon;
-                const isSelected = customCreatorFolder === formatItem.folder;
+                const isSelected = selectedType === formatItem.id;
                 return (
                   <button
                     key={formatItem.id}
                     type="button"
-                    onClick={() => setCustomCreatorFolder(formatItem.folder)}
+                    onClick={() => {
+                      setSelectedType(formatItem.id);
+                      setCustomCreatorFolder(formatItem.folder);
+                    }}
                     className={`p-3.5 border rounded-2xl text-left flex flex-col gap-2 transition-all ${
                       isSelected 
                         ? 'border-slate-800 bg-slate-50 ring-2 ring-slate-800/10' 
@@ -1481,25 +1451,7 @@ Abaixo estão mapeados os principais riscos do trimestre e suas respectivas estr
                 <button
                   type="button"
                   disabled={!customCreatorName.trim()}
-                  onClick={() => {
-                    if (customCreatorName.toLowerCase().endsWith('.psd')) {
-                      setAttemptedPsdName(customCreatorName);
-                      setPsdErrorModalOpen(true);
-                      setIsCustomCreatorOpen(false);
-                      setCustomCreatorName('');
-                      return;
-                    }
-                    const freshDoc = {
-                      title: customCreatorName,
-                      folder: customCreatorFolder,
-                      content: (window as any)._activeTemplateContent || '',
-                    };
-                    setCustomCreatorName('');
-                    (window as any)._activeTemplateContent = '';
-                    setIsCustomCreatorOpen(false);
-                    setSelectedDoc(freshDoc);
-                    setIsEditorOpen(true);
-                  }}
+                  onClick={handleCreateAndOpenDoc}
                   className="bg-[#111111] hover:bg-black text-white text-xs uppercase tracking-wider font-bold px-5 py-3 rounded-xl shadow-sm transition-all disabled:opacity-40"
                 >
                   Criar & Abrir Editor

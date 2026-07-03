@@ -194,8 +194,17 @@ export default function ProdutosView() {
 
   const handleDropKanban = async (e: React.DragEvent, colId: string) => {
     e.preventDefault();
-    const prodId = e.dataTransfer.getData('itemId');
+    const prodIdStr = e.dataTransfer.getData('itemId') || e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('projectId');
+    let prodId = (window as any).__draggedItemId;
+
+    if (!prodId && prodIdStr) {
+      prodId = Number(prodIdStr);
+    }
+
     if (!prodId) return;
+
+    // Clear global state
+    (window as any).__draggedItemId = null;
 
     const reverseStatusMap: Record<string, string> = {
       'Planejamento': 'Planejamento',

@@ -178,10 +178,18 @@ export default function ProjetosView() {
 
   const handleDrop = async (e: React.DragEvent, targetColumn: string) => {
     e.preventDefault();
-    const projectIdStr = e.dataTransfer.getData('projectId');
-    if (!projectIdStr) return;
+    const projectIdStr = e.dataTransfer.getData('projectId') || e.dataTransfer.getData('itemId') || e.dataTransfer.getData('text/plain');
+    let projectId = (window as any).__draggedItemId;
 
-    const projectId = Number(projectIdStr);
+    if (!projectId && projectIdStr) {
+      projectId = Number(projectIdStr);
+    }
+
+    if (!projectId) return;
+
+    // Clear global state
+    (window as any).__draggedItemId = null;
+
     const movedProject = projects.find(p => p.id === projectId);
     if (!movedProject) return;
 

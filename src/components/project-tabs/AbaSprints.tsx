@@ -164,15 +164,26 @@ export default function AbaSprints({ project, onUpdateProject }: AbaSprintsProps
 
   // Sprint Kanban move items
   const handleDragStart = (e: React.DragEvent, taskId: number) => {
+    (window as any).__draggedTaskId = taskId;
+    e.dataTransfer.setData('text/plain', taskId.toString());
     e.dataTransfer.setData('sprintTaskId', taskId.toString());
+    e.dataTransfer.effectAllowed = 'move';
   };
 
   const handleDrop = async (e: React.DragEvent, targetCol: 'todo' | 'in_progress' | 'review' | 'done') => {
     e.preventDefault();
-    const taskIdStr = e.dataTransfer.getData('sprintTaskId');
-    if (!taskIdStr) return;
+    let taskIdStr = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('sprintTaskId');
+    let taskId = (window as any).__draggedTaskId;
 
-    const taskId = parseInt(taskIdStr, 10);
+    if (!taskId && taskIdStr) {
+      taskId = parseInt(taskIdStr, 10);
+    }
+
+    if (!taskId) return;
+
+    // Clear global state
+    (window as any).__draggedTaskId = null;
+
     const taskToMove = (project.tasks || []).find(t => t.id === taskId);
     if (!taskToMove) return;
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Plus, Star, User, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import KanbanBoardWrapper from './KanbanBoardWrapper';
 
 export interface KanbanColumn {
   id: string;
@@ -45,11 +46,15 @@ export default function BoardKanban({
   disableLayoutAnimation = false
 }: BoardKanbanProps) {
   const handleDragStart = (e: React.DragEvent, id: string | number) => {
+    (window as any).__draggedItemId = id;
+    e.dataTransfer.setData('text/plain', id.toString());
     e.dataTransfer.setData('itemId', id.toString());
+    e.dataTransfer.setData('projectId', id.toString());
+    e.dataTransfer.effectAllowed = 'move';
   };
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin">
+    <KanbanBoardWrapper>
       {columns.map((col) => {
         const columnItems = items.filter(p => p.status === col.id);
 
@@ -58,7 +63,7 @@ export default function BoardKanban({
             key={col.id}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => onDrop(e, col.id)}
-            className="flex-shrink-0 w-72 bg-[#FAFAFA]/50 rounded-2xl p-3 border border-neutral-100 flex flex-col min-h-[520px]"
+            className="flex-shrink-0 w-72 bg-[#FAFAFA]/50 rounded-2xl p-3 border border-neutral-100 flex flex-col min-h-[520px] snap-start"
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-3 px-1 text-left">
@@ -93,7 +98,7 @@ export default function BoardKanban({
                         exit={{ opacity: 0, scale: 0.9 }}
                         transition={{ duration: 0.2, ease: "easeInOut" }}
                         draggable
-                        onDragStartCapture={(e) => handleDragStart(e, p.id)}
+                        onDragStart={(e: any) => handleDragStart(e as any, p.id)}
                         className="bg-white p-4 rounded-xl border border-neutral-200/50 hover:border-neutral-300 shadow-[0_1px_3px_rgba(0,0,0,0.01)] hover:shadow-sm cursor-grab active:cursor-grabbing transition-all text-left relative group"
                       >
                         {/* Starred Favorite */}
@@ -173,6 +178,6 @@ export default function BoardKanban({
           </div>
         );
       })}
-    </div>
+    </KanbanBoardWrapper>
   );
 }

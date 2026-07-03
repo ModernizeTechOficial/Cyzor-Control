@@ -8,6 +8,7 @@ import {
   List, LayoutGrid, Clock
 } from 'lucide-react';
 import TaskDetailModal from '../TaskDetailModal';
+import KanbanBoardWrapper from '../common/management/KanbanBoardWrapper';
 import { motion, AnimatePresence } from 'framer-motion';
 import { showSuccess, confirmAction, showError } from '../../lib/alerts';
 import TimelineView, { TimelineItem } from '../common/TimelineView';
@@ -138,15 +139,26 @@ export default function AbaKanban({ project, onUpdateProject }: AbaKanbanProps) 
 
   // Drag and drop handlers
   const handleDragStart = (e: React.DragEvent, taskId: number) => {
+    (window as any).__draggedTaskId = taskId;
+    e.dataTransfer.setData('text/plain', taskId.toString());
     e.dataTransfer.setData('projectIdTaskId', taskId.toString());
+    e.dataTransfer.effectAllowed = 'move';
   };
 
   const handleDrop = async (e: React.DragEvent, targetColumn: 'todo' | 'in_progress' | 'review' | 'done') => {
     e.preventDefault();
-    const taskIdStr = e.dataTransfer.getData('projectIdTaskId');
-    if (!taskIdStr) return;
+    let taskIdStr = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('projectIdTaskId');
+    let taskId = (window as any).__draggedTaskId;
 
-    const taskId = parseInt(taskIdStr, 10);
+    if (!taskId && taskIdStr) {
+      taskId = parseInt(taskIdStr, 10);
+    }
+
+    if (!taskId) return;
+
+    // Clear global state
+    (window as any).__draggedTaskId = null;
+
     const movedTask = tasks.find(t => t.id === taskId);
     if (!movedTask) return;
 
@@ -446,7 +458,7 @@ export default function AbaKanban({ project, onUpdateProject }: AbaKanbanProps) 
 
       {/* Board Columns container */}
       {viewMode === 'kanban' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 items-start overflow-x-auto pb-4 custom-scrollbar">
+        <KanbanBoardWrapper>
           {columns.map(colId => {
             const columnTasks = filteredTasks.filter(t => t.column === colId);
             return (
@@ -454,7 +466,7 @@ export default function AbaKanban({ project, onUpdateProject }: AbaKanbanProps) 
                 key={colId}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => handleDrop(e, colId)}
-                className="bg-[#FAFAFA]/50 border border-[#0F172A0F] rounded-[24px] p-4 flex flex-col gap-4 min-w-[250px]"
+                className="bg-[#FAFAFA]/50 border border-[#0F172A0F] rounded-[24px] p-4 flex flex-col gap-4 w-72 md:w-[290px] shrink-0 snap-start"
               >
                 <div className="flex justify-between items-center px-1">
                   <h4 className="text-[10px] font-bold uppercase text-[#64748B] tracking-widest">
@@ -661,7 +673,7 @@ export default function AbaKanban({ project, onUpdateProject }: AbaKanbanProps) 
               </div>
             );
           })}
-        </div>
+        </KanbanBoardWrapper>
       )}
 
       {viewMode === 'list' && (

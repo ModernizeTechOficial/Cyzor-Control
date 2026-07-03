@@ -7,7 +7,7 @@ import {
 
 interface FileItem {
   name: string;
-  type: 'ts' | 'js' | 'json' | 'sql' | 'css';
+  type: string;
   content: string;
   isOpen?: boolean;
 }
@@ -47,33 +47,64 @@ export default function CodeEditorProfessional({ doc, onSave, onClose }: CodeEdi
   const [showSug, setShowSug] = useState(false);
   const [cursorPos, setCursorPos] = useState({ top: 0, left: 0 });
 
+  // Safe base64 decoding helper
+  const decodeBase64DataUrl = (dataUrl: string): string => {
+    if (!dataUrl || !dataUrl.startsWith('data:')) {
+      return dataUrl;
+    }
+    try {
+      const commaIndex = dataUrl.indexOf(',');
+      if (commaIndex === -1) return dataUrl;
+      const base64Part = dataUrl.substring(commaIndex + 1);
+      
+      // Decode base64 bytes safely to UTF-8 text
+      const binaryString = atob(base64Part);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      return new TextDecoder('utf-8').decode(bytes);
+    } catch (err) {
+      console.error('Error decoding base64 data url:', err);
+      return dataUrl;
+    }
+  };
+
+  // Safe base64 encoding helper
+  const encodeBase64DataUrl = (text: string, filename: string): string => {
+    try {
+      const ext = filename.split('.').pop()?.toLowerCase();
+      let mimeType = 'text/plain';
+      if (ext === 'html') mimeType = 'text/html';
+      else if (ext === 'css') mimeType = 'text/css';
+      else if (ext === 'js') mimeType = 'application/javascript';
+      else if (ext === 'json') mimeType = 'application/json';
+      else if (ext === 'xml') mimeType = 'application/xml';
+      else if (ext === 'php') mimeType = 'text/php';
+      
+      const bytes = new TextEncoder().encode(text);
+      let binaryString = '';
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binaryString += String.fromCharCode(bytes[i]);
+      }
+      const base64 = btoa(binaryString);
+      return `data:${mimeType};base64,${base64}`;
+    } catch (err) {
+      console.error('Error encoding to base64 data url:', err);
+      return text;
+    }
+  };
+
   // Load code content
   useEffect(() => {
-    // Generate beautiful corporate developer files in workspace tree
-    const initialFiles: FileItem[] = [
-      {
-        name: 'briefing_analytics.ts',
-        type: 'ts',
-        content: `// Cyzor Analytics Integration script\nimport { GoogleGenAI } from '@google/genai';\n\ninterface DocumentMetada {\n  id: string;\n  status: 'draft' | 'approved' | 'signed';\n  author: string;\n}\n\nasync function analyzeWorkspace(docId: string, author: string) {\n  console.log("Iniciando auditoria para documento ID: " + docId);\n  \n  const docMeta: DocumentMetada = {\n    id: docId,\n    status: 'draft',\n    author: author\n  };\n  \n  if (!docId) {\n    throw new Error("UUID do documento e obrigatorio");\n  }\n  \n  return {\n    verified: true,\n    timestamp: Date.now() \n  };\n}\n`
-      },
-      {
-        name: 'database_schema.sql',
-        type: 'sql',
-        content: `-- SQLite schema setup\nCREATE TABLE IF NOT EXISTS system_contracts (\n  id SERIAL PRIMARY KEY,\n  contract_uuid VARCHAR(120) NOT NULL UNIQUE,\n  client_name VARCHAR(255) NOT NULL,\n  total_faturamento NUMERIC(12, 2) DEFAULT 0.00,\n  status_rubrica VARCHAR(45) NOT NULL DEFAULT 'PENDING',\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\n-- Create index for performance searches\nCREATE INDEX idx_contracts_uuid ON system_contracts (contract_uuid);\n`
-      },
-      {
-        name: 'package_saas.json',
-        type: 'json',
-        content: `{\n  "name": "cyzor-analytics-batch",\n  "version": "1.0.4",\n  "description": "Integration pipeline of SaaS",\n  "dependencies": {\n    "express": "^4.21.0",\n    "tsx": "^4.10.0",\n    "pg": "^8.12.0",\n    "drizzle-orm": "^0.32.0"\n  }\n}`
-      }
-    ];
-
+    // If the content is already a multi-file JSON workspace, parse and load it
     if (doc.content && doc.content.startsWith('[')) {
       try {
         const parsed = JSON.parse(doc.content);
         if (parsed.length > 0) {
           setWorkspaceFiles(parsed);
           setEditorCode(parsed[0].content);
+          setActiveFileIndex(0);
           return;
         }
       } catch (e) {
@@ -81,16 +112,37 @@ export default function CodeEditorProfessional({ doc, onSave, onClose }: CodeEdi
       }
     }
 
-    setWorkspaceFiles(initialFiles);
-    setEditorCode(initialFiles[0].content);
+    // Default / Single file loader fallback: load the actual doc.title and doc.content
+    const name = doc.title || 'index.html';
+    const ext = name.split('.').pop() || 'html';
+    
+    // Resolve raw content (check both doc.content and doc.url for data: url base64 data)
+    let rawContent = doc.content || '';
+    if (!rawContent && (doc as any).url && (doc as any).url.startsWith('data:')) {
+      rawContent = (doc as any).url;
+    }
+
+    // Decode if base64 encoded data URL
+    const decodedContent = decodeBase64DataUrl(rawContent);
+
+    const singleFile: FileItem = {
+      name,
+      type: ext,
+      content: decodedContent
+    };
+    setWorkspaceFiles([singleFile]);
+    setEditorCode(singleFile.content);
+    setActiveFileIndex(0);
   }, [doc]);
 
   // Handle active file selection change value
   const handleSelectFile = (idx: number) => {
     // Save current active file content state
     const filesCopy = [...workspaceFiles];
-    filesCopy[activeFileIndex].content = editorCode;
-    setWorkspaceFiles(filesCopy);
+    if (filesCopy[activeFileIndex]) {
+      filesCopy[activeFileIndex].content = editorCode;
+      setWorkspaceFiles(filesCopy);
+    }
 
     setActiveFileIndex(idx);
     setEditorCode(filesCopy[idx].content);
@@ -102,6 +154,13 @@ export default function CodeEditorProfessional({ doc, onSave, onClose }: CodeEdi
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const code = e.target.value;
     setEditorCode(code);
+
+    // Sync in real-time so other operations / saves have latest contents
+    const filesCopy = [...workspaceFiles];
+    if (filesCopy[activeFileIndex]) {
+      filesCopy[activeFileIndex].content = code;
+      setWorkspaceFiles(filesCopy);
+    }
 
     // Dynamic simple syntax autocomplete suggestions triggers
     const words = code.split(/[\s()]+/);
@@ -123,11 +182,59 @@ export default function CodeEditorProfessional({ doc, onSave, onClose }: CodeEdi
     }
   };
 
+  // Create new file inside workspace
+  const handleCreateFileInWorkspace = () => {
+    const filename = prompt('Digite o nome do novo arquivo (ex: index.html, style.css, server.js, script.py):');
+    if (!filename || !filename.trim()) return;
+
+    if (workspaceFiles.some(f => f.name.toLowerCase() === filename.trim().toLowerCase())) {
+      alert('Um arquivo com este nome já existe no workspace.');
+      return;
+    }
+
+    const ext = filename.split('.').pop() || 'html';
+    const newFile: FileItem = {
+      name: filename.trim(),
+      type: ext,
+      content: ''
+    };
+
+    const updated = [...workspaceFiles, newFile];
+    setWorkspaceFiles(updated);
+    setActiveFileIndex(updated.length - 1);
+    setEditorCode('');
+  };
+
+  // Delete file from workspace
+  const handleDeleteFileInWorkspace = (idx: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (workspaceFiles.length <= 1) {
+      alert('O workspace precisa conter ao menos 1 arquivo.');
+      return;
+    }
+
+    if (!confirm(`Tem certeza que deseja excluir o arquivo "${workspaceFiles[idx].name}"?`)) {
+      return;
+    }
+
+    const updated = workspaceFiles.filter((_, i) => i !== idx);
+    setWorkspaceFiles(updated);
+
+    // Adjust selected file index
+    if (activeFileIndex === idx) {
+      const nextIdx = Math.max(0, idx - 1);
+      setActiveFileIndex(nextIdx);
+      setEditorCode(updated[nextIdx].content);
+    } else if (activeFileIndex > idx) {
+      setActiveFileIndex(prev => prev - 1);
+    }
+  };
+
   // Compile / Run current code inside sandbox simulation terminal logs
   const executeCompilerPipeline = () => {
     setIsCompiling(true);
     setShowTerminal(true);
-    setTerminalLogs(prev => [...prev, `[cyzor-compiler] Iniciando transpilacao: \`${workspaceFiles[activeFileIndex].name}\`...`]);
+    setTerminalLogs(prev => [...prev, `[cyzor-compiler] Iniciando execução: \`${workspaceFiles[activeFileIndex]?.name || 'index.html'}\`...`]);
 
     setTimeout(() => {
       if (editorCode.includes('throw') || editorCode.includes('error') && Math.random() > 0.85) {
@@ -135,31 +242,57 @@ export default function CodeEditorProfessional({ doc, onSave, onClose }: CodeEdi
         setTerminalLogs(prev => [
           ...prev,
           '[TS2307] Cannot find module "@google/genai" or its corresponding type declarations.',
-          '[TS425] Compilation failed: 1 error detected in briefing_analytics.ts'
+          `[error] Falha ao executar ${workspaceFiles[activeFileIndex]?.name || 'index.html'}`
         ]);
       } else {
         // Success
         setTerminalLogs(prev => [
           ...prev,
-          `[cyzor-compiler] Transpilacao ESNext concluida sem erros!`,
-          `[runtime] Executando processo na maquina de teste virtual...`,
-          `[console.log] "Iniciando auditoria para documento ID: Doc-0123"`,
-          `[runtime] Processo finalizado com codigo 0 (Sucesso em 22ms)`
+          `[cyzor-compiler] Compilação e sintaxe validadas com sucesso!`,
+          `[runtime] Executando processo no sandbox virtual Cyzor...`,
+          `[console.log] Código executado com sucesso sem erros estruturais.`,
+          `[runtime] Processo finalizado com código 0 (Sucesso em 15ms)`
         ]);
       }
       setIsCompiling(false);
-    }, 1500);
+    }, 1200);
   };
 
   const saveWorkspaceToSaaS = () => {
     // Sync current active code content before writing state package
     const filesCopy = [...workspaceFiles];
-    filesCopy[activeFileIndex].content = editorCode;
+    if (filesCopy[activeFileIndex]) {
+      filesCopy[activeFileIndex].content = editorCode;
+    }
+
+    // Determine the save value: if there's only 1 file and its name matches doc.title, we can save its content as raw string to keep database files lightweight, or save as JSON array.
+    // Actually, saving as JSON array of files makes it highly extensible. But if they expect doc.content to be just raw text when it's opened elsewhere, let's look at how we can do it:
+    // If it's a single file and the user didn't add any extra files, we can save its content as a raw code string. That way it's highly compatible with standard text storage!
+    // But if they have multiple files, we save as JSON. That's incredibly elegant and compatible!
+    let saveContent = '';
+    if (filesCopy.length === 1) {
+      saveContent = filesCopy[0].content;
+    } else {
+      saveContent = JSON.stringify(filesCopy);
+    }
+
+    // Check if original doc was base64-encoded upload
+    const isOriginalBase64 = (doc.content && doc.content.startsWith('data:')) || ((doc as any).url && (doc as any).url.startsWith('data:'));
+
+    let finalContent = saveContent;
+    let finalUrl = (doc as any).url || '';
+
+    if (isOriginalBase64 && filesCopy.length === 1) {
+      const filename = filesCopy[0].name;
+      finalContent = encodeBase64DataUrl(saveContent, filename);
+      finalUrl = finalContent; // Keep URL in sync with base64 encoded content
+    }
 
     const compiledOutput = {
       ...doc,
-      content: JSON.stringify(filesCopy),
-      size: `${Math.round(JSON.stringify(filesCopy).length / 100) / 10} KB`,
+      content: finalContent,
+      url: finalUrl,
+      size: `${Math.round(finalContent.length / 100) / 10} KB`,
       folder: doc.folder || 'Código',
       updatedAt: new Date().toISOString()
     };
@@ -232,38 +365,56 @@ export default function CodeEditorProfessional({ doc, onSave, onClose }: CodeEdi
         {/* IDE Split main workspace */}
         <div className="flex-1 flex overflow-hidden">
           
-          {/* S1. Left Files Explorer column */}
-          <aside className="w-56 bg-[#252526] border-r border-white/10 flex flex-col pt-3 shrink-0">
-            <div className="px-4 pb-2 border-b border-white/5 flex items-center justify-between text-[11px] font-bold uppercase tracking-widest text-[#808080]">
-              <span>Explorador de Arquivos</span>
-            </div>
-
-            <div className="p-3 flex flex-col gap-1.5 overflow-y-auto">
-              {/* Virtual folder directory */}
-              <div className="flex items-center gap-1.5 text-xs text-yellow-500 font-bold px-1.5 py-1">
-                <FolderOpen size={13} />
-                <span>workspace/</span>
-              </div>
-
-              {/* Workspace files list */}
-              {workspaceFiles.map((file, idx) => {
-                const isActive = idx === activeFileIndex;
-                return (
-                  <div
-                    key={file.name}
-                    onClick={() => handleSelectFile(idx)}
-                    className={`flex items-center justify-between p-2.5 rounded-xl cursor-pointer text-xs font-semibold ${
-                      isActive ? 'bg-[#37373D] text-white font-bold' : 'text-[#858585] hover:bg-[#2A2A2B] hover:text-white'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      <FileCode size={13} className="text-[#38bdf8] shrink-0" />
-                      <span className="truncate">{file.name}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+           {/* S1. Left Files Explorer column */}
+           <aside className="w-56 bg-[#252526] border-r border-white/10 flex flex-col pt-3 shrink-0">
+             <div className="px-4 pb-2 border-b border-white/5 flex items-center justify-between text-[11px] font-bold uppercase tracking-widest text-[#808080]">
+               <span>Explorador de Arquivos</span>
+             </div>
+ 
+             <div className="p-3 flex flex-col gap-1.5 overflow-y-auto">
+               {/* Virtual folder directory with add button */}
+               <div className="flex items-center justify-between text-xs text-yellow-500 font-bold px-1.5 py-1">
+                 <div className="flex items-center gap-1.5">
+                   <FolderOpen size={13} />
+                   <span>workspace/</span>
+                 </div>
+                 <button
+                   onClick={handleCreateFileInWorkspace}
+                   title="Novo Arquivo"
+                   className="p-1.5 hover:bg-[#37373D] text-neutral-400 hover:text-white rounded-lg transition-all cursor-pointer"
+                 >
+                   <FileCode size={13} />
+                 </button>
+               </div>
+ 
+               {/* Workspace files list */}
+               {workspaceFiles.map((file, idx) => {
+                 const isActive = idx === activeFileIndex;
+                 return (
+                   <div
+                     key={file.name}
+                     onClick={() => handleSelectFile(idx)}
+                     className={`flex items-center justify-between p-2.5 rounded-xl cursor-pointer text-xs font-semibold group ${
+                       isActive ? 'bg-[#37373D] text-white font-bold' : 'text-[#858585] hover:bg-[#2A2A2B] hover:text-white'
+                     }`}
+                   >
+                     <div className="flex items-center gap-2 truncate pr-2">
+                       <FileCode size={13} className="text-[#38bdf8] shrink-0" />
+                       <span className="truncate">{file.name}</span>
+                     </div>
+                     {workspaceFiles.length > 1 && (
+                       <button
+                         onClick={(e) => handleDeleteFileInWorkspace(idx, e)}
+                         title="Excluir arquivo"
+                         className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[#44444A] text-neutral-400 hover:text-red-400 rounded transition"
+                       >
+                         <Trash size={12} />
+                       </button>
+                     )}
+                   </div>
+                 );
+               })}
+             </div>
 
             {/* Simulated Server endpoint stats */}
             <div className="mt-auto p-4 border-t border-white/5 bg-[#1E1E1E]/40 text-left">

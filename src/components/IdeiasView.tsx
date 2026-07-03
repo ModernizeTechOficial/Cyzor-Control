@@ -259,8 +259,17 @@ export default function IdeiasView() {
 
   const handleDropKanban = async (e: React.DragEvent, colId: string) => {
     e.preventDefault();
-    const ideaId = e.dataTransfer.getData('itemId');
+    const ideaIdStr = e.dataTransfer.getData('itemId') || e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('projectId');
+    let ideaId = (window as any).__draggedItemId;
+
+    if (!ideaId && ideaIdStr) {
+      ideaId = Number(ideaIdStr);
+    }
+
     if (!ideaId) return;
+
+    // Clear global state
+    (window as any).__draggedItemId = null;
 
     // Optimistic Update
     setIdeas(prev => prev.map(i => i.id === Number(ideaId) ? { ...i, column: colId } : i));
