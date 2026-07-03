@@ -4,6 +4,9 @@ import {
   Trash2, Edit3, X, Check, CheckCircle2, AlertCircle, Sparkles, Tag, ChevronRight, FileText
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
+import { useCompanies, useProjects, useFinance } from '../hooks/useCyzorQueries';
+import { SkeletonDashboard } from './common/skeletons/SkeletonDashboard';
+import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'motion/react';
 import StandardHeader from './layout/StandardHeader';
 import MetricCard from './MetricCard';
@@ -14,7 +17,12 @@ export default function ClientesView() {
   
   // States
   const [clients, setClients] = useState<any[]>([]);
+  const { data: companiesData, isLoading: isCompaniesLoading } = useCompanies();
+  const { data: projectsData } = useProjects();
+  const { data: financeData } = useFinance();
+
   const [companies, setCompanies] = useState<any[]>([]);
+  useEffect(() => { if (companiesData) setCompanies(companiesData); }, [companiesData]);
   const [loading, setLoading] = useState(true);
   
   // Filters
@@ -194,6 +202,10 @@ export default function ClientesView() {
   const activeClientsCount = clients.filter(c => c.status === 'Ativo').length;
   const leadsCount = clients.filter(c => c.status === 'Lead').length;
   const inactiveClientsCount = clients.filter(c => c.status === 'Inativo').length;
+
+  if (isCompaniesLoading) {
+    return <SkeletonDashboard />;
+  }
 
   return (
     <div className="w-full mx-auto pb-12 flex flex-col gap-10 animate-in fade-in duration-500 relative px-4 sm:px-6 lg:px-10">

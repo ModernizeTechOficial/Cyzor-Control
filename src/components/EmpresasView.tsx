@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import CompanyModal from './CompanyModal';
 import { useAuth } from '../context/AuthContext.tsx';
+import { useCompanies, useProjects } from '../hooks/useCyzorQueries';
+import { SkeletonDashboard } from './common/skeletons/SkeletonDashboard';
+import { useQueryClient } from '@tanstack/react-query';
 import StandardHeader from './layout/StandardHeader';
 import { Plus } from 'lucide-react';
 import CompanyStats from './empresas/CompanyStats';
@@ -17,7 +20,11 @@ export default function EmpresasView() {
   const [editingCompany, setEditingCompany] = useState<any>(null);
 
   // Data
+  const { data: companiesData, isLoading: isCompaniesLoading } = useCompanies();
+  const { data: projectsData } = useProjects();
+
   const [companies, setCompanies] = useState<any[]>([]);
+  useEffect(() => { if (companiesData) setCompanies(companiesData); }, [companiesData]);
   const [clients, setClients] = useState<any[]>([]);
   const [finance, setFinance] = useState<any[]>([]);
   const [totalRevenue, setTotalRevenue] = useState(0);
@@ -110,6 +117,10 @@ export default function EmpresasView() {
   const clearSelection = () => {
     setSelectedCompanyIds([]);
   };
+
+  if (isCompaniesLoading) {
+    return <SkeletonDashboard />;
+  }
 
   return (
     <div className="w-full mx-auto pb-12 flex flex-col gap-10 animate-in fade-in duration-500 relative px-4 sm:px-6 lg:px-10">

@@ -3,6 +3,9 @@ import MetricCard from './MetricCard';
 import StandardHeader from './layout/StandardHeader';
 import FinanceEntryModal from './FinanceEntryModal';
 import { useAuth } from '../context/AuthContext';
+import { useFinance, useProjects, useCompanies } from '../hooks/useCyzorQueries';
+import { SkeletonDashboard } from './common/skeletons/SkeletonDashboard';
+import { useQueryClient } from '@tanstack/react-query';
 import { DollarSign, TrendingUp, TrendingDown, CreditCard, ArrowUpRight, ArrowDownRight, Server, Globe, Key, Database, MoreHorizontal, Edit3, Layers, ChevronRight, Plus } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 
@@ -12,8 +15,14 @@ export default function FinanceiroView() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<any>(null);
 
+  const { data: financeData, isLoading: isFinanceLoading } = useFinance();
+  const { data: projectsData } = useProjects();
+  const { data: companiesData } = useCompanies();
+
   const [entries, setEntries] = useState<any[]>([]);
+  useEffect(() => { if (financeData) setEntries(financeData); }, [financeData]);
   const [projects, setProjects] = useState<any[]>([]);
+  useEffect(() => { if (projectsData) setProjects(projectsData); }, [projectsData]);
   const { fetchWithAuth, activeWorkspace } = useAuth();
   
   const fetchData = async () => {

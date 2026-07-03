@@ -573,8 +573,7 @@ export default function TimelineView({
                       {/* Bar Main Drag Area */}
                       <div
                         onPointerDown={(e) => handlePointerDown(e, item, 'move')}
-                        onClick={() => onItemClick(item.rawItem)}
-                        className={`w-full h-full bg-gradient-to-r ${getBarColor(item.statusLabel)} rounded-xl px-3.5 flex items-center justify-between cursor-grab active:cursor-grabbing overflow-hidden`}
+                        className={`w-full h-full bg-gradient-to-r ${getBarColor(item.statusLabel)} rounded-xl pl-3.5 pr-2 flex items-center justify-between cursor-grab active:cursor-grabbing overflow-hidden`}
                       >
                         {/* Progress Bar Indicator Underlay */}
                         <div 
@@ -582,14 +581,27 @@ export default function TimelineView({
                           style={{ width: `${item.progress}%` }}
                         />
 
-                        {/* Title & Progress Inside Pill */}
-                        <span className="text-[10px] font-bold truncate pr-2 leading-none">
-                          {item.name}
-                        </span>
+                        {/* Title Inside Pill */}
+                        <div className="flex items-center gap-2 overflow-hidden pr-2">
+                          <span className="text-[10px] font-bold truncate leading-none">
+                            {item.name}
+                          </span>
+                        </div>
 
-                        <span className="text-[9px] font-black bg-white/25 px-1.5 py-0.5 rounded leading-none shrink-0">
-                          {item.progress}%
-                        </span>
+                        {/* Progress & Actions */}
+                        <div className="flex items-center gap-1.5 shrink-0 relative z-30">
+                          <span className="text-[9px] font-black bg-white/25 px-1.5 py-0.5 rounded leading-none shrink-0 pointer-events-none">
+                            {item.progress}%
+                          </span>
+                          <button
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onClick={() => onItemClick(item.rawItem)}
+                            className="bg-white/20 hover:bg-white/50 p-1 rounded transition-colors text-white cursor-pointer z-50 flex items-center justify-center shadow-sm"
+                            title="Abrir detalhes"
+                          >
+                            <Maximize2 size={10} strokeWidth={2.5} />
+                          </button>
+                        </div>
                       </div>
 
                       {/* Right Resize Handle */}

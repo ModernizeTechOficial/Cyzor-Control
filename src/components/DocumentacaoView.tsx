@@ -55,6 +55,9 @@ import CodeEditorProfessional from './CodeEditorProfessional';
 import LocalPdfViewerModal from './LocalPdfViewerModal';
 import LocalImageViewerModal from './LocalImageViewerModal';
 import { useAuth } from '../context/AuthContext';
+import { useDocuments, useProjects } from '../hooks/useCyzorQueries';
+import { SkeletonDashboard } from './common/skeletons/SkeletonDashboard';
+import { useQueryClient } from '@tanstack/react-query';
 import StandardHeader from './layout/StandardHeader';
 import { 
   fetchGoogleDriveFiles, 
@@ -74,7 +77,11 @@ const resolveIcon = (icon: any) => {
 };
 
 export default function DocumentacaoView() {
+  const { data: documentsData, isLoading: isDocumentsLoading } = useDocuments();
+  const { data: projectsData } = useProjects();
+
   const [documents, setDocuments] = useState<any[]>([]);
+  useEffect(() => { if (documentsData) setDocuments(documentsData); }, [documentsData]);
   const [projectsList, setProjectsList] = useState<any[]>([]);
   const { fetchWithAuth, activeWorkspace, googleDriveToken, connectGoogleDrive } = useAuth();
 

@@ -6,6 +6,9 @@ import {
   Filter, ArrowUpRight, CheckSquare, ChevronLeft, LogIn, User, CheckCircle2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
+import { useProjects, useCompanies, useTasks, useFinance, useDocuments, useMembers } from '../hooks/useCyzorQueries';
+import { SkeletonKanban } from './common/skeletons/SkeletonKanban';
+import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import StandardHeader from './layout/StandardHeader';
 import MetricCard from './MetricCard';
@@ -19,12 +22,25 @@ export default function ProjetosView() {
   const { fetchWithAuth, activeWorkspace, user } = useAuth();
   
   // Real database entity states
+  const { data: projectsData, isLoading: isProjectsLoading } = useProjects();
+  const { data: companiesData, isLoading: isCompaniesLoading } = useCompanies();
+  const { data: tasksData } = useTasks();
+  const { data: financeData } = useFinance();
+  const { data: docsData } = useDocuments();
+  const { data: membersData } = useMembers();
+
   const [projects, setProjects] = useState<any[]>([]);
+  useEffect(() => { if (projectsData) setProjects(projectsData); }, [projectsData]);
   const [companies, setCompanies] = useState<any[]>([]);
+  useEffect(() => { if (companiesData) setCompanies(companiesData); }, [companiesData]);
   const [tasks, setTasks] = useState<any[]>([]);
+  useEffect(() => { if (tasksData) setTasks(tasksData); }, [tasksData]);
   const [financeEntries, setFinanceEntries] = useState<any[]>([]);
+  useEffect(() => { if (financeData) setFinanceEntries(financeData); }, [financeData]);
   const [documents, setDocuments] = useState<any[]>([]);
+  useEffect(() => { if (docsData) setDocuments(docsData); }, [docsData]);
   const [members, setMembers] = useState<any[]>([]);
+  useEffect(() => { if (membersData) setMembers(membersData); }, [membersData]);
   
   // Modal controllers
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -109,37 +125,21 @@ export default function ProjetosView() {
   };
 
   // Synchronize dynamic platform arrays with actual databases
+  const queryClient = useQueryClient();
   const syncPlatformData = async () => {
-    if (!activeWorkspace) return;
     setIsSyncing(true);
-    try {
-      const [projRes, compRes, taskRes, finRes, docRes, memRes] = await Promise.all([
-        fetchWithAuth('/api/projects'),
-        fetchWithAuth('/api/companies'),
-        fetchWithAuth('/api/tasks'),
-        fetchWithAuth('/api/finance'),
-        fetchWithAuth('/api/documents'),
-        fetchWithAuth('/api/workspace/members')
-      ]);
-
-      if (projRes.ok) {
-        setProjects(await projRes.json());
-      }
-      if (compRes.ok) setCompanies(await compRes.json());
-      if (taskRes.ok) setTasks(await taskRes.json());
-      if (finRes.ok) setFinanceEntries(await finRes.json());
-      if (docRes.ok) setDocuments(await docRes.json());
-      if (memRes.ok) setMembers(await memRes.json());
-    } catch (err) {
-      console.error("CYZOR sync failure:", err);
-    } finally {
-      setIsSyncing(false);
-    }
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['projects'] }),
+      queryClient.invalidateQueries({ queryKey: ['companies'] }),
+      queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+      queryClient.invalidateQueries({ queryKey: ['finance'] }),
+      queryClient.invalidateQueries({ queryKey: ['documents'] }),
+      queryClient.invalidateQueries({ queryKey: ['members'] })
+    ]);
+    setIsSyncing(false);
   };
 
-  useEffect(() => {
-    syncPlatformData();
-  }, [activeWorkspace]);
+  
 
   // Command keybind (⌘K or Ctrl+K)
   useEffect(() => {
@@ -354,6 +354,10 @@ export default function ProjetosView() {
 
     return matches;
   };
+
+  if (isProjectsLoading || isCompaniesLoading) {
+    return <SkeletonKanban />;
+  }
 
   return (
     <div className="w-full mx-auto pb-12 flex flex-col gap-10 animate-in fade-in duration-500 relative text-left px-4 sm:px-6 lg:px-10">

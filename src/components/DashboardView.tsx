@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
+import { useProjects, useCompanies, useFinance, useMembers } from '../hooks/useCyzorQueries';
+import { SkeletonDashboard } from './common/skeletons/SkeletonDashboard';
+import { useQueryClient } from '@tanstack/react-query';
 import { View } from '../types';
 import HomeHeader from './home/HomeHeader';
 import HomeOverview from './home/HomeOverview';
@@ -21,13 +24,22 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
     tasks: 0
   });
   
+  const { data: projectsData, isLoading: isProjectsLoading } = useProjects();
+  const { data: companiesData, isLoading: isCompaniesLoading } = useCompanies();
+  const { data: financeData } = useFinance();
+  const { data: membersData } = useMembers();
+
   const [projects, setProjects] = useState<any[]>([]);
+  useEffect(() => { if (projectsData) setProjects(projectsData); }, [projectsData]);
   const [deploys, setDeploys] = useState<any[]>([]);
   const [finance, setFinance] = useState<any[]>([]);
+  useEffect(() => { if (financeData) setFinance(financeData); }, [financeData]);
   const [tasks, setTasks] = useState<any[]>([]);
   const [members, setMembers] = useState<any[]>([]);
+  useEffect(() => { if (membersData) setMembers(membersData); }, [membersData]);
   const [agendaEvents, setAgendaEvents] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
+  useEffect(() => { if (companiesData) setClients(companiesData); }, [companiesData]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

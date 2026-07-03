@@ -10,6 +10,9 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useMembers, useProjects } from '../../hooks/useCyzorQueries';
+import { SkeletonDashboard } from '../common/skeletons/SkeletonDashboard';
+import { useQueryClient } from '@tanstack/react-query';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function EquipeDashboard() {
