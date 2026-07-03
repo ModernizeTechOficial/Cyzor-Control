@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useProducts, useCompanies, useProjects } from '../hooks/useCyzorQueries';
 import { SkeletonKanban } from './common/skeletons/SkeletonKanban';
 import { useQueryClient } from '@tanstack/react-query';
+import Swal from 'sweetalert2';
 
 import StandardHeader from './layout/StandardHeader';
 import { Plus } from 'lucide-react';
@@ -194,6 +195,7 @@ export default function ProdutosView() {
   }, [filteredProducts]);
 
   const handleDropKanban = async (e: React.DragEvent, colId: string) => {
+    e.preventDefault();
     const prodId = e.dataTransfer.getData('itemId');
     if (!prodId) return;
 
@@ -207,14 +209,25 @@ export default function ProdutosView() {
     const newStatus = reverseStatusMap[colId] || colId;
 
     // Optimistic Update
-    setProducts(prev => prev.map(i => i.id === prodId ? { ...i, status: newStatus } : i));
+    setProducts(prev => prev.map(i => i.id === Number(prodId) ? { ...i, status: newStatus } : i));
 
     try {
-      await fetchWithAuth(`/api/products/${prodId}`, {
+      const res = await fetchWithAuth(`/api/products/${prodId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus })
       });
+      
+      if (res.ok) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Produto atualizado!',
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 2000
+        });
+      }
     } catch(err) {
       console.error(err);
       fetchData(); // Revert
@@ -302,6 +315,7 @@ export default function ProdutosView() {
                 onItemClick={setSelectedProduct}
                 onAddClick={() => setIsNewModalOpen(true)}
                 emptyMessage="Nenhum produto nesta etapa."
+                disableLayoutAnimation={true}
               />
             )}
 

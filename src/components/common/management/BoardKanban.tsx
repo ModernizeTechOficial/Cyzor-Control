@@ -1,5 +1,6 @@
 import React from 'react';
 import { Plus, Star, User, Calendar } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 export interface KanbanColumn {
   id: string;
@@ -30,6 +31,7 @@ interface BoardKanbanProps {
   onToggleFavorite?: (id: number) => void;
   onAddClick?: (colId: string) => void;
   emptyMessage?: string;
+  disableLayoutAnimation?: boolean;
 }
 
 export default function BoardKanban({
@@ -39,7 +41,8 @@ export default function BoardKanban({
   onItemClick,
   onToggleFavorite,
   onAddClick,
-  emptyMessage = "Vazio"
+  emptyMessage = "Vazio",
+  disableLayoutAnimation = false
 }: BoardKanbanProps) {
   const handleDragStart = (e: React.DragEvent, id: string | number) => {
     e.dataTransfer.setData('itemId', id.toString());
@@ -78,87 +81,94 @@ export default function BoardKanban({
 
             {/* Cards stack */}
             <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[580px] pr-1 scrollbar-none flex-1">
-              {columnItems.length > 0 ? (
-                columnItems.map((p) => {
-                  return (
-                    <div 
-                      key={p.id}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, p.id)}
-                      className="bg-white p-4 rounded-xl border border-neutral-200/50 hover:border-neutral-300 shadow-[0_1px_3px_rgba(0,0,0,0.01)] hover:shadow-sm cursor-grab active:cursor-grabbing transition-all text-left relative group"
-                    >
-                      {/* Starred Favorite */}
-                      {onToggleFavorite && (
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); onToggleFavorite(Number(p.id)); }}
-                          className="absolute top-3 right-3 text-neutral-300 hover:text-amber-500 transition-colors"
-                        >
-                          <Star size={13} fill={p.isStarred ? "currentColor" : "none"} className={p.isStarred ? "text-amber-500" : ""} />
-                        </button>
-                      )}
-
-                      {/* Client & Title */}
-                      <span className="text-[9px] font-bold text-neutral-400 block tracking-wide uppercase">
-                        {p.subtitle || 'S/N'}
-                      </span>
-                      <h4 
-                        onClick={() => onItemClick(p.raw)}
-                        className="text-xs font-black text-neutral-900 mt-1 hover:underline cursor-pointer tracking-tight"
+              <AnimatePresence initial={false}>
+                {columnItems.length > 0 ? (
+                  columnItems.map((p) => {
+                    return (
+                      <motion.div 
+                        key={p.id}
+                        layout={!disableLayoutAnimation}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        transition={{ duration: 0.2, ease: "easeInOut" }}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, p.id)}
+                        className="bg-white p-4 rounded-xl border border-neutral-200/50 hover:border-neutral-300 shadow-[0_1px_3px_rgba(0,0,0,0.01)] hover:shadow-sm cursor-grab active:cursor-grabbing transition-all text-left relative group"
                       >
-                        {p.title}
-                      </h4>
-
-                      <div className="flex items-center gap-1 mt-1 text-[9px] text-neutral-500 font-medium italic">
-                        <User size={10} className="text-neutral-400" />
-                        {p.owner || 'Sem dono'}
-                      </div>
-
-                      {/* Priority Status indicator */}
-                      <div className="flex items-center gap-2 mt-2.5">
-                        <span className={`text-[8px] font-black tracking-wider uppercase px-1.5 py-0.5 rounded-md ${
-                          p.priority === 'Alta' ? 'bg-red-50 text-red-700' : 'bg-neutral-50 text-neutral-600'
-                        }`}>
-                          {p.priority || 'Normal'}
-                        </span>
-                        
-                        {p.dueDate && (
-                          <span className="text-[9px] font-semibold text-neutral-400 flex items-center gap-1">
-                            <Calendar size={10} />
-                            {new Date(p.dueDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
-                          </span>
+                        {/* Starred Favorite */}
+                        {onToggleFavorite && (
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); onToggleFavorite(Number(p.id)); }}
+                            className="absolute top-3 right-3 text-neutral-300 hover:text-amber-500 transition-colors"
+                          >
+                            <Star size={13} fill={p.isStarred ? "currentColor" : "none"} className={p.isStarred ? "text-amber-500" : ""} />
+                          </button>
                         )}
-                      </div>
 
-                      {/* Interactive Progress Bar */}
-                      <div className="mt-3.5">
-                        <div className="flex items-center justify-between text-[10px] text-neutral-500 font-bold mb-1">
-                          <span>Progresso</span>
-                          <span>{p.progress}%</span>
-                        </div>
-                        <div className="w-full h-1 bg-neutral-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-neutral-950 rounded-full" style={{ width: `${p.progress}%` }} />
-                        </div>
-                      </div>
+                        {/* Client & Title */}
+                        <span className="text-[9px] font-bold text-neutral-400 block tracking-wide uppercase">
+                          {p.subtitle || 'S/N'}
+                        </span>
+                        <h4 
+                          onClick={() => onItemClick(p.raw)}
+                          className="text-xs font-black text-neutral-900 mt-1 hover:underline cursor-pointer tracking-tight"
+                        >
+                          {p.title}
+                        </h4>
 
-                      {/* Team initials display / Values */}
-                      {p.budgetOrValue !== undefined && (
-                        <div className="mt-4 pt-3 border-t border-neutral-100 flex items-center justify-between">
-                          <span className="text-[9px] font-bold text-neutral-400 uppercase">{p.budgetLabel || 'Valor'}</span>
-                          <span className="text-xs font-black text-neutral-900">
-                            {typeof p.budgetOrValue === 'number' 
-                              ? `R$ ${p.budgetOrValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-                              : p.budgetOrValue}
+                        <div className="flex items-center gap-1 mt-1 text-[9px] text-neutral-500 font-medium italic">
+                          <User size={10} className="text-neutral-400" />
+                          {p.owner || 'Sem dono'}
+                        </div>
+
+                        {/* Priority Status indicator */}
+                        <div className="flex items-center gap-2 mt-2.5">
+                          <span className={`text-[8px] font-black tracking-wider uppercase px-1.5 py-0.5 rounded-md ${
+                            p.priority === 'Alta' ? 'bg-red-50 text-red-700' : 'bg-neutral-50 text-neutral-600'
+                          }`}>
+                            {p.priority || 'Normal'}
                           </span>
+                          
+                          {p.dueDate && (
+                            <span className="text-[9px] font-semibold text-neutral-400 flex items-center gap-1">
+                              <Calendar size={10} />
+                              {new Date(p.dueDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                            </span>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="flex flex-col items-center justify-center py-10 border border-dashed border-neutral-200/50 rounded-xl text-center">
-                  <span className="text-[9px] font-black tracking-widest text-neutral-300 uppercase">{emptyMessage}</span>
-                </div>
-              )}
+
+                        {/* Interactive Progress Bar */}
+                        <div className="mt-3.5">
+                          <div className="flex items-center justify-between text-[10px] text-neutral-500 font-bold mb-1">
+                            <span>Progresso</span>
+                            <span>{p.progress}%</span>
+                          </div>
+                          <div className="w-full h-1 bg-neutral-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-neutral-950 rounded-full" style={{ width: `${p.progress}%` }} />
+                          </div>
+                        </div>
+
+                        {/* Team initials display / Values */}
+                        {p.budgetOrValue !== undefined && (
+                          <div className="mt-4 pt-3 border-t border-neutral-100 flex items-center justify-between">
+                            <span className="text-[9px] font-bold text-neutral-400 uppercase">{p.budgetLabel || 'Valor'}</span>
+                            <span className="text-xs font-black text-neutral-900">
+                              {typeof p.budgetOrValue === 'number' 
+                                ? `R$ ${p.budgetOrValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                                : p.budgetOrValue}
+                            </span>
+                          </div>
+                        )}
+                      </motion.div>
+                    );
+                  })
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-10 border border-dashed border-neutral-200/50 rounded-xl text-center">
+                    <span className="text-[9px] font-black tracking-widest text-neutral-300 uppercase">{emptyMessage}</span>
+                  </div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         );

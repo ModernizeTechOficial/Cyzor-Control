@@ -260,6 +260,7 @@ export default function IdeiasView() {
   }, [filteredIdeas]);
 
   const handleDropKanban = async (e: React.DragEvent, colId: string) => {
+    e.preventDefault();
     const ideaId = e.dataTransfer.getData('itemId');
     if (!ideaId) return;
 
