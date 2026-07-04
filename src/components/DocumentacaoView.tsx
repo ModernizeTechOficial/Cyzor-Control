@@ -1381,7 +1381,7 @@ export default function DocumentacaoView() {
             <div>
               <h3 className="text-xl font-body font-bold text-slate-900 tracking-tight flex items-center gap-2">
                 <Sparkles className="text-amber-500 animate-pulse animate-duration-1000" size={20} />
-                Criar Novo Documento Profissional1
+                Criar Novo Documento Profissional
               </h3>
               <p className="text-xs text-neutral-500 font-semibold mt-1">Selecione o formato inteligente ou utilize um modelo corporativo da biblioteca abaixo.</p>
             </div>
