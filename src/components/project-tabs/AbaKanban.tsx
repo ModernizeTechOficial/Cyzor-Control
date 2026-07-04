@@ -77,7 +77,7 @@ interface AbaKanbanProps {
 }
 
 export default function AbaKanban({ project, onUpdateProject }: AbaKanbanProps) {
-  const { fetchWithAuth } = useAuth();
+  const { fetchWithAuth, syncSaaSState } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
   const [assigneeFilter, setAssigneeFilter] = useState('');
@@ -192,6 +192,10 @@ export default function AbaKanban({ project, onUpdateProject }: AbaKanbanProps) 
               tasks: updatedTasks,
               history: [activityLog, ...(project.history || [])]
             });
+
+            if (targetColumn === 'done') {
+              syncSaaSState();
+            }
         }
     } catch (e) {
         console.error(e);

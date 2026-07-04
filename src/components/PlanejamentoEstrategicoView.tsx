@@ -561,8 +561,8 @@ Por favor, analise esses fatos operacionais e prescreva:
         </div>
 
         {/* Linear Stage timeline - premium execution */}
-        <div className="relative w-full py-4 md:overflow-visible overflow-x-auto custom-scrollbar">
-          <div className="min-w-[800px] md:min-w-0 flex items-start justify-between relative px-4 sm:px-12 h-16 mt-16">
+        <div className="relative w-full py-4 md:overflow-visible overflow-visible custom-scrollbar">
+          <div className="min-w-[800px] md:min-w-0 flex items-start justify-between relative px-4 sm:px-12 h-16 mt-16 overflow-visible">
             
             {/* Background Line */}
             <div className="absolute left-10 right-10 sm:left-20 sm:right-20 top-[18px] h-1 bg-slate-100 rounded-full z-0" />

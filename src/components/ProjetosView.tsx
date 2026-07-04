@@ -28,7 +28,7 @@ import { useNavigation } from "../context/NavigationContext";
 
 export default function ProjetosView() {
   const { globalFilters, setGlobalFilters } = useNavigation();
-  const { fetchWithAuth, activeWorkspace, user } = useAuth();
+  const { fetchWithAuth, activeWorkspace, user, syncSaaSState } = useAuth();
   
   // Real database entity states
   const { data: projectsData, isLoading: isProjectsLoading } = useProjects();
@@ -160,7 +160,8 @@ export default function ProjetosView() {
       queryClient.invalidateQueries({ queryKey: ['tasks'] }),
       queryClient.invalidateQueries({ queryKey: ['finance'] }),
       queryClient.invalidateQueries({ queryKey: ['documents'] }),
-      queryClient.invalidateQueries({ queryKey: ['members'] })
+      queryClient.invalidateQueries({ queryKey: ['members'] }),
+      syncSaaSState()
     ]);
     setIsSyncing(false);
   };
