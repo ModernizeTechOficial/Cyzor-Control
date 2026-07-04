@@ -11,16 +11,20 @@ interface ProductTourProps {
 }
 
 export default function ProductTour({ onComplete, onSkip, forceStart = false }: ProductTourProps) {
-  const { tourCompleted, setTourCompleted, fetchWithAuth } = useAuth();
+  const { tourCompleted, setTourCompleted, fetchWithAuth, activeWorkspace } = useAuth();
   const [currentStepIndex, setCurrentStepIndex] = useState(-1);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isEnding, setIsEnding] = useState(false);
 
   const currentStep = currentStepIndex >= 0 ? tourSteps[currentStepIndex] : null;
+  const isOnboardingCompleted = activeWorkspace?.settings?.onboardingCompleted === true;
 
   useEffect(() => {
-    if (forceStart || !tourCompleted) {
+    // Only start automatically if:
+    // 1. It's a forced start (from finished onboarding callback)
+    // 2. OR tour is not completed AND onboarding IS completed
+    if (forceStart || (!tourCompleted && isOnboardingCompleted)) {
       // Small delay to ensure layout is ready
       const timer = setTimeout(() => {
         setIsVisible(true);
@@ -28,7 +32,7 @@ export default function ProductTour({ onComplete, onSkip, forceStart = false }: 
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [tourCompleted, forceStart]);
+  }, [tourCompleted, forceStart, isOnboardingCompleted]);
 
   useEffect(() => {
     if (currentStepIndex >= 0 && isVisible) {

@@ -59,14 +59,18 @@ export default function App() {
 
   useEffect(() => {
     // Show welcome modal after login (once per session)
-    if (user && !loading && !sessionStorage.getItem('welcome_modal_shown')) {
+    // Only show if onboarding is already completed AND it's not the session where they just finished it
+    const isOnboardingFinished = activeWorkspace?.settings?.onboardingCompleted === true;
+    const justFinishedOnboarding = sessionStorage.getItem('just_finished_onboarding') === 'true';
+
+    if (user && !loading && isOnboardingFinished && !justFinishedOnboarding && !sessionStorage.getItem('welcome_modal_shown')) {
       const timer = setTimeout(() => {
         setShowWelcome(true);
         sessionStorage.setItem('welcome_modal_shown', 'true');
       }, 1500); // Delay slightly for smoother experience
       return () => clearTimeout(timer);
     }
-  }, [user, loading]);
+  }, [user, loading, activeWorkspace]);
 
   useEffect(() => {
     const handleRestartTour = () => setRestartTour(prev => prev + 1);

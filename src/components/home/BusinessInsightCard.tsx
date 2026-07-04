@@ -26,20 +26,20 @@ export default function BusinessInsightCard({ setCurrentView, currentStage }: Bu
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="w-full bg-slate-900 border border-slate-800 rounded-[24px] p-6 flex flex-col gap-4 text-white shadow-xl"
+      className="w-full h-full bg-slate-900 border border-slate-800 rounded-[24px] p-4 flex flex-col gap-3 text-white shadow-xl"
     >
       <div className="flex items-center gap-2">
-        <Sparkles className="w-4 h-4 text-blue-400" />
-        <h3 className="text-sm font-bold text-white">Business Insight</h3>
+        <Sparkles className="w-3 h-3 text-blue-400" />
+        <h3 className="text-xs font-bold text-white uppercase tracking-wider">Business Insight</h3>
       </div>
       
-      <p className="text-xs text-slate-300 leading-relaxed">
+      <p className="text-[10px] text-slate-300 leading-relaxed flex-1">
         {getInsight()}
       </p>
 
       <button
         onClick={() => setCurrentView('roadmap')}
-        className="self-start text-[11px] font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1.5 transition-colors"
+        className="self-start text-[10px] font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1.5 transition-colors mt-2"
       >
         Continuar Jornada
         <ArrowRight className="w-3 h-3" />

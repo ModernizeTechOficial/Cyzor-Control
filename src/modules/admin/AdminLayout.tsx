@@ -22,10 +22,12 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ currentView, setCurrentView }: AdminLayoutProps) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const { fetchWithAuth, user, loading } = useAuth();
+  const { fetchWithAuth, user, dbUser, loading } = useAuth();
   const [metrics, setMetrics] = useState<any>(null);
   const [loadingMetrics, setLoadingMetrics] = useState(true);
   const [showWelcome, setShowWelcome] = useState(false);
+
+  const isPlatformAdmin = dbUser?.isPlatformAdmin === true;
 
   useEffect(() => {
     // Show welcome modal after login (once per session)
@@ -38,7 +40,14 @@ export default function AdminLayout({ currentView, setCurrentView }: AdminLayout
     }
   }, [user, loading]);
 
+  useEffect(() => {
+    if (!loading && user && !isPlatformAdmin) {
+      setCurrentView('dashboard');
+    }
+  }, [user, dbUser, loading, isPlatformAdmin, setCurrentView]);
+
   const loadMetrics = useCallback(async () => {
+    if (!isPlatformAdmin) return;
     try {
       setLoadingMetrics(true);
       const res = await fetchWithAuth('/api/admin/metrics');
@@ -51,11 +60,21 @@ export default function AdminLayout({ currentView, setCurrentView }: AdminLayout
     } finally {
       setLoadingMetrics(false);
     }
-  }, [fetchWithAuth]);
+  }, [fetchWithAuth, isPlatformAdmin]);
 
   useEffect(() => {
-    loadMetrics();
-  }, [loadMetrics]);
+    if (isPlatformAdmin) {
+      loadMetrics();
+    }
+  }, [loadMetrics, isPlatformAdmin]);
+
+  if (!isPlatformAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white text-gray-900 font-sans relative flex overflow-hidden">

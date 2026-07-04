@@ -6,21 +6,24 @@ export class GeminiProvider implements AIProvider {
   private ai: GoogleGenAI;
 
   constructor(apiKey: string) {
-    this.ai = new GoogleGenAI({ apiKey });
+    this.ai = new GoogleGenAI({ 
+      apiKey,
+      httpOptions: { headers: { "User-Agent": "aistudio-build" } }
+    });
   }
 
   async chat(request: ChatRequest): Promise<ChatResponse> {
     const start = Date.now();
     try {
       const response = await this.ai.models.generateContent({
-        model: 'gemini-1.5-flash', // Default model
+        model: 'gemini-3.5-flash', // Default model
         contents: request.message,
       });
 
       return {
         message: response.text || '',
         provider: this.name,
-        model: 'gemini-1.5-flash',
+        model: 'gemini-3.5-flash',
         duration: Date.now() - start,
       };
     } catch (error) {
@@ -31,8 +34,8 @@ export class GeminiProvider implements AIProvider {
 
   async models(): Promise<ModelInfo[]> {
     return [
-      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', provider: this.name },
-      { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', provider: this.name },
+      { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash', provider: this.name },
+      { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro', provider: this.name },
     ];
   }
 

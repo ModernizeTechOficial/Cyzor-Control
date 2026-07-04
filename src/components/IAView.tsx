@@ -145,7 +145,7 @@ export default function IAView() {
       <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 h-auto lg:h-[calc(100vh-220px)] text-left">
       
       {/* Principal: Chat Interface */}
-      <div className="flex-1 flex flex-col bg-[#FFFFFF] rounded-[24px] sm:rounded-[30px] border border-[#0F172A0F] shadow-[0_20px_60px_rgba(0,0,0,0.02)] overflow-hidden h-[600px] lg:h-full">
+      <div className="flex-1 flex flex-col bg-[#FFFFFF] rounded-[24px] sm:rounded-[30px] border border-[#0F172A0F] shadow-[0_20px_60px_rgba(0,0,0,0.02)] overflow-hidden h-[70vh] lg:h-full">
         
         {/* Header */}
         <div className="px-5 sm:px-8 py-4 sm:py-6 border-b border-[#0F172A0F] bg-[#FAFAFA] flex items-center justify-between flex-shrink-0">

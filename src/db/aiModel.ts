@@ -505,7 +505,7 @@ INSTRUÇÕES:
 export async function generateEntityInsights(workspaceId: number, entityType: string, entityData: any) {
   try {
     const ai = await getAIInstance(workspaceId);
-    const model = 'gemini-2.5-flash';
+    const model = 'gemini-3.5-flash';
     
     const prompt = `Analise a seguinte entidade do tipo "${entityType}" e gere insights estratégicos, identificação de riscos ocultos e recomendações acionáveis para uma empresa de tecnologia.
     

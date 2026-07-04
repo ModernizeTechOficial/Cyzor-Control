@@ -39,8 +39,8 @@ export default function EquipeView() {
   return (
     <div className="flex flex-col h-full bg-[#FAFAFA]">
       {/* Header */}
-      <div className="p-8 pb-0">
-        <div className="flex flex-col gap-1 mb-8">
+      <div className="p-4 sm:p-8 pb-0">
+        <div className="flex flex-col gap-1 mb-6 sm:mb-8">
           <div className="flex items-center gap-2 text-[#64748B] text-xs font-bold uppercase tracking-widest mb-1">
             <Users size={12} />
             <span>Gestão de Equipe</span>
@@ -74,7 +74,7 @@ export default function EquipeView() {
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-8 custom-scrollbar">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}

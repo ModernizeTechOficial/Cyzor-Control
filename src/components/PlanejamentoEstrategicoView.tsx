@@ -144,7 +144,7 @@ const DEFAULT_MISSIONS: Record<string, { title: string; objective: string; check
 };
 
 export default function PlanejamentoEstrategicoView({ setCurrentView }: { setCurrentView: (view: View) => void }) {
-  const { activeWorkspace, fetchWithAuth } = useAuth();
+  const { activeWorkspace, fetchWithAuth, syncSaaSState } = useAuth();
   const { setGlobalFilters } = useNavigation();
 
   // Queries using React Query
@@ -297,6 +297,7 @@ export default function PlanejamentoEstrategicoView({ setCurrentView }: { setCur
       if (res.ok) {
         showSuccess(`Nível de maturidade alterado para: ${stageId}`);
         setShowStageSelector(false);
+        await syncSaaSState();
         refetchAll();
       } else {
         showError("Falha ao atualizar o nível de maturidade.");
@@ -331,6 +332,7 @@ export default function PlanejamentoEstrategicoView({ setCurrentView }: { setCur
         })
       });
       if (res.ok) {
+        await syncSaaSState();
         refetchAll();
       }
     } catch (err) {
@@ -364,6 +366,7 @@ export default function PlanejamentoEstrategicoView({ setCurrentView }: { setCur
       if (res.ok) {
         showSuccess("Missão operacional atualizada!");
         setEditingMissionKey(null);
+        await syncSaaSState();
         refetchAll();
       } else {
         showError("Falha ao salvar missão.");
@@ -541,7 +544,7 @@ Por favor, analise esses fatos operacionais e prescreva:
       </div>
 
       {/* Corporate Evolution Stage Map (Durable Strategic timeline) */}
-      <div className="w-full bg-white border border-[#0F172A08] rounded-[24px] shadow-[0_4px_24px_rgba(0,0,0,0.01)] p-6 sm:p-8 space-y-6">
+      <div className="w-full bg-white border border-[#0F172A08] rounded-[24px] shadow-[0_4px_24px_rgba(0,0,0,0.01)] p-6 sm:p-8 space-y-6 relative z-20 overflow-visible">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h2 className="text-base sm:text-lg font-bold text-[#111111] tracking-tight">
@@ -558,35 +561,46 @@ Por favor, analise esses fatos operacionais e prescreva:
         </div>
 
         {/* Linear Stage timeline - premium execution */}
-        <div className="relative w-full py-4 overflow-x-auto custom-scrollbar">
-          <div className="min-w-[800px] flex items-center justify-between relative px-2">
+        <div className="relative w-full py-4 md:overflow-visible overflow-x-auto custom-scrollbar">
+          <div className="min-w-[800px] md:min-w-0 flex items-start justify-between relative px-4 sm:px-12 h-16 mt-16">
             
             {/* Background Line */}
-            <div className="absolute left-8 right-8 top-1/2 -translate-y-1/2 h-1 bg-slate-100 rounded-full z-0" />
+            <div className="absolute left-10 right-10 sm:left-20 sm:right-20 top-[18px] h-1 bg-slate-100 rounded-full z-0" />
             
             {/* Active Progress Fill Line */}
             <div 
-              className="absolute left-8 top-1/2 -translate-y-1/2 h-1 bg-[#111111] rounded-full transition-all duration-500 z-0" 
-              style={{ width: `${Math.max(0, (activeStageIndex / (STAGES.length - 1)) * 96)}%` }}
+              className="absolute left-10 sm:left-20 top-[18px] h-1 bg-[#111111] rounded-full transition-all duration-500 z-0" 
+              style={{ width: `calc(${(activeStageIndex / (STAGES.length - 1)) * 100}% - ${(activeStageIndex / (STAGES.length - 1)) * 40}px)` }}
             />
 
             {STAGES.map((stage, idx) => {
               const isPast = idx < activeStageIndex;
               const isActive = idx === activeStageIndex;
+              const isNextObjective = idx === activeStageIndex + 1;
               
               return (
                 <div 
                   key={stage.id} 
-                  className="flex flex-col items-center relative z-10 w-20 text-center cursor-pointer group"
+                  className="flex flex-col items-center relative z-10 w-24 text-center cursor-pointer group hover:z-[100]"
                   onClick={() => handleStageChange(stage.id)}
                 >
+                  {isNextObjective && (
+                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                      <span className="bg-blue-600 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest shadow-lg shadow-blue-200 animate-bounce">
+                        Próximo
+                      </span>
+                    </div>
+                  )}
+
                   <div 
-                    className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all shadow-sm ${
+                    className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all shadow-sm mb-3 ${
                       isActive 
-                        ? 'bg-[#111111] border-[#111111] text-white scale-110' 
+                        ? 'bg-[#111111] border-[#111111] text-white scale-110 shadow-lg shadow-black/20' 
                         : isPast 
                           ? 'bg-emerald-50 border-emerald-500 text-emerald-600' 
-                          : 'bg-white border-slate-200 text-slate-400 group-hover:border-slate-400 group-hover:text-slate-700'
+                          : isNextObjective
+                            ? 'bg-white border-blue-500 text-blue-600 animate-glow-pulse'
+                            : 'bg-white border-slate-200 text-slate-400 group-hover:border-slate-400 group-hover:text-slate-700'
                     }`}
                   >
                     {isPast ? (
@@ -595,12 +609,24 @@ Por favor, analise esses fatos operacionais e prescreva:
                       <span className="text-xs font-extrabold">{idx + 1}</span>
                     )}
                   </div>
-                  <span className={`text-[11px] font-bold mt-2.5 truncate max-w-full ${isActive ? 'text-[#111111] font-extrabold' : 'text-slate-500'}`}>
+                  
+                  <span className={`text-[10px] font-black uppercase tracking-tight leading-tight px-1 transition-colors ${isActive ? 'text-[#111111]' : 'text-slate-500 group-hover:text-slate-800'}`}>
                     {stage.label}
                   </span>
-                  <div className="absolute top-full mt-2 hidden group-hover:block w-48 bg-slate-900 text-white text-[10px] rounded-lg p-2.5 z-50 shadow-xl pointer-events-none text-left">
-                    <p className="font-bold border-b border-white/10 pb-1 mb-1">{stage.label}</p>
-                    <p className="text-white/80 leading-relaxed font-medium">{stage.description}</p>
+
+                  {/* Enhanced Tooltip - Positioned above with z-index to overlap everything */}
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-6 opacity-0 group-hover:opacity-100 transition-all duration-300 w-64 bg-[#18181B] text-white text-[11px] rounded-2xl p-4 z-[200] shadow-[0_20px_50px_rgba(0,0,0,0.4)] pointer-events-none text-left border border-white/10 -translate-y-2 group-hover:translate-y-0">
+                    <div className="flex items-center justify-between mb-3 border-b border-white/10 pb-2">
+                      <span className="font-black uppercase tracking-widest text-[9px] text-blue-400">{idx + 1}. {stage.label}</span>
+                      {isPast && <Check className="w-3 h-3 text-emerald-400" />}
+                    </div>
+                    <p className="text-white/80 leading-relaxed font-medium mb-3">{stage.description}</p>
+                    <div className="pt-2.5 border-t border-white/5 flex items-center justify-between">
+                      <span className="text-[9px] text-white/40 font-bold uppercase">Progresso Sugerido</span>
+                      <span className="text-[10px] font-black text-white">{stage.progress}%</span>
+                    </div>
+                    {/* Arrow */}
+                    <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#18181B] rotate-45 border-r border-b border-white/10" />
                   </div>
                 </div>
               );

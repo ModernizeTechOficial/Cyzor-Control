@@ -172,7 +172,14 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
   if (activeWorkspace && !isOnboardingCompleted) {
     return (
       <div className="w-full mx-auto py-2">
-        <OnboardingWizard onComplete={() => {}} />
+        <OnboardingWizard onComplete={() => {
+          // 1. Mark that we just finished onboarding in this session
+          sessionStorage.setItem('just_finished_onboarding', 'true');
+          // 2. Mark that welcome modal was already "handled" for this flow
+          sessionStorage.setItem('welcome_modal_shown', 'true');
+          // 3. Trigger the product tour
+          window.dispatchEvent(new Event('restart-tour'));
+        }} />
       </div>
     );
   }
@@ -197,9 +204,9 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
         </div>
 
         {/* Main Content Area (8 columns) */}
-        <div className="col-span-12 md:col-span-8 flex flex-col gap-6">
+        <div className="col-span-12 md:col-span-8">
             {isGrowthScale ? (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 h-full">
                 <div className="flex items-center justify-between border-b border-[#0F172A05] pb-2">
                   <h3 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Desempenho Comercial & Tração</h3>
                   <span className="text-[11px] text-[#64748B] font-medium">Estágio de Crescimento Ativo: {currentStage}</span>
@@ -212,18 +219,22 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
         </div>
 
         {/* Sidebar Content Area (4 columns) */}
-        <div className="col-span-12 md:col-span-4 flex flex-col gap-6">
-            <StrategicPriorityCard 
-              setCurrentView={setCurrentView} 
-              currentStage={currentStage}
-              ideas={ideas}
-              projects={filteredProjects}
-              products={productsList}
-              clients={clients}
-              finance={filteredFinance}
-              tasks={filteredTasks}
-            />
-            <BusinessInsightCard setCurrentView={setCurrentView} currentStage={currentStage} />
+        <div className="col-span-12 md:col-span-4 flex flex-col gap-4 h-full">
+            <div className="flex-1">
+              <StrategicPriorityCard 
+                setCurrentView={setCurrentView} 
+                currentStage={currentStage}
+                ideas={ideas}
+                projects={filteredProjects}
+                products={productsList}
+                clients={clients}
+                finance={filteredFinance}
+                tasks={filteredTasks}
+              />
+            </div>
+            <div className="flex-1">
+              <BusinessInsightCard setCurrentView={setCurrentView} currentStage={currentStage} />
+            </div>
         </div>
       </div>
     </div>

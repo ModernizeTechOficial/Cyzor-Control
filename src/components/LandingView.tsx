@@ -42,17 +42,17 @@ export default function LandingView({ onNavigate }: LandingViewProps) {
               </span>
             </div>
             
-            <nav className="hidden md:flex space-x-10">
-              <a className="text-[#1c1b1b]/70 hover:text-black font-semibold text-sm transition-colors" href="#produto">Produto</a>
-              <a className="text-[#1c1b1b]/70 hover:text-black font-semibold text-sm transition-colors" href="#recursos">Recursos</a>
-              <a className="text-[#1c1b1b]/70 hover:text-black font-semibold text-sm transition-colors flex items-center gap-1.5" href="#solucoes">
+            <nav className="hidden md:flex space-x-8 lg:space-x-10">
+              <a className="text-[#1c1b1b]/70 hover:text-black font-semibold text-sm transition-colors whitespace-nowrap" href="#produto">Produto</a>
+              <a className="text-[#1c1b1b]/70 hover:text-black font-semibold text-sm transition-colors whitespace-nowrap" href="#recursos">Recursos</a>
+              <a className="text-[#1c1b1b]/70 hover:text-black font-semibold text-sm transition-colors flex items-center gap-1.5 whitespace-nowrap" href="#solucoes">
                 Soluções 
                 <ChevronRight size={14} className="opacity-50 rotate-90" />
               </a>
-              <a className="text-[#1c1b1b]/70 hover:text-black font-semibold text-sm transition-colors" href="#precos">Preços</a>
+              <a className="text-[#1c1b1b]/70 hover:text-black font-semibold text-sm transition-colors whitespace-nowrap" href="#precos">Preços</a>
             </nav>
 
-            <div className="flex items-center space-x-6">
+            <div className="flex items-center space-x-3 sm:space-x-6">
               <button 
                 onClick={() => onNavigate('login')}
                 className="text-[#1c1b1b]/80 font-semibold text-sm hover:text-black transition-colors"
@@ -80,18 +80,18 @@ export default function LandingView({ onNavigate }: LandingViewProps) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="lg:col-span-6 flex flex-col items-start text-left"
+              className="lg:col-span-6 flex flex-col items-center lg:items-start text-center lg:text-left"
             >
               <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-slate-100 border border-[#1c1b1b]/5 mb-10 shadow-sm">
                 <span className="bg-black text-white text-[10px] font-black px-2 py-0.5 rounded-md tracking-widest">2.0</span>
-                <span className="text-xs font-bold text-[#1c1b1b]/80 uppercase tracking-wider">A nova era da automação chegou</span>
+                <span className="text-[10px] sm:text-xs font-bold text-[#1c1b1b]/80 uppercase tracking-wider">A nova era da automação chegou</span>
               </div>
               
-              <h1 className="text-5xl lg:text-6xl xl:text-7xl font-extrabold text-[#1c1b1b] leading-[0.95] mb-8 tracking-tight">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-[#1c1b1b] leading-[1] lg:leading-[0.95] mb-8 tracking-tight">
                 Domine sua operação com <span className="text-[#1c1b1b]/40">IA Pura</span>
               </h1>
               
-              <p className="text-lg lg:text-xl text-[#1c1b1b]/70 mb-10 leading-relaxed max-w-xl font-medium">
+              <p className="text-base sm:text-lg lg:text-xl text-[#1c1b1b]/70 mb-10 leading-relaxed max-w-xl font-medium">
                 Conecte seu ecossistema Google a agentes autônomos que executam fluxos complexos, reduzem custos e liberam sua equipe para o que importa.
               </p>
               
@@ -197,14 +197,14 @@ export default function LandingView({ onNavigate }: LandingViewProps) {
       </section>
 
       {/* Enterprise Social Proof Marquee */}
-      <section className="py-12 bg-white border-y border-black/5 overflow-hidden">
+      <section className="py-12 bg-white border-y border-black/5 overflow-hidden w-full">
         <div className="max-w-7xl mx-auto px-4 mb-6">
           <h2 className="text-[10px] font-black text-[#1c1b1b]/40 tracking-[0.3em] uppercase text-center">
             Trusted by Global Enterprise
           </h2>
         </div>
-        <div className="relative flex overflow-x-hidden">
-          <div className="animate-marquee whitespace-nowrap flex items-center gap-20 py-2 text-2xl font-black text-black/20 tracking-tighter">
+        <div className="relative flex overflow-x-hidden w-full">
+          <div className="animate-marquee whitespace-nowrap flex items-center gap-20 py-2 text-xl sm:text-2xl font-black text-black/20 tracking-tighter">
             <span>VOLTAIC.</span>
             <span className="font-bold italic">NEXUS_</span>
             <span className="font-light uppercase tracking-[0.4em]">Aether</span>
@@ -387,22 +387,22 @@ export default function LandingView({ onNavigate }: LandingViewProps) {
           />
         </div>
         <div className="max-w-5xl mx-auto px-4 relative z-10 text-center">
-          <h2 className="text-5xl lg:text-7xl font-extrabold text-white mb-8 tracking-tighter">
+          <h2 className="text-3xl sm:text-5xl lg:text-7xl font-extrabold text-white mb-8 tracking-tighter px-4">
             Pronto para o futuro da <span className="text-white/40 italic font-light">gestão?</span>
           </h2>
-          <p className="text-xl text-white/60 mb-12 max-w-2xl mx-auto font-medium">
+          <p className="text-base sm:text-xl text-white/60 mb-12 max-w-2xl mx-auto font-medium px-6">
             Junte-se a mais de 2.500 empresas que escalam suas operações com agentes inteligentes.
           </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-6">
+          <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 px-4">
             <button 
               onClick={() => onNavigate('login')}
-              className="bg-white text-black px-12 py-6 rounded-full font-black text-xl hover:scale-105 active:scale-95 transition-all shadow-2xl"
+              className="bg-white text-black px-8 sm:px-12 py-4 sm:py-6 rounded-full font-black text-lg sm:text-xl hover:scale-105 active:scale-95 transition-all shadow-2xl"
             >
               Começar Agora — É Grátis
             </button>
             <button 
               onClick={() => onNavigate('login')}
-              className="border border-white/20 text-white px-12 py-6 rounded-full font-black text-xl hover:bg-white/5 transition-all"
+              className="border border-white/20 text-white px-8 sm:px-12 py-4 sm:py-6 rounded-full font-black text-lg sm:text-xl hover:bg-white/5 transition-all"
             >
               Falar com Consultor
             </button>

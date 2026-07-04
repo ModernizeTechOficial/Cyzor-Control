@@ -80,12 +80,12 @@ export default function ConfiguracoesView() {
       <div className="flex flex-col md:flex-row gap-6 md:gap-8 flex-1 min-h-0">
         
         {/* Navigation Sidebar */}
-        <div className="w-full md:w-[260px] flex-shrink-0 bg-[#FFFFFF] border border-[#0F172A0F] rounded-[24px] p-4 flex flex-col gap-1 overflow-y-auto custom-scrollbar shadow-sm">
+        <div className="w-full md:w-[260px] flex-shrink-0 bg-[#FFFFFF] border border-[#0F172A0F] rounded-[24px] p-2 md:p-4 flex flex-row md:flex-col gap-1 overflow-x-auto md:overflow-y-auto no-scrollbar shadow-sm">
           {SECTIONS.map((sec) => (
             <button
               key={sec.id}
               onClick={() => setActiveSection(sec.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-[16px] transition-all text-sm font-bold cursor-pointer ${
+              className={`flex-shrink-0 md:w-full flex items-center gap-3 px-3 md:px-4 py-2.5 md:py-3 rounded-[12px] md:rounded-[16px] transition-all text-[11px] md:text-sm font-bold cursor-pointer whitespace-nowrap ${
                  activeSection === sec.id 
                   ? 'bg-[#111111] text-white shadow-md' 
                   : 'text-[#64748B] hover:bg-[#FAFAFA] hover:text-[#111111]'
@@ -98,7 +98,7 @@ export default function ConfiguracoesView() {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 bg-[#FFFFFF] border border-[#0F172A0F] rounded-[24px] p-8 overflow-y-auto custom-scrollbar shadow-sm text-left">
+        <div className="flex-1 bg-[#FFFFFF] border border-[#0F172A0F] rounded-[24px] p-5 md:p-8 overflow-y-auto custom-scrollbar shadow-sm text-left">
           <div className="w-full">
             {renderSettingsSection()}
           </div>

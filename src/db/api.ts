@@ -13,7 +13,10 @@ import { companies, clients, products, projects, tasks, ideas, documents, financ
 import { eq, and, desc, sql, or, inArray, gte, lte, not } from "drizzle-orm";
 import { getUserSaaSState } from "./queries.ts";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const ai = new GoogleGenAI({ 
+  apiKey: process.env.GEMINI_API_KEY,
+  httpOptions: { headers: { "User-Agent": "aistudio-build" } }
+});
 import { sendProjectNotificationEmail, testSmtpConnection } from "./mail.ts";
 import { v4 as uuidv4 } from 'uuid';
 
@@ -3077,7 +3080,7 @@ apiRouter.post("/ideas/analyze", requireAuth, async (req: AuthRequest, res) => {
         Ideia: ${title}
         Descrição: ${description}`;
 
-        const model = "gemini-1.5-flash";
+        const model = "gemini-3.5-flash";
         const result = await ai.models.generateContent({
             model: model,
             contents: [{ role: "user", parts: [{ text: prompt }] }],
