@@ -111,16 +111,36 @@ export default function BoardKanban({
                           </button>
                         )}
 
-                        {/* Client & Title */}
-                        <span className="text-[9px] font-bold text-neutral-400 block tracking-wide uppercase">
-                          {p.subtitle || 'S/N'}
-                        </span>
-                        <h4 
-                          onClick={() => onItemClick(p.raw)}
-                          className="text-xs font-black text-neutral-900 mt-1 hover:underline cursor-pointer tracking-tight"
-                        >
-                          {p.title}
-                        </h4>
+                        {/* Client & Title with Visual Identity Logo */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-grow min-w-0">
+                            <span className="text-[9px] font-bold text-neutral-400 block tracking-wide uppercase truncate">
+                              {p.subtitle || 'S/N'}
+                            </span>
+                            <h4 
+                              onClick={() => onItemClick(p.raw)}
+                              className="text-xs font-black text-neutral-900 mt-1 hover:underline cursor-pointer tracking-tight"
+                            >
+                              {p.title}
+                            </h4>
+                          </div>
+                          {(p.raw?.logoUrl || p.title) && (
+                            <div className="w-7 h-7 rounded-lg border border-neutral-200/60 flex items-center justify-center overflow-hidden bg-white shrink-0 shadow-sm mt-0.5">
+                              {p.raw?.logoUrl ? (
+                                <img 
+                                  src={p.raw.logoUrl} 
+                                  alt={p.title} 
+                                  referrerPolicy="no-referrer"
+                                  className="w-full h-full object-contain p-0.5" 
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-[#111111] text-white flex items-center justify-center font-bold text-[10px]">
+                                  {p.title ? p.title.trim().charAt(0).toUpperCase() : '?'}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
 
                         <div className="flex items-center gap-1 mt-1 text-[9px] text-neutral-500 font-medium italic">
                           <User size={10} className="text-neutral-400" />

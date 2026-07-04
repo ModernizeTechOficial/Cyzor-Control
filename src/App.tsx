@@ -22,6 +22,8 @@ import VisualSystemsStudioView from './modules/VisualSystemsStudio/VisualSystems
 import AdminLayout from './modules/admin/AdminLayout';
 import EquipeView from './components/EquipeView';
 import { View } from './types';
+import { useURLSync } from './hooks/useURLSync';
+import { useNavigation } from './context/NavigationContext';
 import { useAuth } from './context/AuthContext.tsx';
 import { Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -30,10 +32,13 @@ import ProductTour from './components/layout/ProductTour';
 import WelcomeModal from './components/layout/WelcomeModal';
 import { CreateWorkspaceModal } from './components/CreateWorkspaceModal';
 import { CommandPalette } from './components/common/CommandPalette';
+import ContextBanner from './components/layout/ContextBanner';
 
 export default function App() {
   const { user, dbUser, loading, activeWorkspace, isSwitchingWorkspace, isCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen } = useAuth();
   const [currentView, setCurrentView] = useState<View | 'admin'>('landing');
+  const { globalFilters, setGlobalFilters } = useNavigation();
+  useURLSync(currentView, setCurrentView, globalFilters, setGlobalFilters);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [restartTour, setRestartTour] = useState(0);
@@ -144,6 +149,7 @@ export default function App() {
             transition={{ duration: 0.3 }}
             className="pt-24 lg:pt-28 px-4 sm:px-6 md:px-8 pb-28 lg:pb-12 flex flex-col gap-6 md:gap-10 w-full xl:max-w-none min-h-screen"
           >
+            <ContextBanner currentView={currentView} />
             {currentView === 'dashboard' && <DashboardView setCurrentView={setCurrentView} />}
             {currentView === 'empresas' && <EmpresasView />}
             {currentView === 'clientes' && <ClientesView />}

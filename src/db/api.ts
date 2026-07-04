@@ -1,4 +1,5 @@
 import { Router } from "express";
+import multer from "multer";
 import { requireAuth, AuthRequest } from "../middleware/auth.ts";
 import { tenantMiddleware, TenantRequest } from "../middleware/tenant.ts";
 import { db } from "./index.ts";
@@ -9,6 +10,21 @@ import { sendProjectNotificationEmail, testSmtpConnection } from "./mail.ts";
 import { v4 as uuidv4 } from 'uuid';
 
 const apiRouter = Router();
+const upload = multer({ storage: multer.memoryStorage() });
+
+apiRouter.post("/upload", upload.single('file'), (req: any, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "Nenhum arquivo enviado" });
+    }
+    const base64 = req.file.buffer.toString('base64');
+    const dataUrl = `data:${req.file.mimetype};base64,${base64}`;
+    res.json({ url: dataUrl });
+  } catch (error: any) {
+    console.error("Erro no upload:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // --- AUDIT LOG HELPER ---
 async function logAction(req: AuthRequest, action: string, tableName: string, recordId: string, oldValues?: any, newValues?: any) {
@@ -280,6 +296,45 @@ apiRouter.post("/workspaces", async (req: AuthRequest, res) => {
   } catch (error) {
     console.error("Error creating workspace:", error);
     res.status(500).json({ error: "Failed to create workspace" });
+  }
+});
+
+apiRouter.put("/workspaces/:id", async (req: AuthRequest, res) => {
+  try {
+    const wsId = Number(req.params.id);
+    const { name, settings } = req.body;
+    
+    // Check membership
+    const [membership] = await db.select()
+      .from(workspaceMembers)
+      .where(and(eq(workspaceMembers.workspaceId, wsId), eq(workspaceMembers.userUid, req.user!.uid)))
+      .limit(1);
+
+    if (!membership) return res.status(403).json({ error: "Access denied" });
+
+    // Fetch existing workspace
+    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, wsId)).limit(1);
+    if (!ws) return res.status(404).json({ error: "Workspace not found" });
+
+    const updateValues: any = {};
+    if (name !== undefined) updateValues.name = name;
+    if (settings !== undefined) {
+      updateValues.settings = {
+        ...(ws.settings as any || {}),
+        ...settings
+      };
+    }
+
+    const [updatedWs] = await db.update(workspaces)
+      .set(updateValues)
+      .where(eq(workspaces.id, wsId))
+      .returning();
+
+    await logAction(req, 'UPDATE', 'workspaces', wsId.toString(), ws, updatedWs);
+    res.json(updatedWs);
+  } catch (error) {
+    console.error("Error updating workspace:", error);
+    res.status(500).json({ error: "Failed to update workspace" });
   }
 });
 
@@ -683,9 +738,12 @@ apiRouter.get("/projects", async (req: AuthRequest, res) => {
         progress: projects.progress,
         companyId: projects.companyId,
         productId: projects.productId,
+        logoUrl: projects.logoUrl,
+        coverUrl: projects.coverUrl,
         createdAt: projects.createdAt,
         updatedAt: projects.updatedAt,
-        companyName: companies.name
+        companyName: companies.name,
+        companyLogoUrl: companies.logoUrl
       })
       .from(projects)
       .leftJoin(companies, eq(projects.companyId, companies.id))
@@ -699,7 +757,7 @@ apiRouter.get("/projects", async (req: AuthRequest, res) => {
 apiRouter.post("/projects", async (req: AuthRequest, res) => {
   console.log("POST /api/projects called with body:", req.body);
   try {
-    const { name, priority, dueDate, companyId, productId, status, budget, owner } = req.body;
+    const { name, priority, dueDate, companyId, productId, status, budget, owner, logoUrl, coverUrl } = req.body;
     
     // Basic validation
     if (!name) {
@@ -716,7 +774,9 @@ apiRouter.post("/projects", async (req: AuthRequest, res) => {
       companyId: companyId ? Number(companyId) : null,
       productId: productId ? Number(productId) : null,
       budget: budget || '0',
-      owner: owner || 'Sem dono'
+      owner: owner || 'Sem dono',
+      logoUrl: logoUrl || null,
+      coverUrl: coverUrl || null
     }).returning();
     
     try {
@@ -738,7 +798,7 @@ apiRouter.post("/projects", async (req: AuthRequest, res) => {
   }
 });
 apiRouter.put("/projects/:id", async (req: AuthRequest, res) => {
-  const { name, description, status, priority, dueDate, team, history, comments, criteria, velocity, progress, budget, companyId, owner } = req.body;
+  const { name, description, status, priority, dueDate, team, history, comments, criteria, velocity, progress, budget, companyId, productId, owner, logoUrl, coverUrl } = req.body;
   const updateValues: any = {};
   if (name !== undefined) updateValues.name = name;
   if (description !== undefined) updateValues.description = description;
@@ -753,7 +813,10 @@ apiRouter.put("/projects/:id", async (req: AuthRequest, res) => {
   if (progress !== undefined) updateValues.progress = progress !== null ? Number(progress) : 0;
   if (budget !== undefined) updateValues.budget = budget;
   if (companyId !== undefined) updateValues.companyId = companyId ? Number(companyId) : null;
+  if (productId !== undefined) updateValues.productId = productId ? Number(productId) : null;
   if (owner !== undefined) updateValues.owner = owner;
+  if (logoUrl !== undefined) updateValues.logoUrl = logoUrl;
+  if (coverUrl !== undefined) updateValues.coverUrl = coverUrl;
 
   const data = await db.update(projects).set(updateValues).where(and(eq(projects.id, Number(req.params.id)), eq(projects.workspaceId, req.workspaceId!))).returning();
   
@@ -895,7 +958,7 @@ apiRouter.get("/products", async (req: AuthRequest, res) => {
 
 apiRouter.post("/products", async (req: AuthRequest, res) => {
   try {
-    const { name, description, status, companyId, launchDate, type, targetAudience, pricingModel, features } = req.body;
+    const { name, description, status, companyId, launchDate, type, targetAudience, pricingModel, features, logoUrl, coverUrl } = req.body;
     if (!name) {
       return res.status(400).json({ error: "Product name is required" });
     }
@@ -911,7 +974,9 @@ apiRouter.post("/products", async (req: AuthRequest, res) => {
       type: type || 'SaaS',
       targetAudience: targetAudience || null,
       pricingModel: pricingModel || null,
-      features: features || []
+      features: features || [],
+      logoUrl: logoUrl || null,
+      coverUrl: coverUrl || null
     }).returning();
 
     try {
@@ -936,7 +1001,7 @@ apiRouter.post("/products", async (req: AuthRequest, res) => {
 apiRouter.put("/products/:id", async (req: AuthRequest, res) => {
   try {
     const productId = Number(req.params.id);
-    const { name, description, status, companyId, launchDate, type, targetAudience, pricingModel, features } = req.body;
+    const { name, description, status, companyId, launchDate, type, targetAudience, pricingModel, features, logoUrl, coverUrl } = req.body;
     
     const updateValues: any = {};
     if (name !== undefined) updateValues.name = name;
@@ -948,6 +1013,8 @@ apiRouter.put("/products/:id", async (req: AuthRequest, res) => {
     if (targetAudience !== undefined) updateValues.targetAudience = targetAudience;
     if (pricingModel !== undefined) updateValues.pricingModel = pricingModel;
     if (features !== undefined) updateValues.features = features;
+    if (logoUrl !== undefined) updateValues.logoUrl = logoUrl;
+    if (coverUrl !== undefined) updateValues.coverUrl = coverUrl;
     updateValues.updatedAt = new Date();
 
     const data = await db.update(products)

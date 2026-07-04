@@ -1,9 +1,11 @@
-import { Search, Bell, PanelLeftClose, PanelLeft, Sun, Moon, LogOut, User, CheckCircle2, AlertTriangle, Info, Clock, ShieldCheck, HelpCircle, ChevronDown, Plus, X } from 'lucide-react';
+import { Search, Bell, PanelLeftClose, PanelLeft, Sun, Moon, LogOut, User, CheckCircle2, AlertTriangle, Info, Clock, ShieldCheck, HelpCircle, ChevronDown, ChevronRight, Plus, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useBranding } from '../hooks/useBranding.ts';
 import { View } from '../types.ts';
+import { useNavigation } from '../context/NavigationContext';
+import { useCompanies, useProjects, useProducts } from '../hooks/useCyzorQueries';
 
 function NotificationMenu() {
   const { fetchWithAuth, activeWorkspace } = useAuth();
@@ -30,7 +32,7 @@ function NotificationMenu() {
         setLoading(false);
       }
     } catch (err) {
-      console.error("Failed to fetch notifications:", err);
+      console.warn("Failed to fetch notifications:", err);
       if (retries > 0) {
         await new Promise(resolve => setTimeout(resolve, 2000));
         await fetchNotifications(retries - 1);
@@ -352,6 +354,43 @@ function WorkspaceSelector() {
   );
 }
 
+function BreadcrumbNavigator({ setCurrentView }: { setCurrentView?: (view: View) => void }) {
+  const { globalFilters } = useNavigation();
+  const { data: companiesData } = useCompanies();
+  const { data: projectsData } = useProjects();
+  const { data: productsData } = useProducts();
+
+  const parts = [{ label: "Workspace", view: "dashboard" as View }];
+  if (globalFilters.companyId) {
+    const c = companiesData?.find(x => x.id.toString() === globalFilters.companyId?.toString());
+    if (c) parts.push({ label: c.name, view: "empresas" as View });
+  }
+  if (globalFilters.projectId) {
+    const p = projectsData?.find(x => x.id.toString() === globalFilters.projectId?.toString());
+    if (p) parts.push({ label: p.name, view: "projetos" as View });
+  }
+  if (globalFilters.productId) {
+    const p = productsData?.find(x => x.id.toString() === globalFilters.productId?.toString());
+    if (p) parts.push({ label: p.name, view: "produtos" as View });
+  }
+
+  return (
+    <div className="flex items-center gap-2 text-[12px] font-bold text-[#111111]">
+      {parts.map((p, idx) => (
+        <div key={idx} className="flex items-center gap-2">
+          <span
+            className="cursor-pointer hover:text-[#000000] opacity-70 hover:opacity-100 transition-opacity"
+            onClick={() => setCurrentView && setCurrentView(p.view)}
+          >
+            {p.label}
+          </span>
+          {idx < parts.length - 1 && <ChevronRight size={14} className="opacity-40" />}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function Topbar({ isSidebarCollapsed, toggleSidebar, setCurrentView }: { isSidebarCollapsed: boolean, toggleSidebar: () => void, setCurrentView?: (view: View) => void }) {
   const [isDark, setIsDark] = useState(false);
   const [time, setTime] = useState(new Date());
@@ -405,6 +444,8 @@ export default function Topbar({ isSidebarCollapsed, toggleSidebar, setCurrentVi
         </button>
         
         <div className="hidden lg:flex items-center gap-8 h-8 px-2">
+           <BreadcrumbNavigator setCurrentView={setCurrentView} />
+           <div className="w-px h-6 bg-[#0F172A08]" />
            <div className="flex flex-col gap-0.5">
               <span className="text-[9px] font-black text-[#64748B] uppercase tracking-[0.2em] opacity-40">Software</span>
               <span className="text-[12px] font-bold text-[#111111] tracking-tight">{appName}</span>

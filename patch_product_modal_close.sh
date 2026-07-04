@@ -1,0 +1,1 @@
+sed -i 's/onClose={() => setSelectedProduct(null)}/onClose={() => {\n            setSelectedProduct(null);\n            if (globalFilters.productId) {\n              setGlobalFilters({ ...globalFilters, productId: undefined });\n            }\n          }}/g' src/components/ProdutosView.tsx

@@ -1,9 +1,9 @@
 import { 
   X, Package, LayoutGrid, DollarSign, FileText, LineChart, Target, Settings, Building2, Calendar, GitBranch, ArrowUpRight, Copy, CheckCircle2, AlertTriangle, Users, Save, Edit3, Trash2, Plus, Clock, Rocket,
-  CloudLightning, HardDrive, Cpu, Fingerprint, History, CreditCard, ChevronRight, Activity
+  CloudLightning, HardDrive, Cpu, Fingerprint, History, CreditCard, ChevronRight, Activity, Github, ExternalLink
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
-import WorkspaceHeader from './WorkspaceHeader';
+import { EntityHero } from '../../common/EntityHero';
 import WorkspaceKPIs from './WorkspaceKPIs';
 import WorkspaceSidebar from './WorkspaceSidebar';
 import VisaoGeralTab from './tabs/VisaoGeralTab';
@@ -28,6 +28,8 @@ interface ProductWorkspaceModalProps {
 export default function ProductWorkspaceModal({ product, isOpen, onClose, onSave, onDelete, companies }: ProductWorkspaceModalProps) {
   if (!isOpen || !product) return null;
 
+  const companyName = companies?.find((c: any) => c.id === product.companyId)?.name || 'Empresa Interna';
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#111111]/40 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="bg-[#FFFFFF] w-full h-full sm:h-[98vh] sm:w-[98vw] max-w-[1600px] sm:rounded-[32px] border border-[#0F172A0F] shadow-[0_40px_100px_rgba(0,0,0,0.15)] flex flex-col overflow-hidden animate-in zoom-in-[0.98] duration-300 relative">
@@ -42,7 +44,31 @@ export default function ProductWorkspaceModal({ product, isOpen, onClose, onSave
         <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col relative bg-[#FAFAFA]/30">
           
           {/* Header */}
-          <WorkspaceHeader product={product} companies={companies} />
+          <EntityHero
+            entityType="product"
+            name={product.name}
+            description={product.description || 'Sem descrição cadastrada para este produto.'}
+            logoUrl={product.logoUrl}
+            coverUrl={product.coverUrl}
+            breadcrumbs={['Perspectiva de Engenharia & Negócios', '360°', product.name]}
+            badges={[
+              { label: companyName, variant: 'neutral' },
+              { label: product.status || 'Em Desenvolvimento', variant: product.status === 'Produção' ? 'secondary' : 'accent' },
+              { label: product.version || 'v1.0.0', variant: 'neutral' }
+            ]}
+            actions={
+              <div className="flex items-center gap-2 mr-12 md:mr-0">
+                <button className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 border border-white/10 text-white font-bold text-xs uppercase tracking-wider hover:bg-white/15 transition-all cursor-pointer">
+                  <Github size={14} />
+                  <span className="hidden sm:inline">Repositório</span>
+                </button>
+                <button className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 border border-white/10 text-white font-bold text-xs uppercase tracking-wider hover:bg-white/15 transition-all cursor-pointer">
+                  <ExternalLink size={14} />
+                  <span className="hidden sm:inline">Visualizar</span>
+                </button>
+              </div>
+            }
+          />
 
           {/* KPIs */}
           <div className="px-8 -mt-6 mb-8 relative z-10">
@@ -69,15 +95,22 @@ export default function ProductWorkspaceModal({ product, isOpen, onClose, onSave
   );
 }
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Vision360 } from '../../common/Vision360';
+import { VisualIdentityTab } from '../../common/VisualIdentityTab';
 
 function WorkspaceTabsContainer({ product, onSave, onDelete, companies }: any) {
   const [activeTab, setActiveTab] = useState('visao_geral');
+  const [localProduct, setLocalProduct] = useState(product);
+
+  useEffect(() => {
+    setLocalProduct(product);
+  }, [product]);
 
   const tabs = [
     { id: 'visao_geral', label: 'Visão Geral' },
     { id: 'visao_360', label: 'Visão 360°' },
+    { id: 'identidade_visual', label: 'Identidade Visual' },
     { id: 'projetos', label: 'Projetos' },
     { id: 'clientes', label: 'Clientes' },
     { id: 'financeiro', label: 'Financeiro' },
@@ -113,17 +146,34 @@ function WorkspaceTabsContainer({ product, onSave, onDelete, companies }: any) {
       </div>
 
       <div className="flex-1 p-8">
-        {activeTab === 'visao_geral' && <VisaoGeralTab product={product} onSave={onSave} companies={companies} />}
-        {activeTab === 'visao_360' && <Vision360 entityType="product" entityId={product.id} entityName={product.name} entityData={product} />}
-        {activeTab === 'projetos' && <ProjetosTab product={product} onSave={onSave} />}
-        {activeTab === 'clientes' && <ClientesTab product={product} />}
-        {activeTab === 'financeiro' && <FinanceiroTab product={product} />}
-        {activeTab === 'licencas' && <LicencasTab product={product} />}
-        {activeTab === 'roadmap' && <RoadmapTab product={product} onSave={onSave} />}
-        {activeTab === 'analytics' && <AnalyticsTab product={product} />}
-        {activeTab === 'equipe' && <EquipeTab product={product} />}
+        {activeTab === 'visao_geral' && <VisaoGeralTab product={localProduct} onSave={onSave} companies={companies} />}
+        {activeTab === 'visao_360' && <Vision360 entityType="product" entityId={localProduct.id} entityName={localProduct.name} entityData={localProduct} />}
+        {activeTab === 'identidade_visual' && (
+          <VisualIdentityTab 
+            entityName={localProduct.name}
+            logoUrl={localProduct.logoUrl || ''}
+            coverUrl={localProduct.coverUrl || ''}
+            onChangeLogo={(url) => {
+              const updated = { ...localProduct, logoUrl: url };
+              setLocalProduct(updated);
+              onSave?.(updated);
+            }}
+            onChangeCover={(url) => {
+              const updated = { ...localProduct, coverUrl: url };
+              setLocalProduct(updated);
+              onSave?.(updated);
+            }}
+          />
+        )}
+        {activeTab === 'projetos' && <ProjetosTab product={localProduct} onSave={onSave} />}
+        {activeTab === 'clientes' && <ClientesTab product={localProduct} />}
+        {activeTab === 'financeiro' && <FinanceiroTab product={localProduct} />}
+        {activeTab === 'licencas' && <LicencasTab product={localProduct} />}
+        {activeTab === 'roadmap' && <RoadmapTab product={localProduct} onSave={onSave} />}
+        {activeTab === 'analytics' && <AnalyticsTab product={localProduct} />}
+        {activeTab === 'equipe' && <EquipeTab product={localProduct} />}
         {['documentacao', 'logs', 'configuracoes'].includes(activeTab) && (
-          <OutrasTabs activeTab={activeTab} product={product} onDelete={onDelete} />
+          <OutrasTabs activeTab={activeTab} product={localProduct} onDelete={onDelete} />
         )}
       </div>
     </div>

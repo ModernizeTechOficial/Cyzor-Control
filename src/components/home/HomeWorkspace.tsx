@@ -12,6 +12,8 @@ import {
   CheckSquare, 
   Plus 
 } from 'lucide-react';
+import { useNavigation } from '../../context/NavigationContext';
+import { useCompanies } from '../../hooks/useCyzorQueries';
 
 interface EventCardProps {
   title: string;
@@ -173,6 +175,22 @@ export default function HomeWorkspace({
   agendaEvents: any[]; 
   setCurrentView: (view: any) => void;
 }) {
+  const { globalFilters } = useNavigation();
+  const { data: companies } = useCompanies();
+  
+  const company = globalFilters.companyId && companies
+    ? companies.find((c: any) => c.id.toString() === globalFilters.companyId.toString())
+    : null;
+
+  const getInitials = (val: string) => {
+    if (!val) return '?';
+    const parts = val.trim().split(/\s+/);
+    if (parts.length > 1) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return parts[0][0].toUpperCase();
+  };
+
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth(); // 0-indexed
@@ -251,7 +269,21 @@ export default function HomeWorkspace({
   return (
     <div className="flex flex-col gap-6 w-full">
       <div className="flex items-center justify-between">
-        <h3 className="text-base font-bold text-[#111111] tracking-tight">Cronograma & Operações</h3>
+        <div className="flex items-center gap-3 flex-wrap">
+          <h3 className="text-base font-bold text-[#111111] tracking-tight">Cronograma & Operações</h3>
+          {company && (
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-[#111111] text-white rounded-full text-[10px] font-bold border border-white/10 shadow-sm animate-in fade-in duration-300">
+              {company.logoUrl ? (
+                <img src={company.logoUrl} alt={company.name} className="w-3.5 h-3.5 rounded-full object-contain bg-white" referrerPolicy="no-referrer" />
+              ) : (
+                <div className="w-3.5 h-3.5 rounded-full bg-white/20 text-white text-[8px] font-black flex items-center justify-center">
+                  {getInitials(company.name)}
+                </div>
+              )}
+              <span>{company.name}</span>
+            </div>
+          )}
+        </div>
         <button 
           onClick={() => setCurrentView('agenda')}
           className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors bg-blue-50/50 hover:bg-blue-50 px-3.5 py-1.5 rounded-xl border border-blue-100 cursor-pointer"
@@ -262,10 +294,28 @@ export default function HomeWorkspace({
       
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
         {/* LEFT COLUMN: Premium Calendar Widget */}
-        <div className="xl:col-span-5 bg-white border border-[#0F172A08] rounded-[24px] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.01)] flex flex-col gap-5 h-fit">
-          <div>
+        <div className={`xl:col-span-5 bg-white border ${company ? 'border-indigo-500/10 shadow-[0_4px_30px_rgba(139,92,246,0.03)]' : 'border-[#0F172A08]'} rounded-[24px] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.01)] flex flex-col gap-5 h-fit relative overflow-hidden transition-all duration-300`}>
+          {company?.coverUrl && (
+            <div className="absolute top-0 left-0 right-0 h-1.5 overflow-hidden">
+              <img src={company.coverUrl} className="w-full h-full object-cover opacity-60" referrerPolicy="no-referrer" alt="" />
+            </div>
+          )}
+          <div className={company?.coverUrl ? 'pt-2' : ''}>
             <div className="flex items-center justify-between mb-6">
-              <span className="text-sm font-bold text-[#111111] capitalize">{monthNames[currentMonth]} {currentYear}</span>
+              <div className="flex items-center gap-2">
+                {company && (
+                  company.logoUrl ? (
+                    <div className="w-6 h-6 rounded-lg overflow-hidden border border-[#0F172A10] bg-white flex items-center justify-center shrink-0">
+                      <img src={company.logoUrl} alt={company.name} className="w-full h-full object-contain p-0.5" referrerPolicy="no-referrer" />
+                    </div>
+                  ) : (
+                    <div className="w-6 h-6 rounded-lg bg-[#111111] text-white text-[10px] font-extrabold flex items-center justify-center shrink-0">
+                      {getInitials(company.name)}
+                    </div>
+                  )
+                )}
+                <span className="text-sm font-bold text-[#111111] capitalize">{monthNames[currentMonth]} {currentYear}</span>
+              </div>
               <span className="text-xs text-[#64748B] font-medium">Visualização Mensal</span>
             </div>
             
@@ -282,17 +332,19 @@ export default function HomeWorkspace({
               {days.map(day => {
                 const isSelected = selectedDay === day;
                 const hasEvent = eventDays.includes(day);
+                const activeColor = company ? 'bg-indigo-600' : 'bg-blue-600';
+                const activeDotColor = company ? 'bg-indigo-400' : 'bg-blue-400';
                 return (
                   <button
                     key={day}
                     onClick={() => setSelectedDay(day)}
                     className="relative flex flex-col items-center justify-center p-2 focus:outline-none group cursor-pointer"
                   >
-                    <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${isSelected ? 'bg-[#111111] text-white font-bold' : 'text-[#334155] hover:bg-slate-50'}`}>
+                    <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${isSelected ? (company ? 'bg-indigo-600 text-white font-bold' : 'bg-[#111111] text-white font-bold') : 'text-[#334155] hover:bg-slate-50'}`}>
                       {day}
                     </span>
                     {hasEvent && (
-                      <span className={`absolute bottom-0 w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-blue-400' : 'bg-blue-600'}`} />
+                      <span className={`absolute bottom-0 w-1.5 h-1.5 rounded-full ${isSelected ? activeDotColor : activeColor}`} />
                     )}
                   </button>
                 );

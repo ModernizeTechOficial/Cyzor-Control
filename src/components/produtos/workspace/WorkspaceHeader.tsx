@@ -7,15 +7,41 @@ export default function WorkspaceHeader({ product, companies = [] }: { product: 
   return (
     <div className="bg-[#111111] text-white pt-16 pb-20 px-8 relative overflow-hidden shrink-0">
       
+      {/* Cover Image Background */}
+      {product.coverUrl && (
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          <img 
+            src={product.coverUrl} 
+            alt="Capa do Produto" 
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover opacity-25 filter blur-[1px]" 
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#111111] via-[#111111]/70 to-[#111111]/30" />
+        </div>
+      )}
+
       {/* Decorative Gradients */}
-      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-bl from-blue-500/20 via-purple-500/10 to-transparent rounded-full blur-[100px] opacity-60 pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-gradient-to-tr from-emerald-500/10 to-transparent rounded-full blur-[80px] pointer-events-none" />
+      {!product.coverUrl && (
+        <>
+          <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-bl from-blue-500/20 via-purple-500/10 to-transparent rounded-full blur-[100px] opacity-60 pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-gradient-to-tr from-emerald-500/10 to-transparent rounded-full blur-[80px] pointer-events-none" />
+        </>
+      )}
 
       <div className="relative z-10 max-w-[1600px] mx-auto w-full flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
         
         <div className="flex items-center gap-6">
-          <div className="w-24 h-24 rounded-[28px] bg-gradient-to-br from-[#1A1A1A] to-[#0A0A0A] border border-white/10 flex items-center justify-center font-display font-bold text-4xl shadow-2xl relative group">
-            {product.logo || product.name?.charAt(0) || 'P'}
+          <div className="w-24 h-24 rounded-[28px] bg-gradient-to-br from-[#1A1A1A] to-[#0A0A0A] border border-white/10 flex items-center justify-center font-display font-bold text-4xl shadow-2xl relative group overflow-hidden shrink-0">
+            {product.logoUrl ? (
+              <img 
+                src={product.logoUrl} 
+                alt={product.name} 
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-contain p-2 bg-white" 
+              />
+            ) : (
+              <span>{product.name?.charAt(0) || 'P'}</span>
+            )}
             <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-[28px]" />
           </div>
           

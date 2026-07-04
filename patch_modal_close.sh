@@ -1,0 +1,1 @@
+sed -i 's/onClose={() => setSelectedProject(null)}/onClose={() => {\n            setSelectedProject(null);\n            if (globalFilters.projectId) {\n              setGlobalFilters({ ...globalFilters, projectId: undefined });\n            }\n          }}/g' src/components/ProjetosView.tsx

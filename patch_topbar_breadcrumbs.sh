@@ -1,0 +1,1 @@
+sed -i 's/import { View } from '\''\.\.\/types\.ts'\'';/import { View } from '\''\.\.\/types\.ts'\'';\nimport { useNavigation } from '\''\.\.\/context\/NavigationContext'\'';\nimport { useCompanies, useProjects, useProducts } from '\''\.\.\/hooks\/useCyzorQueries'\'';/g' src/components/Topbar.tsx

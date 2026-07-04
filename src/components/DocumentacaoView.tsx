@@ -81,7 +81,10 @@ const resolveIcon = (icon: any) => {
   return icon || Folder;
 };
 
+import { useNavigation } from "../context/NavigationContext";
+
 export default function DocumentacaoView() {
+  const { globalFilters, setGlobalFilters } = useNavigation();
   const { data: documentsData, isLoading: isDocumentsLoading } = useDocuments();
   const { data: projectsData } = useProjects();
 
@@ -155,6 +158,14 @@ export default function DocumentacaoView() {
   };
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDoc, setSelectedDoc] = useState<any>(null);
+
+  useEffect(() => {
+    if (globalFilters.documentId && documents && documents.length > 0) {
+      const p = documents.find((proj: any) => proj.id.toString() === globalFilters.documentId.toString());
+      if (p) setSelectedDoc(p);
+    }
+  }, [globalFilters.documentId, documents]);
+
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isCustomCreatorOpen, setIsCustomCreatorOpen] = useState(false);
@@ -497,6 +508,7 @@ export default function DocumentacaoView() {
         setIsEditorOpen(false);
         setIsCustomCreatorOpen(false);
         setSelectedDoc(null);
+    if (globalFilters.documentId) setGlobalFilters({ ...globalFilters, documentId: undefined });
         fetchDocuments();
       }
     } catch (e) {
@@ -512,11 +524,13 @@ export default function DocumentacaoView() {
       return;
     }
     setSelectedDoc(doc);
+    setGlobalFilters({ ...globalFilters, documentId: doc.id });
     setIsEditorOpen(true);
   };
 
   const handleNewDoc = () => {
     setSelectedDoc(null);
+    if (globalFilters.documentId) setGlobalFilters({ ...globalFilters, documentId: undefined });
     setSelectedType('rich-text');
     setCustomCreatorFolder('Geral');
     setCustomCreatorName('');
@@ -1253,6 +1267,7 @@ export default function DocumentacaoView() {
                 onClose={() => {
                   setIsEditorOpen(false);
                   setSelectedDoc(null);
+    if (globalFilters.documentId) setGlobalFilters({ ...globalFilters, documentId: undefined });
                 }}
               />
             );
@@ -1265,6 +1280,7 @@ export default function DocumentacaoView() {
                 onClose={() => {
                   setIsEditorOpen(false);
                   setSelectedDoc(null);
+    if (globalFilters.documentId) setGlobalFilters({ ...globalFilters, documentId: undefined });
                 }}
               />
             );
@@ -1279,6 +1295,7 @@ export default function DocumentacaoView() {
               onClose={() => {
                 setIsEditorOpen(false);
                 setSelectedDoc(null);
+    if (globalFilters.documentId) setGlobalFilters({ ...globalFilters, documentId: undefined });
               }}
             />
           );
@@ -1291,6 +1308,7 @@ export default function DocumentacaoView() {
               onClose={() => {
                 setIsEditorOpen(false);
                 setSelectedDoc(null);
+    if (globalFilters.documentId) setGlobalFilters({ ...globalFilters, documentId: undefined });
               }}
             />
           );
@@ -1303,6 +1321,7 @@ export default function DocumentacaoView() {
               onClose={() => {
                 setIsEditorOpen(false);
                 setSelectedDoc(null);
+    if (globalFilters.documentId) setGlobalFilters({ ...globalFilters, documentId: undefined });
               }}
             />
           );
@@ -1315,6 +1334,7 @@ export default function DocumentacaoView() {
               onClose={() => {
                 setIsEditorOpen(false);
                 setSelectedDoc(null);
+    if (globalFilters.documentId) setGlobalFilters({ ...globalFilters, documentId: undefined });
               }}
             />
           );
@@ -1327,6 +1347,7 @@ export default function DocumentacaoView() {
               onClose={() => {
                 setIsEditorOpen(false);
                 setSelectedDoc(null);
+    if (globalFilters.documentId) setGlobalFilters({ ...globalFilters, documentId: undefined });
               }}
             />
           );
@@ -1339,11 +1360,13 @@ export default function DocumentacaoView() {
             onClose={() => {
               setIsEditorOpen(false);
               setSelectedDoc(null);
+    if (globalFilters.documentId) setGlobalFilters({ ...globalFilters, documentId: undefined });
               fetchDocuments();
             }}
             onSave={(updatedDoc) => {
               // setIsEditorOpen(false); // Commented out to keep modal open
-              // setSelectedDoc(null); // Commented out to keep modal open
+              // setSelectedDoc(null);
+    if (globalFilters.documentId) setGlobalFilters({ ...globalFilters, documentId: undefined }); // Commented out to keep modal open
               fetchDocuments();
             }}
           />

@@ -12,7 +12,10 @@ import StandardHeader from './layout/StandardHeader';
 import MetricCard from './MetricCard';
 import { Vision360 } from './common/Vision360';
 
+import { useNavigation } from "../context/NavigationContext";
+
 export default function ClientesView() {
+  const { globalFilters, setGlobalFilters } = useNavigation();
   const { fetchWithAuth, activeWorkspace } = useAuth();
   
   // States
@@ -28,12 +31,32 @@ export default function ClientesView() {
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
-  const [companyFilter, setCompanyFilter] = useState('ALL');
+  const [companyFilter, setCompanyFilter] = useState(globalFilters.companyId ? globalFilters.companyId.toString() : 'ALL');
+
+  useEffect(() => {
+    if (globalFilters.companyId) {
+      setCompanyFilter(globalFilters.companyId.toString());
+    } else {
+      setCompanyFilter('ALL');
+    }
+  }, [globalFilters.companyId]);
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeModalTab, setActiveModalTab] = useState<'cadastro' | 'visao_360'>('cadastro');
   const [editingClient, setEditingClient] = useState<any>(null);
+
+  useEffect(() => {
+    if (globalFilters.clientId && clients && clients.length > 0) {
+      const p = clients.find((proj: any) => proj.id.toString() === globalFilters.clientId.toString());
+      if (p) {
+        setEditingClient(p);
+        setIsModalOpen(true);
+        setActiveModalTab('visao_360');
+      }
+    }
+  }, [globalFilters.clientId, clients]);
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -86,6 +109,7 @@ export default function ClientesView() {
   // Open modal for Create
   const handleNewClient = () => {
     setEditingClient(null);
+    if (globalFilters.clientId) setGlobalFilters({ ...globalFilters, clientId: undefined });
     setActiveModalTab('cadastro');
     setFormData({
       name: '',
@@ -103,6 +127,7 @@ export default function ClientesView() {
   // Open modal for Edit
   const handleEditClient = (client: any) => {
     setEditingClient(client);
+    setGlobalFilters({ ...globalFilters, clientId: client.id });
     setActiveModalTab('cadastro');
     setFormData({
       name: client.name || '',

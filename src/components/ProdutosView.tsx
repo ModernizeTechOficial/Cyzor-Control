@@ -24,7 +24,10 @@ const PRODUTOS_COLUMNS: KanbanColumn[] = [
   { id: 'Produção', label: 'Em Produção', badge: 'bg-emerald-50 text-emerald-800 border border-emerald-200/30' }
 ];
 
+import { useNavigation } from "../context/NavigationContext";
+
 export default function ProdutosView() {
+  const { globalFilters, setGlobalFilters } = useNavigation();
   const { data: productsData, isLoading: isProductsLoading } = useProducts();
   const { data: companiesData } = useCompanies();
   const { data: projectsData } = useProjects();
@@ -41,7 +44,24 @@ export default function ProdutosView() {
   const [companyFilter, setCompanyFilter] = useState('ALL');
   const [viewMode, setViewMode] = useState<'kanban' | 'list' | 'timeline' | 'gantt'>('kanban');
   
+  useEffect(() => {
+    if (globalFilters.companyId && companies.length > 0) {
+      const company = companies.find(c => c.id.toString() === globalFilters.companyId?.toString());
+      if (company) setCompanyFilter(company.name);
+    } else {
+      setCompanyFilter('ALL');
+    }
+  }, [globalFilters.companyId, companies]);
+  
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
+
+  useEffect(() => {
+    if (globalFilters.productId && productsData && productsData.length > 0) {
+      const p = productsData.find((proj: any) => proj.id.toString() === globalFilters.productId.toString());
+      if (p) setSelectedProduct(p);
+    }
+  }, [globalFilters.productId, productsData]);
+
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   
@@ -246,7 +266,14 @@ export default function ProdutosView() {
        const res = await fetchWithAuth(`/api/products/${updated.id}`, {
          method: 'PUT',
          headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({ name: updated.name, description: updated.desc, status: updated.status, companyId: updated.companyId })
+         body: JSON.stringify({ 
+           name: updated.name, 
+           description: updated.description !== undefined ? updated.description : updated.desc, 
+           status: updated.status, 
+           companyId: updated.companyId,
+           logoUrl: updated.logoUrl,
+           coverUrl: updated.coverUrl
+         })
        });
        if(res.ok) fetchData();
     } catch(e) { console.error(e) }
@@ -258,7 +285,14 @@ export default function ProdutosView() {
       const res = await fetchWithAuth(`/api/products`, {
          method: 'POST',
          headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({ name: newProd.name, description: newProd.desc, status: newProd.status, companyId: newProd.companyId })
+         body: JSON.stringify({ 
+           name: newProd.name, 
+           description: newProd.desc, 
+           status: newProd.status, 
+           companyId: newProd.companyId,
+           logoUrl: newProd.logoUrl || null,
+           coverUrl: newProd.coverUrl || null
+         })
       });
       if(res.ok) fetchData();
     } catch(e) { console.error(e) }
@@ -318,7 +352,10 @@ export default function ProdutosView() {
               columns={PRODUTOS_COLUMNS}
               items={kanbanItems}
               onDrop={handleDropKanban}
-              onItemClick={setSelectedProduct}
+              onItemClick={(p) => {
+                setSelectedProduct(p);
+                setGlobalFilters({ ...globalFilters, productId: p.id });
+              }}
               onAddClick={() => setIsNewModalOpen(true)}
               emptyMessage="Nenhum produto nesta etapa."
               disableLayoutAnimation={true}
@@ -334,7 +371,10 @@ export default function ProdutosView() {
                 { key: 'progress', label: 'Progresso' }
               ]}
               items={filteredProducts}
-              onItemClick={setSelectedProduct}
+              onItemClick={(p) => {
+                setSelectedProduct(p);
+                setGlobalFilters({ ...globalFilters, productId: p.id });
+              }}
               renderCell={(item, colKey) => {
                 if (colKey === 'title') return <div className="font-bold text-neutral-900">{item.name}</div>;
                 if (colKey === 'empresa') return <div className="text-slate-600 font-semibold">{item.empresa || '-'}</div>;
@@ -357,7 +397,10 @@ export default function ProdutosView() {
               <TimelineView 
                 items={timelineItems}
                 onUpdateItemDates={handleUpdateProductDates}
-                onItemClick={(rawItem) => setSelectedProduct(rawItem)}
+                onItemClick={(rawItem) => {
+                  setSelectedProduct(rawItem);
+                  setGlobalFilters({ ...globalFilters, productId: rawItem.id });
+                }}
                 onDeleteItem={(productId) => {
                   setProducts(prev => prev.filter(p => p.id !== productId));
                 }}
@@ -374,7 +417,12 @@ export default function ProdutosView() {
       <ProductDetailsModal 
         product={selectedProduct} 
         isOpen={!!selectedProduct} 
-        onClose={() => setSelectedProduct(null)} 
+        onClose={() => {
+            setSelectedProduct(null);
+            if (globalFilters.productId) {
+              setGlobalFilters({ ...globalFilters, productId: undefined });
+            }
+          }} 
         onSave={handleUpdateProduct}
         onDelete={() => setSelectedProduct(null)}
         companies={companies}

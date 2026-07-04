@@ -13,7 +13,10 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsToolti
 
 const COLORS = ['#111111', '#475569', '#94A3B8', '#CBD5E1', '#E2E8F0'];
 
+import { useNavigation } from "../context/NavigationContext";
+
 export default function FinanceiroView() {
+  const { globalFilters } = useNavigation();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<any>(null);
 
@@ -80,7 +83,11 @@ export default function FinanceiroView() {
     const monthlyRevenue = Array(12).fill(0);
     const companyRevenue: Record<string, number> = {};
 
-    entries.forEach((e: any) => {
+    const filteredEntries = globalFilters.companyId 
+      ? entries.filter((e: any) => e.companyId?.toString() === globalFilters.companyId?.toString())
+      : entries;
+
+    filteredEntries.forEach((e: any) => {
       const d = new Date(e.date || Date.now());
       const amount = Number(e.amount) || 0;
       
@@ -120,7 +127,7 @@ export default function FinanceiroView() {
       percentage: totalCompanyRevenue > 0 ? Math.round((c.value / totalCompanyRevenue) * 100) : 0
     }));
 
-    const sortedEntries = [...entries].sort((a, b) => new Date(b.date || Date.now()).getTime() - new Date(a.date || Date.now()).getTime());
+    const sortedEntries = [...filteredEntries].sort((a, b) => new Date(b.date || Date.now()).getTime() - new Date(a.date || Date.now()).getTime());
 
     return {
       revenueMensal: rMensal,
@@ -132,7 +139,7 @@ export default function FinanceiroView() {
       companyData: companyDataWithPercentage,
       tableData: sortedEntries
     };
-  }, [entries, projects]);
+  }, [entries, projects, globalFilters.companyId]);
 
   const formatCurrency = (val: number) => `R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 

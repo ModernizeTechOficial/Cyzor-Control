@@ -1,0 +1,1 @@
+sed -i 's/onItemClick={setSelectedProject}/onItemClick={(p) => {\n                setSelectedProject(p);\n                setGlobalFilters({ ...globalFilters, projectId: p.id });\n              }}/g' src/components/ProjetosView.tsx

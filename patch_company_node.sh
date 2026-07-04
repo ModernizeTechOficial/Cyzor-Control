@@ -1,0 +1,1 @@
+sed -i 's/<span className="text-\[13px\] font-medium truncate">{company.name}<\/span>/<span className="text-[13px] font-medium truncate hover:underline" onClick={(e) => { e.stopPropagation(); handleNavigate('\''empresas'\'', { companyId: company.id }); }}>{company.name}<\/span>/g' src/components/Sidebar.tsx

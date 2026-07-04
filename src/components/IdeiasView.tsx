@@ -15,6 +15,7 @@ import ProductActionBar from './produtos/ProductActionBar';
 import BoardToolbar from './common/management/BoardToolbar';
 import BoardKanban, { KanbanColumn, KanbanItem } from './common/management/BoardKanban';
 import BoardList from './common/management/BoardList';
+import { useNavigation } from '../context/NavigationContext';
 
 const IDEIA_COLUMNS: KanbanColumn[] = [
   { id: 'capturadas', label: 'Capturadas', badge: 'bg-neutral-50 text-neutral-500 border border-neutral-200/50' },
@@ -26,6 +27,7 @@ const IDEIA_COLUMNS: KanbanColumn[] = [
 ];
 
 export default function IdeiasView() {
+  const { globalFilters, setGlobalFilters } = useNavigation();
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [selectedIdea, setSelectedIdea] = useState<any>(null);
   const { data: ideasData, isLoading: isIdeasLoading } = useIdeas();
@@ -39,6 +41,13 @@ export default function IdeiasView() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const { fetchWithAuth, activeWorkspace } = useAuth();
+
+  useEffect(() => {
+    if (globalFilters.ideaId && ideas && ideas.length > 0) {
+      const p = ideas.find((proj: any) => proj.id.toString() === globalFilters.ideaId.toString());
+      if (p) setSelectedIdea(p);
+    }
+  }, [globalFilters.ideaId, ideas]);
 
   const handleUpdateIdeaDates = async (ideaId: number, newStartDate: string, newEndDate: string) => {
     const idea = ideas.find(i => i.id === ideaId);
@@ -135,6 +144,7 @@ export default function IdeiasView() {
       console.error(err);
     }
     setSelectedIdea(null);
+    if (globalFilters.ideaId) setGlobalFilters({ ...globalFilters, ideaId: undefined });
   };
 
   const handleUpdateIdeaQuarter = async (ideaId: string, newQuarter: string) => {
@@ -353,7 +363,10 @@ export default function IdeiasView() {
               columns={IDEIA_COLUMNS}
               items={kanbanItems}
               onDrop={handleDropKanban}
-              onItemClick={setSelectedIdea}
+              onItemClick={(item) => {
+                setSelectedIdea(item.raw);
+                setGlobalFilters({ ...globalFilters, ideaId: item.id });
+              }}
               onAddClick={() => setIsNewModalOpen(true)}
               emptyMessage="Nenhuma ideia nesta etapa."
             />
@@ -368,7 +381,10 @@ export default function IdeiasView() {
                 { key: 'score', label: 'Score' }
               ]}
               items={filteredIdeas}
-              onItemClick={setSelectedIdea}
+              onItemClick={(item) => {
+                setSelectedIdea(item);
+                setGlobalFilters({ ...globalFilters, ideaId: item.id });
+              }}
               renderCell={(item, colKey) => {
                 if (colKey === 'title') return <div className="font-bold text-neutral-900">{item.name}</div>;
                 if (colKey === 'priority') return (
@@ -395,7 +411,10 @@ export default function IdeiasView() {
               <TimelineView 
                 items={timelineItems}
                 onUpdateItemDates={handleUpdateIdeaDates}
-                onItemClick={(rawItem) => setSelectedIdea(rawItem)}
+                onItemClick={(rawItem) => {
+                  setSelectedIdea(rawItem);
+                  setGlobalFilters({ ...globalFilters, ideaId: rawItem.id });
+                }}
                 onDeleteItem={(ideaId) => {
                   setIdeas(prev => prev.filter(i => i.id !== ideaId));
                 }}
@@ -417,7 +436,10 @@ export default function IdeiasView() {
       <IdeaDetailsModal 
         idea={selectedIdea} 
         isOpen={!!selectedIdea} 
-        onClose={() => setSelectedIdea(null)} 
+        onClose={() => {
+          setSelectedIdea(null);
+          if (globalFilters.ideaId) setGlobalFilters({ ...globalFilters, ideaId: undefined });
+        }} 
         onSave={handleUpdateIdea}
       />
     </div>

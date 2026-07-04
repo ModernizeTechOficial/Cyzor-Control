@@ -1,0 +1,1 @@
+sed -i 's/<div className={`flex items-center mb-6 px-3 ${isCollapsed ? '\''lg:justify-center'\'' : '\''gap-3'\''} `}>/<div className={`flex items-center mb-6 px-3 cursor-pointer ${isCollapsed ? '\''lg:justify-center'\'' : '\''gap-3'\''} `} onClick={() => handleNavigate('\''dashboard'\'')}>/g' src/components/Sidebar.tsx

@@ -1,0 +1,2 @@
+sed -i 's/onItemClick={setSelectedProduct}/onItemClick={(p) => {\n                setSelectedProduct(p);\n                setGlobalFilters({ ...globalFilters, productId: p.id });\n              }}/g' src/components/ProdutosView.tsx
+sed -i 's/onItemClick={(rawItem) => setSelectedProduct(rawItem)}/onItemClick={(rawItem) => {\n                  setSelectedProduct(rawItem);\n                  setGlobalFilters({ ...globalFilters, productId: rawItem.id });\n                }}/g' src/components/ProdutosView.tsx

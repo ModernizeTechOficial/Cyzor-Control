@@ -1,0 +1,1 @@
+sed -i 's/export default function EmpresasView() {/import { useNavigation } from "..\/context\/NavigationContext";\nimport { Vision360 } from ".\/common\/Vision360";\n\nexport default function EmpresasView() {\n  const { globalFilters, setGlobalFilters } = useNavigation();/g' src/components/EmpresasView.tsx

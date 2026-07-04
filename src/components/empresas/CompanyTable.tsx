@@ -14,6 +14,15 @@ export default function CompanyTable({
   companies, finance, onSelect, onEdit, selectedCompanyIds, toggleSelection, viewMode
 }: CompanyTableProps) {
 
+  const getInitials = (name: string) => {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length > 1) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return parts[0][0].toUpperCase();
+  };
+
   const getRevenue = (companyId: string) => {
     return finance
       .filter(f => f.companyId === companyId && f.type === 'RECEITA')
@@ -60,8 +69,19 @@ export default function CompanyTable({
           >
             <div className="flex justify-between items-start mb-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-[#FAFAFA] rounded-2xl border border-[#0F172A08] flex items-center justify-center shadow-sm">
-                  <Building2 size={20} className="text-[#111111]" />
+                <div className="w-12 h-12 rounded-2xl border border-[#0F172A08] flex items-center justify-center shadow-sm shrink-0 overflow-hidden bg-white">
+                  {c.logoUrl ? (
+                    <img 
+                      src={c.logoUrl} 
+                      alt={c.name} 
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-contain p-1" 
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-[#111111] text-white flex items-center justify-center font-bold text-sm">
+                      {getInitials(c.name)}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <h4 className="font-bold text-[#111111] text-base">{c.name}</h4>
@@ -148,8 +168,19 @@ export default function CompanyTable({
                   </td>
                   <td className="py-5">
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-[#FAFAFA] rounded-[14px] border border-[#0F172A08] flex items-center justify-center shadow-sm shrink-0">
-                        <Building2 size={18} className="text-[#111111]" />
+                      <div className="w-10 h-10 rounded-[14px] border border-[#0F172A08] flex items-center justify-center shadow-sm shrink-0 overflow-hidden bg-white">
+                        {c.logoUrl ? (
+                          <img 
+                            src={c.logoUrl} 
+                            alt={c.name} 
+                            referrerPolicy="no-referrer"
+                            className="w-full h-full object-contain p-1" 
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-[#111111] text-white flex items-center justify-center font-bold text-xs">
+                            {getInitials(c.name)}
+                          </div>
+                        )}
                       </div>
                       <div>
                         <h4 className="font-bold text-[#111111] text-sm group-hover:text-blue-600 transition-colors">{c.name}</h4>
@@ -239,8 +270,19 @@ export default function CompanyTable({
             </div>
             
             <div className="flex items-center gap-3 mb-4 pr-8">
-              <div className="w-10 h-10 bg-[#FAFAFA] rounded-xl border border-[#0F172A08] flex items-center justify-center shrink-0">
-                <Building2 size={16} className="text-[#111111]" />
+              <div className="w-10 h-10 rounded-xl border border-[#0F172A08] flex items-center justify-center shrink-0 overflow-hidden bg-white">
+                {c.logoUrl ? (
+                  <img 
+                    src={c.logoUrl} 
+                    alt={c.name} 
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-contain p-1" 
+                  />
+                ) : (
+                  <div className="w-full h-full bg-[#111111] text-white flex items-center justify-center font-bold text-xs">
+                    {getInitials(c.name)}
+                  </div>
+                )}
               </div>
               <div>
                 <h4 className="font-bold text-[#111111] text-sm">{c.name}</h4>

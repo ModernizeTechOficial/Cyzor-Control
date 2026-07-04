@@ -1,0 +1,1 @@
+sed -i 's/export default function ProjetosView() {/import { useNavigation } from "..\/context\/NavigationContext";\n\nexport default function ProjetosView() {\n  const { globalFilters } = useNavigation();/g' src/components/ProjetosView.tsx

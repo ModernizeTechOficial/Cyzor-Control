@@ -1,0 +1,1 @@
+sed -i 's|<div className="hidden lg:flex items-center gap-8 h-8 px-2">|<div className="hidden lg:flex items-center gap-8 h-8 px-2">\n           <BreadcrumbNavigator setCurrentView={setCurrentView} />\n           <div className="w-px h-6 bg-[#0F172A08]" />|g' src/components/Topbar.tsx

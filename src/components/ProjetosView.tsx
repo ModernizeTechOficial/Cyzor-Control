@@ -24,7 +24,10 @@ import AbaTimeline from './project-tabs/AbaTimeline';
 import Markdown from 'react-markdown';
 import { FormGroup, FormLabel, FormInput, FormSelect, FormTextarea } from './ui/FormComponents';
 
+import { useNavigation } from "../context/NavigationContext";
+
 export default function ProjetosView() {
+  const { globalFilters, setGlobalFilters } = useNavigation();
   const { fetchWithAuth, activeWorkspace, user } = useAuth();
   
   // Real database entity states
@@ -52,13 +55,29 @@ export default function ProjetosView() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedColumnId, setSelectedColumnId] = useState<string | undefined>(undefined);
   const [selectedProject, setSelectedProject] = useState<any>(null);
+
+  useEffect(() => {
+    if (globalFilters.projectId && projectsData && projectsData.length > 0) {
+      const p = projectsData.find((proj: any) => proj.id.toString() === globalFilters.projectId.toString());
+      if (p) setSelectedProject(p);
+    }
+  }, [globalFilters.projectId, projectsData]);
+
   const [currentView, setCurrentView] = useState<'kanban' | 'list' | 'timeline' | 'gantt'>('kanban');
   
   // Global & Kanban search/filter states
   const [searchQuery, setSearchQuery] = useState('');
   const [innerSearch, setInnerSearch] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('Todas');
-  const [clientFilter, setClientFilter] = useState('Todos');
+  const [clientFilter, setClientFilter] = useState(globalFilters.companyId ? globalFilters.companyId.toString() : 'Todos');
+
+  useEffect(() => {
+    if (globalFilters.companyId) {
+      setClientFilter(globalFilters.companyId.toString());
+    } else {
+      setClientFilter('Todos');
+    }
+  }, [globalFilters.companyId]);
   
   // Custom interactive panels state
   const [isCommandOpen, setIsCommandOpen] = useState(false);
@@ -551,7 +570,10 @@ export default function ProjetosView() {
               columns={KANBAN_COLUMNS}
               items={kanbanItems}
               onDrop={(e, colId) => handleDrop(e, colId)}
-              onItemClick={setSelectedProject}
+              onItemClick={(p) => {
+                setSelectedProject(p);
+                setGlobalFilters({ ...globalFilters, projectId: p.id });
+              }}
               onToggleFavorite={toggleFavorite}
               onAddClick={(colId) => {
                 setSelectedColumnId(colId);
@@ -584,7 +606,10 @@ export default function ProjetosView() {
                 });
                 syncPlatformData();
               }}
-              onItemClick={setSelectedProject}
+              onItemClick={(p) => {
+                setSelectedProject(p);
+                setGlobalFilters({ ...globalFilters, projectId: p.id });
+              }}
             />
           )}
           {currentView === 'gantt' && (
@@ -609,7 +634,10 @@ export default function ProjetosView() {
                 });
                 syncPlatformData();
               }}
-              onItemClick={setSelectedProject}
+              onItemClick={(p) => {
+                setSelectedProject(p);
+                setGlobalFilters({ ...globalFilters, projectId: p.id });
+              }}
               title="Gantt do Projeto"
             />
           )}
@@ -902,7 +930,12 @@ export default function ProjetosView() {
         <ProjectDetailsModal 
           project={selectedProject} 
           isOpen={!!selectedProject} 
-          onClose={() => setSelectedProject(null)} 
+          onClose={() => {
+            setSelectedProject(null);
+            if (globalFilters.projectId) {
+              setGlobalFilters({ ...globalFilters, projectId: undefined });
+            }
+          }} 
           onSave={handleProjectSave} 
         />
       )}

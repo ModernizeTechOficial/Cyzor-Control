@@ -72,6 +72,7 @@ export interface ProjectExtended {
   dueDate?: string;
   budget?: string;
   companyId?: number;
+  productId?: number;
   column: string;
   description?: string;
   criteria?: Array<{ id: number; text: string; completed: boolean }>;
@@ -79,6 +80,8 @@ export interface ProjectExtended {
   // Extended fields
   progress?: number;
   hasFullData?: boolean;
+  logoUrl?: string;
+  coverUrl?: string;
   tasks?: Task[];
   sprints?: Sprint[];
   currentSprintId?: number;

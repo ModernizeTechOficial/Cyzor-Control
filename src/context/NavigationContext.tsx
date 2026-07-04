@@ -7,9 +7,20 @@ interface NavigationBadges {
   ia: number;
 }
 
+interface GlobalFilters {
+  companyId?: string | number;
+  projectId?: string | number;
+  productId?: string | number;
+  clientId?: string | number;
+  documentId?: string | number;
+  ideaId?: string | number;
+}
+
 interface NavigationContextType {
   badges: NavigationBadges;
   refreshBadges: () => Promise<void>;
+  globalFilters: GlobalFilters;
+  setGlobalFilters: React.Dispatch<React.SetStateAction<GlobalFilters>>;
 }
 
 const NavigationContext = createContext<NavigationContextType | undefined>(undefined);
@@ -21,6 +32,8 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     financeiro: 0,
     ia: 0
   });
+  
+  const [globalFilters, setGlobalFilters] = useState<GlobalFilters>({});
 
   const refreshBadges = useCallback(async () => {
     if (!activeWorkspace) return;
@@ -31,7 +44,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
         setBadges(data);
       }
     } catch (error) {
-      console.error('Failed to fetch navigation badges:', error);
+      console.warn('Failed to fetch navigation badges:', error);
     }
   }, [activeWorkspace, fetchWithAuth]);
 
@@ -44,7 +57,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   }, [refreshBadges]);
 
   return (
-    <NavigationContext.Provider value={{ badges, refreshBadges }}>
+    <NavigationContext.Provider value={{ badges, refreshBadges, globalFilters, setGlobalFilters }}>
       {children}
     </NavigationContext.Provider>
   );

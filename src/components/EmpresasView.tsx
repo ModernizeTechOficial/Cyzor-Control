@@ -5,7 +5,7 @@ import { useCompanies, useProjects } from '../hooks/useCyzorQueries';
 import { SkeletonDashboard } from './common/skeletons/SkeletonDashboard';
 import { useQueryClient } from '@tanstack/react-query';
 import StandardHeader from './layout/StandardHeader';
-import { Plus } from 'lucide-react';
+import { Plus, ChevronLeft } from 'lucide-react';
 import CompanyStats from './empresas/CompanyStats';
 import CompanyFilters from './empresas/CompanyFilters';
 import CompanyTable from './empresas/CompanyTable';
@@ -15,7 +15,12 @@ import FinancialSummary from './empresas/FinancialSummary';
 import Charts from './empresas/Charts';
 import CompanyActionBar from './empresas/CompanyActionBar';
 
+import { useNavigation } from "../context/NavigationContext";
+import { Vision360 } from "./common/Vision360";
+import { EntityHero } from "./common/EntityHero";
+
 export default function EmpresasView() {
+  const { globalFilters, setGlobalFilters } = useNavigation();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<any>(null);
 
@@ -120,6 +125,49 @@ export default function EmpresasView() {
 
   if (isCompaniesLoading) {
     return <SkeletonDashboard />;
+  }
+
+  if (globalFilters.companyId) {
+    const activeCompany = companies.find(c => c.id.toString() === globalFilters.companyId?.toString());
+    if (activeCompany) {
+      return (
+        <div className="w-full mx-auto pb-12 flex flex-col animate-in fade-in duration-500 relative bg-[#FAFAFA]/30">
+          <div className="flex flex-col">
+            <EntityHero
+              entityType="company"
+              name={activeCompany.name}
+              description={activeCompany.industry ? `Empresa atuante no segmento de ${activeCompany.industry}.` : 'Parceiro comercial registrado no ecossistema Cyzor Control.'}
+              logoUrl={activeCompany.logoUrl}
+              coverUrl={activeCompany.coverUrl}
+              breadcrumbs={['Perspectiva Corporativa', '360°', activeCompany.name]}
+              badges={[
+                { label: activeCompany.status || 'Ativo', variant: 'secondary' },
+                { label: activeCompany.industry || 'Sem Setor', variant: 'neutral' },
+                { label: activeCompany.cnpj || 'Sem CNPJ', variant: 'neutral' }
+              ]}
+              actions={
+                <button 
+                  onClick={() => setGlobalFilters({})} 
+                  className="px-4 py-2 rounded-xl bg-white/10 text-white/90 hover:bg-white/20 hover:text-white flex items-center gap-2 transition-all cursor-pointer font-bold text-xs"
+                >
+                  <ChevronLeft size={16} />
+                  <span>Voltar para Lista</span>
+                </button>
+              }
+            />
+          </div>
+          
+          <div className="px-4 sm:px-6 lg:px-10 mt-6">
+            <Vision360
+              entityType="company"
+              entityId={activeCompany.id}
+              entityName={activeCompany.name}
+              entityData={activeCompany}
+            />
+          </div>
+        </div>
+      );
+    }
   }
 
   return (

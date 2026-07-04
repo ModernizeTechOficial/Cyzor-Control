@@ -132,6 +132,8 @@ export const companies = pgTable('companies', {
   size: text('size'),
   website: text('website'),
   status: text('status').default('Ativo'), // Ativo, Inativo
+  logoUrl: text('logo_url'),
+  coverUrl: text('cover_url'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 }, (t) => ({
@@ -174,6 +176,8 @@ export const products = pgTable('products', {
   pricingModel: text('pricing_model'), // Assinatura, Licença Única, Gratuito
   features: jsonb('features').default([]),
   launchDate: timestamp('launch_date'),
+  logoUrl: text('logo_url'),
+  coverUrl: text('cover_url'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 }, (t) => ({
@@ -203,6 +207,8 @@ export const projects = pgTable('projects', {
   comments: jsonb('comments').default([]),
   criteria: jsonb('criteria').default([]),
   velocity: jsonb('velocity').default([]),
+  logoUrl: text('logo_url'),
+  coverUrl: text('cover_url'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 }, (t) => ({
