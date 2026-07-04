@@ -275,6 +275,7 @@ export const ideas = pgTable('ideas', {
   tags: jsonb('tags').default([]),
   authorUid: text('author_uid').references(() => users.uid, { onDelete: 'set null' }),
   convertedToProjectId: integer('converted_to_project_id').references(() => projects.id, { onDelete: 'set null' }),
+  analysis: jsonb('analysis').default('{}'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 }, (t) => ({
@@ -898,3 +899,26 @@ export const platformSettings = pgTable('platform_settings', {
   value: jsonb('value').notNull(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
+
+// MISSIONS (Journey)
+export const missions = pgTable('missions', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description').notNull(),
+  checklist: jsonb('checklist').notNull(), // {id: string, text: string}[]
+  order: integer('order').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const workspaceMissionProgress = pgTable('workspace_mission_progress', {
+  id: serial('id').primaryKey(),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  missionId: integer('mission_id').notNull().references(() => missions.id, { onDelete: 'cascade' }),
+  status: text('status').default('TODO'), // TODO, IN_PROGRESS, COMPLETED
+  currentChecklistProgress: jsonb('current_checklist_progress').default('{}'), // {id: boolean}
+  completedAt: timestamp('completed_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (t) => ({
+  wsMissionIdx: index('ws_mission_idx').on(t.workspaceId, t.missionId),
+}));

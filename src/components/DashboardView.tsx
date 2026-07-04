@@ -186,62 +186,45 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
 
   return (
     <div id="main-dashboard" className="w-full mx-auto pb-12 flex flex-col gap-10 animate-in fade-in duration-500 relative px-4 sm:px-6 lg:px-10">
-      {/* Header and Strategic Guided Journey (Full Width) */}
-      <div className="flex flex-col gap-8">
-        <HomeHeader />
-        
-        <StrategicPriorityCard 
-          setCurrentView={setCurrentView} 
-          currentStage={currentStage}
-          ideas={ideas}
-          projects={filteredProjects}
-          products={productsList}
-          clients={clients}
-          finance={filteredFinance}
-          tasks={filteredTasks}
-        />
-        <BusinessInsightCard setCurrentView={setCurrentView} currentStage={currentStage} />
-      </div>
+      {/* Header (Full Width) */}
+      <HomeHeader />
 
       {/* Dynamic Widget Grid prioritized by Maturity Stage */}
-      <div className="flex flex-col gap-8 w-full">
-        {isConstruction ? (
-          <>
-            {/* For construction stages: Workspace (tasks/agenda) takes highest priority */}
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between border-b border-[#0F172A05] pb-2">
-                <h3 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Foco Operacional: Cronograma e Execução</h3>
-                <span className="text-[11px] text-[#64748B] font-medium">Estágio de Construção Ativo: {currentStage}</span>
-              </div>
-              <HomeWorkspace projects={filteredProjects} tasks={filteredTasks} agendaEvents={filteredAgendaEvents} setCurrentView={setCurrentView} />
-            </div>
+      <div className="grid grid-cols-12 gap-6 w-full">
+        {/* KPI Row (Full Width) */}
+        <div className="col-span-12">
+            <HomeKPIs metrics={filteredMetrics} setCurrentView={setCurrentView} />
+        </div>
 
-            <HomeKPIs metrics={filteredMetrics} setCurrentView={setCurrentView} />
-            <HomeAnalytics financeEntries={filteredFinance} />
-          </>
-        ) : isGrowthScale ? (
-          <>
-            {/* For scale & financial stages: KPIs and Analytics are highest priority */}
-            <HomeKPIs metrics={filteredMetrics} setCurrentView={setCurrentView} />
-            
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between border-b border-[#0F172A05] pb-2">
-                <h3 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Desempenho Comercial & Tração</h3>
-                <span className="text-[11px] text-[#64748B] font-medium">Estágio de Crescimento Ativo: {currentStage}</span>
+        {/* Main Content Area (8 columns) */}
+        <div className="col-span-12 md:col-span-8 flex flex-col gap-6">
+            {isGrowthScale ? (
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between border-b border-[#0F172A05] pb-2">
+                  <h3 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Desempenho Comercial & Tração</h3>
+                  <span className="text-[11px] text-[#64748B] font-medium">Estágio de Crescimento Ativo: {currentStage}</span>
+                </div>
+                <HomeAnalytics financeEntries={filteredFinance} />
               </div>
+            ) : (
               <HomeAnalytics financeEntries={filteredFinance} />
-            </div>
+            )}
+        </div>
 
-            <HomeWorkspace projects={filteredProjects} tasks={filteredTasks} agendaEvents={filteredAgendaEvents} setCurrentView={setCurrentView} />
-          </>
-        ) : (
-          <>
-            {/* Default / Discovery Stage priority */}
-            <HomeKPIs metrics={filteredMetrics} setCurrentView={setCurrentView} />
-            <HomeWorkspace projects={filteredProjects} tasks={filteredTasks} agendaEvents={filteredAgendaEvents} setCurrentView={setCurrentView} />
-            <HomeAnalytics financeEntries={filteredFinance} />
-          </>
-        )}
+        {/* Sidebar Content Area (4 columns) */}
+        <div className="col-span-12 md:col-span-4 flex flex-col gap-6">
+            <StrategicPriorityCard 
+              setCurrentView={setCurrentView} 
+              currentStage={currentStage}
+              ideas={ideas}
+              projects={filteredProjects}
+              products={productsList}
+              clients={clients}
+              finance={filteredFinance}
+              tasks={filteredTasks}
+            />
+            <BusinessInsightCard setCurrentView={setCurrentView} currentStage={currentStage} />
+        </div>
       </div>
     </div>
   );

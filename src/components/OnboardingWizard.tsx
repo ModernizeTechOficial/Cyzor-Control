@@ -105,15 +105,14 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
         companyId = company.id;
       }
 
-      // 3. Create Idea
-      const ideaRes = await fetchWithAuth('/api/ideas', {
+      // 3. Create Idea and Analyze
+      const ideaRes = await fetchWithAuth('/api/ideas/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: `Ideia de Negócio: ${businessName}`,
           description: ideaDescription,
-          status: businessStage === 'Ideia' ? 'capturadas' : 'avaliacao',
-          priority: 'Alta'
+          workspaceId: activeWorkspace.id
         })
       });
 
@@ -177,6 +176,13 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
           content: `# Planejamento Inicial da Empresa: ${businessName}\n\nEste documento serve como diretriz estratégica de negócios para a nossa empresa, gerado automaticamente no Onboarding da Cyzor Control.\n\n## 1. O Modelo de Negócio\n- **Tipo**: ${businessType}\n- **Estágio Atual**: ${businessStage}\n\n## 2. A Oportunidade\n${ideaDescription}\n\n## 3. Próximos Passos Sugeridos\n1. Validar a viabilidade econômica do modelo de monetização.\n2. Iniciar o desenvolvimento de um escopo mínimo viável (MVP).\n3. Registrar contatos de potenciais clientes interessados.`,
           folder: 'Estratégia'
         })
+      });
+
+      // 6. Initialize Journey (Missions)
+      await fetchWithAuth('/api/missions/init', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workspaceId: activeWorkspace.id })
       });
 
       showSuccess('Workspace configurado com absoluto sucesso!');

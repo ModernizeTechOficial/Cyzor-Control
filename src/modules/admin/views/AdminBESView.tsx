@@ -115,7 +115,7 @@ export default function AdminBESView() {
                           type="number" 
                           value={value as number}
                           onChange={(e) => setBesConfig({...besConfig, thresholds: {...besConfig.thresholds, [key]: parseInt(e.target.value)}})}
-                          className="w-full px-2 py-1 border rounded text-xs font-mono"
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl outline-none text-xs font-mono transition"
                         />
                     </div>
                 ))}
@@ -132,7 +132,7 @@ export default function AdminBESView() {
                           type="number" 
                           value={value as number}
                           onChange={(e) => setBesConfig({...besConfig, actions: {...besConfig.actions, [key]: parseInt(e.target.value)}})}
-                          className="w-full px-2 py-1 border rounded text-xs font-mono"
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl outline-none text-xs font-mono transition"
                         />
                     </div>
                 ))}
@@ -142,9 +142,9 @@ export default function AdminBESView() {
           <button 
             onClick={saveConfig}
             disabled={saving === 'config'}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 text-white rounded-lg hover:bg-blue-600 transition text-xs"
+            className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl hover:bg-indigo-600 transition text-xs font-bold shadow-sm"
           >
-            {saving === 'config' ? <RotateCw className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+            {saving === 'config' ? <RotateCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
             Salvar Configurações
           </button>
         </div>
@@ -171,7 +171,7 @@ export default function AdminBESView() {
                     type="number"
                     id={`bes-${ws.id}`}
                     defaultValue={ws.settings?.besScore || 0}
-                    className="w-24 px-2 py-1 border rounded text-right font-mono"
+                    className="w-24 px-3 py-2 bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl outline-none text-right text-xs font-mono transition"
                   />
                 </td>
                 <td className="px-6 py-4 text-right">
@@ -181,9 +181,9 @@ export default function AdminBESView() {
                         updateWorkspaceBES(ws.id, parseInt(input.value));
                     }}
                     disabled={saving === ws.id}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 text-white rounded-lg hover:bg-blue-600 transition"
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl hover:bg-indigo-600 transition text-xs font-bold shadow-sm"
                   >
-                    {saving === ws.id ? <RotateCw className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                    {saving === ws.id ? <RotateCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                     Salvar
                   </button>
                 </td>

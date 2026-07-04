@@ -1,15 +1,19 @@
 import { Router } from "express";
 import multer from "multer";
+import { GoogleGenAI } from "@google/genai";
 import { requireAuth, AuthRequest } from "../middleware/auth.ts";
 import { tenantMiddleware, TenantRequest } from "../middleware/tenant.ts";
 import { updateBesScore } from "./bes.ts";
 import { BESIntegrationService } from "../services/BESIntegrationService.ts";
 import { BusinessEventTranslator } from "../services/BusinessEventTranslator.ts";
 import { TechnicalEvent } from "../types/domainEvents.ts";
+import { MissionService } from "../services/MissionService.ts";
 import { db } from "./index.ts";
 import { companies, clients, products, projects, tasks, ideas, documents, financeEntries, sprints, milestones, aiMemories, notifications, agendaEvents, users, workspaceMembers, workspaces, flows, notes, deploys, productLicenses, workspaceInvitations, auditLogs, entityComments, entityApprovals, roadmaps, entityTemplates, timelineActivities, platformSettings } from "./schema.ts";
 import { eq, and, desc, sql, or, inArray, gte, lte, not } from "drizzle-orm";
 import { getUserSaaSState } from "./queries.ts";
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 import { sendProjectNotificationEmail, testSmtpConnection } from "./mail.ts";
 import { v4 as uuidv4 } from 'uuid';
 
@@ -3054,6 +3058,58 @@ apiRouter.get("/bes/insights", requireAuth, async (req: AuthRequest, res) => {
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch BES insights" });
   }
+});
+
+apiRouter.get("/missions/active", requireAuth, async (req: AuthRequest, res) => {
+    try {
+        await MissionService.seedMissions();
+        const mission = await MissionService.getActiveMission(req.workspaceId!);
+        res.json(mission);
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch active mission" });
+    }
+});
+
+apiRouter.post("/ideas/analyze", requireAuth, async (req: AuthRequest, res) => {
+    try {
+        const { title, description, workspaceId } = req.body;
+        const prompt = `Analise a seguinte ideia de negócio e retorne um JSON estruturado com os campos: problema, solucao, publico, diferenciais, riscos.
+        Ideia: ${title}
+        Descrição: ${description}`;
+
+        const model = "gemini-1.5-flash";
+        const result = await ai.models.generateContent({
+            model: model,
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+        });
+        const text = result.text;
+        // Remove markdown formatting
+        const jsonString = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        const analysis = JSON.parse(jsonString);
+
+        const newIdea = await db.insert(ideas).values({
+            tenantId: req.tenantId as any,
+            workspaceId: parseInt(workspaceId),
+            title,
+            description,
+            analysis
+        }).returning();
+
+        res.json(newIdea[0]);
+    } catch (err) {
+        console.error("Error analyzing idea:", err);
+        res.status(500).json({ error: "Failed to analyze idea" });
+    }
+});
+
+apiRouter.post("/missions/init", requireAuth, async (req: AuthRequest, res) => {
+    try {
+        const { workspaceId } = req.body;
+        await MissionService.initializeWorkspaceMissions(workspaceId);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to initialize missions" });
+    }
 });
 
 // Final catch-all for apiRouter
