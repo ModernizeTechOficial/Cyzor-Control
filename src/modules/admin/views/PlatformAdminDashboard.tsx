@@ -85,7 +85,7 @@ export default function PlatformAdminDashboard({ metrics, loading, onRefresh }: 
       {/* 1. Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2 mb-4">
         <h1 className="text-2xl font-medium text-gray-900 tracking-tight">
-          Bem vindo!, {user?.displayName?.split(' ')[0] || 'Salung'}
+          Welcome back, {user?.displayName?.split(' ')[0] || 'Salung'}
         </h1>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-1.5 shadow-sm text-xs font-medium text-gray-700 cursor-pointer hover:bg-gray-50">
