@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Building2, Users, Package, GitBranch, Lightbulb, FileText, 
   DollarSign, BotMessageSquare, Settings, Calendar, ShieldCheck, StickyNote, 
   Workflow, ChevronRight, ChevronDown, Plus, MoreHorizontal, Star, Clock, Folder,
-  MoreVertical, Briefcase, Search, Shield
+  MoreVertical, Briefcase, Search, Shield, TrendingUp
 } from 'lucide-react';
 import { View } from '../types';
 
@@ -187,6 +187,12 @@ export default function Sidebar({
               label="Dashboard" 
               active={currentView === 'dashboard'} 
               onClick={() => handleNavigate('dashboard')} 
+            />
+            <NavItem 
+              icon={TrendingUp} 
+              label="Planejamento Estratégico" 
+              active={currentView === 'roadmap'} 
+              onClick={() => handleNavigate('roadmap')} 
             />
             <NavItem 
               icon={BotMessageSquare} 

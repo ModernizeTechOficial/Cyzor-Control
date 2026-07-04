@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { 
   LayoutDashboard, GitBranch, DollarSign, BotMessageSquare, 
   Menu, X, Building2, Users, Package, Lightbulb, FileText, 
-  Calendar, StickyNote, Settings 
+  Calendar, StickyNote, Settings, TrendingUp 
 } from 'lucide-react';
 import { View } from '../types';
 
@@ -25,6 +25,7 @@ export default function BottomBar({
 
   // The rest of the tabs grouped in "Mais"
   const moreTabs = [
+    { id: 'roadmap', label: 'Planejamento', icon: TrendingUp },
     { id: 'empresas', label: 'Empresas', icon: Building2 },
     { id: 'clientes', label: 'Clientes', icon: Users },
     { id: 'produtos', label: 'Produtos', icon: Package },

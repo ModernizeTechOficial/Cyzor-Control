@@ -10,7 +10,7 @@ import HomeKPIs from './home/HomeKPIs';
 import HomeWorkspace from './home/HomeWorkspace';
 import HomeAnalytics from './home/HomeAnalytics';
 import OnboardingWizard from './OnboardingWizard';
-import GuidedJourneyPanel from './GuidedJourneyPanel';
+import StrategicPriorityCard from './home/StrategicPriorityCard';
 
 export default function DashboardView({ setCurrentView }: { setCurrentView: (view: View) => void }) {
   const { activeWorkspace, fetchWithAuth } = useAuth();
@@ -189,16 +189,15 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
       <div className="flex flex-col gap-8">
         <HomeHeader />
         
-        <GuidedJourneyPanel 
+        <StrategicPriorityCard 
           setCurrentView={setCurrentView} 
-          metrics={filteredMetrics} 
+          currentStage={currentStage}
+          ideas={ideas}
           projects={filteredProjects}
           products={productsList}
-          ideas={ideas}
           clients={clients}
           finance={filteredFinance}
           tasks={filteredTasks}
-          onRefreshData={fetchDashboardData}
         />
       </div>
 

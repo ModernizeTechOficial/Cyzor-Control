@@ -21,6 +21,7 @@ import GoogleKeepView from './components/GoogleKeepView';
 import VisualSystemsStudioView from './modules/VisualSystemsStudio/VisualSystemsStudioView';
 import AdminLayout from './modules/admin/AdminLayout';
 import EquipeView from './components/EquipeView';
+import PlanejamentoEstrategicoView from './components/PlanejamentoEstrategicoView';
 import { View } from './types';
 import { useURLSync } from './hooks/useURLSync';
 import { useNavigation } from './context/NavigationContext';
@@ -151,6 +152,7 @@ export default function App() {
           >
             <ContextBanner currentView={currentView} />
             {currentView === 'dashboard' && <DashboardView setCurrentView={setCurrentView} />}
+            {currentView === 'roadmap' && <PlanejamentoEstrategicoView setCurrentView={setCurrentView} />}
             {currentView === 'empresas' && <EmpresasView />}
             {currentView === 'clientes' && <ClientesView />}
             {currentView === 'produtos' && <ProdutosView />}
