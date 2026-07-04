@@ -4,6 +4,8 @@ import { requireAuth, AuthRequest } from "../middleware/auth.ts";
 import { tenantMiddleware, TenantRequest } from "../middleware/tenant.ts";
 import { updateBesScore } from "./bes.ts";
 import { BESIntegrationService } from "../services/BESIntegrationService.ts";
+import { BusinessEventTranslator } from "../services/BusinessEventTranslator.ts";
+import { TechnicalEvent } from "../types/domainEvents.ts";
 import { db } from "./index.ts";
 import { companies, clients, products, projects, tasks, ideas, documents, financeEntries, sprints, milestones, aiMemories, notifications, agendaEvents, users, workspaceMembers, workspaces, flows, notes, deploys, productLicenses, workspaceInvitations, auditLogs, entityComments, entityApprovals, roadmaps, entityTemplates, timelineActivities, platformSettings } from "./schema.ts";
 import { eq, and, desc, sql, or, inArray, gte, lte, not } from "drizzle-orm";
@@ -652,7 +654,17 @@ apiRouter.post("/clients", async (req: AuthRequest, res) => {
       role: role || null,
       tags: tags || []
     }).returning();
-
+  
+    // Instrument technical event
+    const technicalEvent: TechnicalEvent = { 
+        type: 'CUSTOMER_CREATED', 
+        payload: { clientId: data[0].id, workspaceId: req.workspaceId! } 
+    };
+    const businessEvent = BusinessEventTranslator.translate(technicalEvent);
+    if (businessEvent) {
+        await BESIntegrationService.processBusinessEvent(businessEvent);
+    }
+  
     try {
       await db.insert(notifications).values({
         tenantId: req.tenantId as any,
@@ -782,6 +794,16 @@ apiRouter.post("/projects", async (req: AuthRequest, res) => {
       logoUrl: logoUrl || null,
       coverUrl: coverUrl || null
     }).returning();
+    
+    // Instrument technical event
+    const technicalEvent: TechnicalEvent = { 
+        type: 'PROJECT_CREATED', 
+        payload: { projectId: data[0].id, workspaceId: req.workspaceId! } 
+    };
+    const businessEvent = BusinessEventTranslator.translate(technicalEvent);
+    if (businessEvent) {
+        await BESIntegrationService.processBusinessEvent(businessEvent);
+    }
     
     try {
       await db.insert(notifications).values({
@@ -1295,7 +1317,14 @@ apiRouter.put("/tasks/:id", async (req: AuthRequest, res) => {
   if (data.length === 0) return res.status(404).json({ error: "Task not found" });
 
   if (status === 'DONE') {
-      await BESIntegrationService.trackOperationalEvent(req.workspaceId!, 'COMPLETE_TASK', taskId);
+      const technicalEvent: TechnicalEvent = { 
+          type: 'TASK_COMPLETED', 
+          payload: { taskId: taskId, workspaceId: req.workspaceId! } 
+      };
+      const businessEvent = BusinessEventTranslator.translate(technicalEvent);
+      if (businessEvent) {
+          await BESIntegrationService.processBusinessEvent(businessEvent);
+      }
   }
 
   try {
@@ -1832,6 +1861,18 @@ apiRouter.put("/finance/:id", async (req: AuthRequest, res) => {
       };
 
       const data = await db.update(financeEntries).set(updateValues).where(eq(financeEntries.id, entryId)).returning();
+      
+      if (status === 'PAID') {
+          const technicalEvent: TechnicalEvent = { 
+              type: 'INVOICE_PAID', 
+              payload: { financeEntryId: entryId, workspaceId: req.workspaceId! } 
+          };
+          const businessEvent = BusinessEventTranslator.translate(technicalEvent);
+          if (businessEvent) {
+              await BESIntegrationService.processBusinessEvent(businessEvent);
+          }
+      }
+      
       res.json(data[0]);
   } catch (error) {
       console.error("Error updating finance entry:", error);
