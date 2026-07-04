@@ -41,63 +41,69 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
   const [agendaEvents, setAgendaEvents] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
   useEffect(() => { if (companiesData) setClients(companiesData); }, [companiesData]);
+  const [productsList, setProductsList] = useState<any[]>([]);
+  const [ideas, setIdeas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchDashboardData = async () => {
+    if (!activeWorkspace) return;
+    try {
+      const [compRes, prodRes, projRes, finRes, depRes, taskRes, memberRes, agendaRes, clientRes, ideasRes] = await Promise.all([
+        fetchWithAuth('/api/companies'),
+        fetchWithAuth('/api/products'),
+        fetchWithAuth('/api/projects'),
+        fetchWithAuth('/api/finance'),
+        fetchWithAuth('/api/deploys'),
+        fetchWithAuth('/api/tasks'),
+        fetchWithAuth('/api/workspace/members'),
+        fetchWithAuth('/api/agenda'),
+        fetchWithAuth('/api/clients'),
+        fetchWithAuth('/api/ideas')
+      ]);
+
+      const [companies, productsData, projectsData, financeData, deploysData, tasksData, membersData, agendaData, clientsData, ideasData] = await Promise.all([
+        compRes.ok ? compRes.json() : [],
+        prodRes.ok ? prodRes.json() : [],
+        projRes.ok ? projRes.json() : [],
+        finRes.ok ? finRes.json() : [],
+        depRes.ok ? depRes.json() : [],
+        taskRes.ok ? taskRes.json() : [],
+        memberRes.ok ? memberRes.json() : [],
+        agendaRes.ok ? agendaRes.json() : [],
+        clientRes.ok ? clientRes.json() : [],
+        ideasRes && ideasRes.ok ? ideasRes.json() : []
+      ]);
+
+      setProjects(projectsData);
+      setDeploys(deploysData);
+      setFinance(financeData);
+      setTasks(tasksData);
+      setMembers(membersData);
+      setAgendaEvents(agendaData);
+      setClients(clientsData);
+      setProductsList(productsData);
+      setIdeas(ideasData);
+
+      const totalRevenue = financeData
+        .filter((f: any) => f.type === 'RECEITA')
+        .reduce((sum: number, entry: any) => sum + Number(entry.amount), 0);
+
+      setMetrics({
+        companies: companies.length,
+        products: productsData.length,
+        projects: projectsData.length,
+        clients: clientsData.length,
+        revenue: Number(totalRevenue / 1000),
+        tasks: tasksData.length
+      });
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      if (!activeWorkspace) return;
-      try {
-        const [compRes, prodRes, projRes, finRes, depRes, taskRes, memberRes, agendaRes, clientRes] = await Promise.all([
-          fetchWithAuth('/api/companies'),
-          fetchWithAuth('/api/products'),
-          fetchWithAuth('/api/projects'),
-          fetchWithAuth('/api/finance'),
-          fetchWithAuth('/api/deploys'),
-          fetchWithAuth('/api/tasks'),
-          fetchWithAuth('/api/workspace/members'),
-          fetchWithAuth('/api/agenda'),
-          fetchWithAuth('/api/clients')
-        ]);
-
-        const [companies, products, projectsData, financeData, deploysData, tasksData, membersData, agendaData, clientsData] = await Promise.all([
-          compRes.ok ? compRes.json() : [],
-          prodRes.ok ? prodRes.json() : [],
-          projRes.ok ? projRes.json() : [],
-          finRes.ok ? finRes.json() : [],
-          depRes.ok ? depRes.json() : [],
-          taskRes.ok ? taskRes.json() : [],
-          memberRes.ok ? memberRes.json() : [],
-          agendaRes.ok ? agendaRes.json() : [],
-          clientRes.ok ? clientRes.json() : []
-        ]);
-
-        setProjects(projectsData);
-        setDeploys(deploysData);
-        setFinance(financeData);
-        setTasks(tasksData);
-        setMembers(membersData);
-        setAgendaEvents(agendaData);
-        setClients(clientsData);
-
-        const totalRevenue = financeData
-          .filter((f: any) => f.type === 'RECEITA')
-          .reduce((sum: number, entry: any) => sum + Number(entry.amount), 0);
-
-        setMetrics({
-          companies: companies.length,
-          products: products.length,
-          projects: projectsData.length,
-          clients: clientsData.length,
-          revenue: Number(totalRevenue / 1000),
-          tasks: tasksData.length
-        });
-      } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchDashboardData();
     const interval = setInterval(fetchDashboardData, 30000); // Poll every 30s
     return () => clearInterval(interval);
@@ -160,6 +166,7 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
   }, [globalFilters.companyId, projects, tasks, agendaEvents, finance, metrics.products, companiesData, clients]);
 
   const isOnboardingCompleted = activeWorkspace?.settings?.onboardingCompleted === true;
+  const currentStage = activeWorkspace?.settings?.stage || 'Ideia';
 
   if (activeWorkspace && !isOnboardingCompleted) {
     return (
@@ -169,22 +176,71 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
     );
   }
 
+  // Define layout categories:
+  // 1. Discovery (Ideia, Validação)
+  // 2. Construction (Projeto, Planejamento, Desenvolvimento)
+  // 3. Growth & Scale (Produto, Clientes, Financeiro, Crescimento, Gestão)
+  const isConstruction = ['Projeto', 'Planejamento', 'Desenvolvimento'].includes(currentStage);
+  const isGrowthScale = ['Produto', 'Clientes', 'Financeiro', 'Crescimento', 'Gestão'].includes(currentStage);
+
   return (
     <div id="main-dashboard" className="w-full mx-auto pb-12 flex flex-col gap-10 animate-in fade-in duration-500 relative px-4 sm:px-6 lg:px-10">
-      {/* Header and KPIs (Full Width) */}
+      {/* Header and Strategic Guided Journey (Full Width) */}
       <div className="flex flex-col gap-8">
         <HomeHeader />
-        <GuidedJourneyPanel setCurrentView={setCurrentView} metrics={filteredMetrics} />
-        <HomeKPIs metrics={filteredMetrics} setCurrentView={setCurrentView} />
+        
+        <GuidedJourneyPanel 
+          setCurrentView={setCurrentView} 
+          metrics={filteredMetrics} 
+          projects={filteredProjects}
+          products={productsList}
+          ideas={ideas}
+          clients={clients}
+          finance={filteredFinance}
+          tasks={filteredTasks}
+          onRefreshData={fetchDashboardData}
+        />
       </div>
 
-      {/* Main Grid: Full Width */}
+      {/* Dynamic Widget Grid prioritized by Maturity Stage */}
       <div className="flex flex-col gap-8 w-full">
-        {/* Calendar and Operational Tasks */}
-        <HomeWorkspace projects={filteredProjects} tasks={filteredTasks} agendaEvents={filteredAgendaEvents} setCurrentView={setCurrentView} />
+        {isConstruction ? (
+          <>
+            {/* For construction stages: Workspace (tasks/agenda) takes highest priority */}
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between border-b border-[#0F172A05] pb-2">
+                <h3 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Foco Operacional: Cronograma e Execução</h3>
+                <span className="text-[11px] text-[#64748B] font-medium">Estágio de Construção Ativo: {currentStage}</span>
+              </div>
+              <HomeWorkspace projects={filteredProjects} tasks={filteredTasks} agendaEvents={filteredAgendaEvents} setCurrentView={setCurrentView} />
+            </div>
 
-        {/* Business analytics */}
-        <HomeAnalytics financeEntries={filteredFinance} />
+            <HomeKPIs metrics={filteredMetrics} setCurrentView={setCurrentView} />
+            <HomeAnalytics financeEntries={filteredFinance} />
+          </>
+        ) : isGrowthScale ? (
+          <>
+            {/* For scale & financial stages: KPIs and Analytics are highest priority */}
+            <HomeKPIs metrics={filteredMetrics} setCurrentView={setCurrentView} />
+            
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between border-b border-[#0F172A05] pb-2">
+                <h3 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Desempenho Comercial & Tração</h3>
+                <span className="text-[11px] text-[#64748B] font-medium">Estágio de Crescimento Ativo: {currentStage}</span>
+              </div>
+              <HomeAnalytics financeEntries={filteredFinance} />
+            </div>
+
+            <HomeWorkspace projects={filteredProjects} tasks={filteredTasks} agendaEvents={filteredAgendaEvents} setCurrentView={setCurrentView} />
+          </>
+        ) : (
+          <>
+            {/* Default / Discovery Stage priority */}
+            <HomeKPIs metrics={filteredMetrics} setCurrentView={setCurrentView} />
+            <HomeWorkspace projects={filteredProjects} tasks={filteredTasks} agendaEvents={filteredAgendaEvents} setCurrentView={setCurrentView} />
+            <HomeAnalytics financeEntries={filteredFinance} />
+          </>
+        )}
       </div>
     </div>
   );

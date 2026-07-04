@@ -3,13 +3,42 @@ import { motion } from 'motion/react';
 import { Sparkles, RefreshCw, Layers, ShieldCheck, Zap } from 'lucide-react';
 
 export default function HomeHeader() {
-  const { user } = useAuth();
+  const { user, activeWorkspace } = useAuth();
   
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Bom dia';
     if (hour < 18) return 'Boa tarde';
     return 'Boa noite';
+  };
+
+  const currentStage = activeWorkspace?.settings?.stage || 'Ideia';
+
+  const getAiAdvice = (stage: string) => {
+    switch (stage) {
+      case 'Ideia':
+        return 'Sua empresa está no estágio de Ideia. Foco estratégico: Estruturar o conceito do negócio e validar a dor inicial. Comece cadastrando sua ideia para mapear a Proposta de Valor.';
+      case 'Validação':
+        return 'Sua empresa está no estágio de Validação. Foco estratégico: Realizar entrevistas qualitativas com potenciais clientes para validar a aderência da sua proposta de valor.';
+      case 'Projeto':
+        return 'Sua empresa está no estágio de Projeto. Foco estratégico: Definir o escopo, cronograma e metas de entrega do MVP. Estruture o roteiro inicial do projeto.';
+      case 'Planejamento':
+        return 'Sua empresa está no estágio de Planejamento. Foco estratégico: Detalhar o backlog, cronograma financeiro e mapear riscos de execução da sua iniciativa.';
+      case 'Desenvolvimento':
+        return 'Sua empresa está no estágio de Desenvolvimento. Foco estratégico: Executar o backlog do MVP e monitorar os cronogramas de entrega e tarefas ativas.';
+      case 'Produto':
+        return 'Sua empresa está no estágio de Produto. Foco estratégico: Lançar o MVP no mercado e coletar feedback de usabilidade com seus primeiros usuários ativos.';
+      case 'Clientes':
+        return 'Sua empresa está no estágio de Clientes. Foco estratégico: Estruturar o funil de aquisição, habilitar canais de captação e monitorar o churn inicial.';
+      case 'Financeiro':
+        return 'Sua empresa está no estágio de Financeiro. Foco estratégico: Organizar o fluxo de caixa, otimizar custos operacionais e validar a precificação da sua solução.';
+      case 'Crescimento':
+        return 'Sua empresa está no estágio de Crescimento. Foco estratégico: Escalar os canais de marketing e otimizar taxas de conversão de ponta a ponta.';
+      case 'Gestão':
+        return 'Sua empresa está no estágio de Gestão. Foco estratégico: Consolidar processos internos, relatórios executivos de DRE, metas de governança e novos horizontes de expansão.';
+      default:
+        return 'Seu ecossistema encontra-se saudável e em evolução constante. Foque nas tarefas e missões prioritárias do seu estágio de maturidade.';
+    }
   };
 
   return (
@@ -57,7 +86,7 @@ export default function HomeHeader() {
           <div className="flex flex-col">
             <span className="text-[10px] font-black uppercase text-blue-600 tracking-wider">Cyzor IA • Consultor de Operações</span>
             <p className="text-[13px] text-[#334155] font-medium mt-1 leading-relaxed">
-              "Seu ecossistema encontra-se saudável. Existem apenas dois pontos que merecem atenção hoje no cronograma de deploys."
+              "{getAiAdvice(currentStage)}"
             </p>
           </div>
         </div>
