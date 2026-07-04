@@ -879,3 +879,22 @@ export const timelineActivities = pgTable('timeline_activities', {
   tenantIdx: index('timeline_tenant_idx').on(t.tenantId),
   entityIdx: index('timeline_entity_idx').on(t.entityType, t.entityId),
 }));
+
+// WORKSPACE BES ACTIONS (Anti-inflation tracker)
+export const workspaceBesActions = pgTable('workspace_bes_actions', {
+  id: serial('id').primaryKey(),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  actionType: text('action_type').notNull(),
+  entityId: integer('entity_id'), // Optional, to track specific entities
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => ({
+  wsActionIdx: index('ws_bes_action_idx').on(t.workspaceId, t.actionType, t.entityId),
+}));
+
+// PLATFORM SETTINGS
+export const platformSettings = pgTable('platform_settings', {
+  id: serial('id').primaryKey(),
+  key: text('key').notNull().unique(),
+  value: jsonb('value').notNull(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});

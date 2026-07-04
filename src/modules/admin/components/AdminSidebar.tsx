@@ -156,6 +156,7 @@ export default function AdminSidebar({ isCollapsed, toggleSidebar, currentView, 
       items: [
         { id: 'admin-settings', icon: Shield, label: 'Roles & Permissions' },
         { id: 'admin-plans', icon: IntegrationsIcon, label: 'Billing & Subscription' },
+        { id: 'admin-bes', icon: BarChart, label: 'BES Management' },
         { id: 'dev-playground', icon: Code, label: 'Integrations', isBeta: true },
       ]
     },

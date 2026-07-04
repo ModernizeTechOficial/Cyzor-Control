@@ -2,8 +2,10 @@ import { Router } from "express";
 import multer from "multer";
 import { requireAuth, AuthRequest } from "../middleware/auth.ts";
 import { tenantMiddleware, TenantRequest } from "../middleware/tenant.ts";
+import { updateBesScore } from "./bes.ts";
+import { BESIntegrationService } from "../services/BESIntegrationService.ts";
 import { db } from "./index.ts";
-import { companies, clients, products, projects, tasks, ideas, documents, financeEntries, sprints, milestones, aiMemories, notifications, agendaEvents, users, workspaceMembers, workspaces, flows, notes, deploys, productLicenses, workspaceInvitations, auditLogs, entityComments, entityApprovals, roadmaps, entityTemplates, timelineActivities } from "./schema.ts";
+import { companies, clients, products, projects, tasks, ideas, documents, financeEntries, sprints, milestones, aiMemories, notifications, agendaEvents, users, workspaceMembers, workspaces, flows, notes, deploys, productLicenses, workspaceInvitations, auditLogs, entityComments, entityApprovals, roadmaps, entityTemplates, timelineActivities, platformSettings } from "./schema.ts";
 import { eq, and, desc, sql, or, inArray, gte, lte, not } from "drizzle-orm";
 import { getUserSaaSState } from "./queries.ts";
 import { sendProjectNotificationEmail, testSmtpConnection } from "./mail.ts";
@@ -582,6 +584,8 @@ apiRouter.post("/companies", async (req: AuthRequest, res) => {
       website: website || null,
       status: status || 'Ativo'
     }).returning();
+
+    await updateBesScore(req.workspaceId!, 'CREATE_COMPANY');
 
     try {
       await db.insert(notifications).values({
@@ -1289,6 +1293,10 @@ apiRouter.put("/tasks/:id", async (req: AuthRequest, res) => {
     .returning();
 
   if (data.length === 0) return res.status(404).json({ error: "Task not found" });
+
+  if (status === 'DONE') {
+      await BESIntegrationService.trackOperationalEvent(req.workspaceId!, 'COMPLETE_TASK', taskId);
+  }
 
   try {
     if (status !== undefined) {
@@ -2962,6 +2970,49 @@ apiRouter.use((err: any, req: any, res: any, next: any) => {
     error: err.message || "Internal Server Error",
     details: process.env.NODE_ENV === "development" ? err.stack : undefined,
   });
+});
+
+apiRouter.get("/admin/bes-config", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const config = await db.select().from(platformSettings).where(eq(platformSettings.key, 'bes_config')).limit(1);
+    res.json(config[0]?.value || {});
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch BES config" });
+  }
+});
+
+apiRouter.put("/admin/bes-config", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { config } = req.body;
+    await db.insert(platformSettings)
+      .values({ key: 'bes_config', value: config })
+      .onConflictDoUpdate({ target: platformSettings.key, set: { value: config, updatedAt: new Date() } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update BES config" });
+  }
+});
+
+apiRouter.get("/bes/insights", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    
+    // Get BES score
+    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+    const besScore = (ws?.settings as any)?.besScore || 0;
+    
+    // Get Core metrics
+    const completedTasks = await db.select({ count: sql<number>`count(*)` }).from(tasks).where(and(eq(tasks.workspaceId, workspaceId), eq(tasks.status, 'DONE')));
+    
+    res.json({
+        besScore,
+        coreMetrics: {
+            completedTasks: Number(completedTasks[0].count)
+        }
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch BES insights" });
+  }
 });
 
 // Final catch-all for apiRouter

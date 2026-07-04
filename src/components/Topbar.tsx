@@ -478,6 +478,14 @@ export default function Topbar({ isSidebarCollapsed, toggleSidebar, setCurrentVi
         <div className="hidden xl:flex items-center gap-6 pr-6 border-r border-[#0F172A08]">
            <div className="flex flex-col items-end gap-0.5">
               <span className="text-[13px] font-bold text-[#111111] tracking-tighter">
+                 BES: {(activeWorkspace?.settings?.besScore || 0).toLocaleString('pt-BR')}
+              </span>
+              <span className="text-[9px] font-black text-[#64748B] uppercase tracking-[0.2em] opacity-40">
+                 Maturidade: {Math.round(activeWorkspace?.settings?.besMaturity || 0)}%
+              </span>
+           </div>
+           <div className="flex flex-col items-end gap-0.5">
+              <span className="text-[13px] font-bold text-[#111111] tracking-tighter">
                  {time.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
               </span>
               <span className="text-[9px] font-black text-[#64748B] uppercase tracking-[0.2em] opacity-40">

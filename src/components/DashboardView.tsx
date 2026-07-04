@@ -11,6 +11,7 @@ import HomeWorkspace from './home/HomeWorkspace';
 import HomeAnalytics from './home/HomeAnalytics';
 import OnboardingWizard from './OnboardingWizard';
 import StrategicPriorityCard from './home/StrategicPriorityCard';
+import BusinessInsightCard from './home/BusinessInsightCard';
 
 export default function DashboardView({ setCurrentView }: { setCurrentView: (view: View) => void }) {
   const { activeWorkspace, fetchWithAuth } = useAuth();
@@ -199,6 +200,7 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
           finance={filteredFinance}
           tasks={filteredTasks}
         />
+        <BusinessInsightCard setCurrentView={setCurrentView} currentStage={currentStage} />
       </div>
 
       {/* Dynamic Widget Grid prioritized by Maturity Stage */}
