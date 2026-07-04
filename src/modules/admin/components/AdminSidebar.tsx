@@ -13,7 +13,16 @@ import {
   Settings, 
   Cpu, 
   Code, 
-  CircleDot
+  CircleDot,
+  ChevronDown,
+  Layers,
+  Inbox,
+  PieChart,
+  MessageSquare,
+  BarChart,
+  Megaphone,
+  CreditCard as IntegrationsIcon,
+  HelpCircle
 } from 'lucide-react';
 import { View } from '../../../types.ts';
 import { useAuth } from '../../../context/AuthContext.tsx';
@@ -127,76 +136,62 @@ export default function AdminSidebar({ isCollapsed, toggleSidebar, currentView, 
 
   const categories = [
     {
-      title: 'SaaS Core',
+      title: 'Main Menu',
       items: [
-        { id: 'admin', icon: LayoutDashboard, label: 'Admin Dashboard' },
-        { id: 'admin-tenants', icon: Building2, label: 'Workspaces SaaS' },
+        { id: 'admin', icon: LayoutDashboard, label: 'Dashboard' },
+        { id: 'admin-tenants', icon: Layers, label: 'Products' },
+        { id: 'admin-billing', icon: Inbox, label: 'Transactions' },
+        { id: 'admin-finance', icon: PieChart, label: 'Reports & Analytics' },
+      ]
+    },
+    {
+      title: 'Customers',
+      items: [
+        { id: 'admin-users', icon: Users, label: 'Customer List' },
+        { id: 'admin-companies', icon: Briefcase, label: 'Channels' },
       ]
     },
     {
       title: 'Management',
       items: [
-        { id: 'admin-companies', icon: Briefcase, label: 'Empresas Clientes' },
-        { id: 'admin-users', icon: Users, label: 'Usuários Globais' },
+        { id: 'admin-settings', icon: Shield, label: 'Roles & Permissions' },
+        { id: 'admin-plans', icon: IntegrationsIcon, label: 'Billing & Subscription' },
+        { id: 'dev-playground', icon: Code, label: 'Integrations', isBeta: true },
       ]
     },
     {
-      title: 'Finance & Billing',
+      title: 'Settings',
       items: [
-        { id: 'admin-finance', icon: CreditCard, label: 'Resumo Financeiro' },
-        { id: 'admin-plans', icon: Package, label: 'Planos & Catálogo' },
-        { id: 'admin-billing', icon: CreditCard, label: 'Stripe Gateway' },
-      ]
-    },
-    {
-      title: 'System Health',
-      items: [
-        { id: 'admin-infrastructure', icon: Activity, label: 'Saúde & Performance', isBeta: true },
-      ]
-    },
-    {
-      title: 'Audit & Safety',
-      items: [
-        { id: 'admin-logs', icon: Shield, label: 'Logs de Auditoria', isBeta: true },
-      ]
-    },
-    {
-      title: 'Integrations',
-      items: [
-        { id: 'dev-playground', icon: Code, label: 'Webhooks & API', isBeta: true },
-      ]
-    },
-    {
-      title: 'Administration',
-      items: [
-        { id: 'admin-settings', icon: Settings, label: 'Configurações Core' },
+        { id: 'admin-logs', icon: HelpCircle, label: 'Customer Support', isBeta: true },
+        { id: 'admin-infrastructure', icon: Settings, label: 'System Settings', isBeta: true },
       ]
     }
   ];
 
   return (
-    <aside className={`bg-[#FAFAFB] border-r border-[#ECECEF] text-zinc-700 flex flex-col transition-all duration-300 relative z-20 h-screen ${isCollapsed ? 'w-[72px]' : 'w-[250px]'}`}>
+    <aside className={`bg-[#F3F4F6] text-gray-600 flex flex-col transition-all duration-300 relative z-20 h-screen ${isCollapsed ? 'w-[72px]' : 'w-[240px]'}`}>
       {/* Brand Header */}
-      <div className="flex items-center justify-between h-16 px-4 border-b border-[#ECECEF] shrink-0 bg-white">
-        <div className={`flex items-center gap-2 overflow-hidden ${isCollapsed ? 'justify-center w-full' : ''}`}>
-          <div className="w-8 h-8 rounded-lg bg-zinc-950 flex items-center justify-center shrink-0 shadow-sm border border-zinc-800">
-            <Shield className="w-4 h-4 text-white" />
+      <div className="flex items-center h-20 px-5 shrink-0">
+        <div className={`flex items-center gap-3 overflow-hidden bg-white/50 p-2 rounded-xl border border-gray-200 w-full hover:bg-white transition-colors cursor-pointer shadow-sm ${isCollapsed ? 'justify-center' : ''}`}>
+          <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center shrink-0">
+            <Layers className="w-4 h-4 text-white" />
           </div>
           {!isCollapsed && (
-            <div className="flex flex-col whitespace-nowrap">
-              <span className="font-bold text-xs tracking-tight text-zinc-900 leading-tight">CYZOR HQ</span>
-              <span className="text-[9px] uppercase tracking-widest text-indigo-600 font-bold">Platform Admin</span>
+            <div className="flex flex-col min-w-0 flex-1">
+              <span className="text-[10px] text-gray-500 font-medium leading-none mb-0.5">Agency</span>
+              <span className="font-bold text-xs tracking-tight text-gray-900 leading-none truncate">Spark Pixel Team</span>
             </div>
           )}
+          {!isCollapsed && <ChevronDown size={14} className="text-gray-400" />}
         </div>
       </div>
 
       {/* Nav List grouped by Category */}
-      <nav className="flex-1 overflow-y-auto py-4 px-2.5 space-y-4 scrollbar-thin scrollbar-thumb-zinc-200">
+      <nav className="flex-1 overflow-y-auto px-4 space-y-6 scrollbar-thin scrollbar-thumb-gray-200 mt-2">
         {categories.map((category) => (
-          <div key={category.title} className="space-y-0.5">
+          <div key={category.title} className="space-y-1">
             {!isCollapsed && (
-              <h3 className="px-2 text-[9px] font-bold uppercase tracking-wider text-zinc-400 select-none">
+              <h3 className="px-2 text-[10px] font-semibold text-gray-500 select-none mb-2">
                 {category.title}
               </h3>
             )}
@@ -209,34 +204,18 @@ export default function AdminSidebar({ isCollapsed, toggleSidebar, currentView, 
                     key={item.id}
                     onClick={() => setCurrentView(item.id as View)}
                     title={isCollapsed ? item.label : ''}
-                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md transition-all group relative ${
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all group relative ${
                       isActive 
-                        ? 'bg-zinc-200/60 text-zinc-950 font-medium' 
-                        : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/25'
+                        ? 'bg-white shadow-[0_1px_2px_rgba(0,0,0,0.05)] text-gray-900 font-semibold' 
+                        : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200/50'
                     } ${isCollapsed ? 'justify-center' : ''}`}
                   >
-                    <Icon size={14} className={`shrink-0 transition-transform duration-300 ${isActive ? 'text-zinc-950' : 'text-zinc-400 group-hover:text-zinc-700'}`} />
+                    <Icon size={16} strokeWidth={isActive ? 2.5 : 2} className={`shrink-0 transition-colors ${isActive ? 'text-gray-900' : 'text-gray-400 group-hover:text-gray-600'}`} />
                     
                     {!isCollapsed && (
                       <div className="flex items-center justify-between flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <span className="text-[11px] tracking-tight whitespace-nowrap truncate">{item.label}</span>
-                          {renderStatusDot(item.id)}
-                        </div>
-                        <div className="flex items-center">
-                          {item.isBeta && (
-                            <span className="text-[8px] font-semibold tracking-wider px-1 py-0.2 rounded bg-zinc-200/80 text-zinc-500 shrink-0 scale-90">
-                              Beta
-                            </span>
-                          )}
-                          {renderBadgeCount(item.id)}
-                        </div>
+                        <span className="text-[13px] tracking-tight whitespace-nowrap truncate">{item.label}</span>
                       </div>
-                    )}
-
-                    {/* Simple indicator on collapsed state */}
-                    {isCollapsed && isActive && (
-                      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-zinc-950 rounded-l" />
                     )}
                   </button>
                 );
@@ -246,45 +225,25 @@ export default function AdminSidebar({ isCollapsed, toggleSidebar, currentView, 
         ))}
       </nav>
 
-      {/* Profile, Version & Environment Section */}
-      <div className="p-3 border-t border-[#ECECEF] shrink-0 bg-white space-y-3">
-        {/* User Profile Info */}
-        {!isCollapsed && (
-          <div className="flex items-center gap-2.5 p-1.5 bg-[#FAFAFB] rounded-xl border border-[#ECECEF]">
+      {/* User Profile Footer */}
+      <div className="p-4 shrink-0 mb-2">
+        <div className={`flex items-center p-2 rounded-xl border border-transparent hover:bg-gray-200/50 transition-colors cursor-pointer ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+          <div className="flex items-center gap-2.5">
             <img 
               src={user?.photoURL || "https://api.dicebear.com/7.x/avataaars/svg?seed=Admin"} 
               alt="Admin avatar" 
-              className="w-7 h-7 rounded-full bg-zinc-100 border border-[#ECECEF] object-cover shrink-0"
+              className="w-8 h-8 rounded-full bg-gray-100 object-cover shrink-0"
               referrerPolicy="no-referrer"
             />
-            <div className="flex flex-col min-w-0">
-              <span className="text-[11px] font-bold text-zinc-900 truncate leading-none mb-0.5">{user?.displayName || 'Diego'}</span>
-              <span className="text-[8px] text-zinc-400 font-mono tracking-wider truncate uppercase">Super Administrator</span>
-            </div>
+            {!isCollapsed && (
+              <div className="flex flex-col min-w-0">
+                <span className="text-[11px] font-semibold text-gray-900 truncate leading-none mb-0.5">{user?.displayName || 'Salung Prastyo'}</span>
+                <span className="text-[9px] text-gray-500 tracking-wide truncate">Sales Operator</span>
+              </div>
+            )}
           </div>
-        )}
-
-        {/* System Info & Status Block */}
-        {!isCollapsed && (
-          <div className="px-1.5 py-0.5 flex items-center justify-between text-[9px] font-mono text-zinc-400">
-            <span className="flex items-center gap-1">
-              <CircleDot size={8} className="text-emerald-500 fill-emerald-500 animate-pulse" />
-              v4.12.0
-            </span>
-            <span className="bg-emerald-50 text-emerald-600 font-bold px-1.5 py-0.2 rounded border border-emerald-100">
-              Production
-            </span>
-          </div>
-        )}
-
-        <button
-          onClick={logout}
-          title={isCollapsed ? "Desconectar" : ""}
-          className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-zinc-500 hover:text-rose-600 hover:bg-rose-50/50 transition-all ${isCollapsed ? 'justify-center' : ''}`}
-        >
-          <LogOut size={14} className="shrink-0 text-zinc-400 group-hover:text-rose-500" />
-          {!isCollapsed && <span className="text-[11px] font-bold">Desconectar</span>}
-        </button>
+          {!isCollapsed && <ChevronDown size={14} className="text-gray-400" />}
+        </div>
       </div>
 
       <EventDrawer

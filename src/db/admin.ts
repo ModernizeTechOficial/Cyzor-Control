@@ -2,7 +2,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import multer from "multer";
 import { requireAuth, AuthRequest } from "../middleware/auth.ts";
 import { db } from "./index.ts";
-import { tenants, users, companies, products, projects, userTenants, financeEntries, tasks, ideas, workspaces, plans } from "./schema.ts";
+import { tenants, users, companies, products, projects, userTenants, financeEntries, tasks, ideas, workspaces, plans, stripeConfig, billingSubscriptions, billingPayments, billingWebhookEvents } from "./schema.ts";
 import { eq, sql, desc, count } from "drizzle-orm";
 
 export const adminRouter = Router();
@@ -45,34 +45,35 @@ adminRouter.get("/metrics", async (req: AuthRequest, res) => {
     const [tasksCount] = await db.select({ value: count() }).from(tasks);
     const [ideasCount] = await db.select({ value: count() }).from(ideas);
 
-    // Sum of amount for RECEITA
+    // Sum of amount for platform revenue (succeeded billing payments)
     const revenueResult = await db.select({
       sum: sql<string>`sum(amount)`
-    }).from(financeEntries).where(eq(financeEntries.type, 'RECEITA'));
+    }).from(billingPayments).where(eq(billingPayments.status, 'succeeded'));
     const totalRevenue = parseFloat(revenueResult[0]?.sum || '0');
 
-    // Sum of amount for DESPESA
-    const expenseResult = await db.select({
-      sum: sql<string>`sum(amount)`
-    }).from(financeEntries).where(eq(financeEntries.type, 'DESPESA'));
-    const totalExpense = parseFloat(expenseResult[0]?.sum || '0');
+    const totalExpense = 0; // SaaS expenses might not be in DB yet, setting to 0
 
-    // Grouped monthly revenue & expense trends
+    // Grouped monthly revenue trends for the platform
     const monthlyTrends = await db.select({
-      month: sql<string>`to_char(${financeEntries.date}, 'YYYY-MM')`,
-      revenue: sql<string>`coalesce(sum(case when ${financeEntries.type} = 'RECEITA' then ${financeEntries.amount} else 0 end), 0)`,
-      expense: sql<string>`coalesce(sum(case when ${financeEntries.type} = 'DESPESA' then ${financeEntries.amount} else 0 end), 0)`,
+      month: sql<string>`to_char(${billingPayments.createdAt}, 'YYYY-MM')`,
+      revenue: sql<string>`coalesce(sum(case when ${billingPayments.status} = 'succeeded' then ${billingPayments.amount} else 0 end), 0)`
     })
-    .from(financeEntries)
-    .groupBy(sql`to_char(${financeEntries.date}, 'YYYY-MM')`)
-    .orderBy(sql`to_char(${financeEntries.date}, 'YYYY-MM')`);
+    .from(billingPayments)
+    .groupBy(sql`to_char(${billingPayments.createdAt}, 'YYYY-MM')`)
+    .orderBy(sql`to_char(${billingPayments.createdAt}, 'YYYY-MM')`);
 
     // Map trends to UI chart format
     const formattedTrends = monthlyTrends.map((t) => ({
       month: t.month,
       revenue: parseFloat(t.revenue || '0'),
-      expense: parseFloat(t.expense || '0'),
+      expense: 0
     }));
+
+    // Get recent transactions (Stripe payments)
+    const recentTransactions = await db.select()
+      .from(billingPayments)
+      .orderBy(desc(billingPayments.createdAt))
+      .limit(5);
 
     res.json({
       status: "success",
@@ -86,7 +87,8 @@ adminRouter.get("/metrics", async (req: AuthRequest, res) => {
         totalIdeas: ideasCount.value,
         totalRevenue,
         totalExpense,
-        trends: formattedTrends
+        trends: formattedTrends,
+        recentTransactions
       }
     });
   } catch (error: any) {
@@ -334,7 +336,7 @@ adminRouter.delete("/plans/:id", async (req: AuthRequest, res) => {
 });
 
 // --- STRIPE CONFIG ---
-import { stripeConfig, billingSubscriptions, billingPayments, billingWebhookEvents } from "./schema.ts";
+
 import { getStripe, getStripeConfig } from "../services/stripe.ts";
 
 adminRouter.get("/stripe/config", async (req: AuthRequest, res) => {

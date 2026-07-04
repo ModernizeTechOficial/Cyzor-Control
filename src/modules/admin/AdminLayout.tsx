@@ -57,12 +57,7 @@ export default function AdminLayout({ currentView, setCurrentView }: AdminLayout
   }, [loadMetrics]);
 
   return (
-    <div className="min-h-screen bg-[#FFFFFF] text-zinc-800 font-sans relative flex overflow-hidden">
-      {/* Subtle, premium, light dot grid pattern */}
-      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(#E2E8F0_1px,transparent_1px)] [background-size:16px_16px] opacity-60" />
-      </div>
-
+    <div className="min-h-screen bg-white text-gray-900 font-sans relative flex overflow-hidden">
       <AdminSidebar
         isCollapsed={isSidebarCollapsed}
         toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
@@ -77,7 +72,7 @@ export default function AdminLayout({ currentView, setCurrentView }: AdminLayout
           setCurrentView={setCurrentView}
         />
         
-        <main className="flex-1 overflow-y-auto bg-[#FAFAFB] pt-6 px-6 md:px-8 pb-16 w-full scrollbar-thin scrollbar-thumb-zinc-200">
+        <main className="flex-1 overflow-y-auto bg-white px-6 md:px-8 pb-16 w-full scrollbar-thin scrollbar-thumb-gray-200">
           {currentView === 'admin' && (
             <PlatformAdminDashboard 
               metrics={metrics} 

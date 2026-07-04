@@ -5,12 +5,9 @@ import { SkeletonDashboard } from './common/skeletons/SkeletonDashboard';
 import { useQueryClient } from '@tanstack/react-query';
 import { View } from '../types';
 import HomeHeader from './home/HomeHeader';
-import HomeOverview from './home/HomeOverview';
 import HomeKPIs from './home/HomeKPIs';
 import HomeWorkspace from './home/HomeWorkspace';
 import HomeAnalytics from './home/HomeAnalytics';
-import HomeWorkspaceStatus from './home/HomeWorkspaceStatus';
-import HomeTimeline from './home/HomeTimeline';
 
 export default function DashboardView({ setCurrentView }: { setCurrentView: (view: View) => void }) {
   const { activeWorkspace, fetchWithAuth } = useAuth();
@@ -104,46 +101,19 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
 
   return (
     <div id="main-dashboard" className="w-full mx-auto pb-12 flex flex-col gap-10 animate-in fade-in duration-500 relative px-4 sm:px-6 lg:px-10">
-      {/* Header, Visão Executiva do Ecossistema and Key Overview (Full Width) */}
+      {/* Header and KPIs (Full Width) */}
       <div className="flex flex-col gap-8">
         <HomeHeader />
         <HomeKPIs metrics={metrics} setCurrentView={setCurrentView} />
-        <HomeOverview metrics={metrics} agendaEvents={agendaEvents} members={members} setCurrentView={setCurrentView} />
       </div>
 
-      {/* Main Grid: Left Workspace & Analytics vs Right Timeline & Redundancy */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start w-full">
-        {/* LEFT CONTAINER (8 cols) */}
-        <div className="lg:col-span-8 flex flex-col gap-8">
-          {/* Calendar and Operational Tasks */}
-          <HomeWorkspace projects={projects} tasks={tasks} agendaEvents={agendaEvents} setCurrentView={setCurrentView} />
+      {/* Main Grid: Full Width */}
+      <div className="flex flex-col gap-8 w-full">
+        {/* Calendar and Operational Tasks */}
+        <HomeWorkspace projects={projects} tasks={tasks} agendaEvents={agendaEvents} setCurrentView={setCurrentView} />
 
-          {/* Business analytics - now occupying full width of the left flow */}
-          <HomeAnalytics financeEntries={finance} />
-        </div>
-
-        {/* RIGHT SIDEBAR (4 cols) */}
-        <div className="lg:col-span-4 flex flex-col gap-8">
-          {/* Live Operational Log */}
-          <HomeTimeline 
-            deploys={deploys} 
-            tasks={tasks}
-            projects={projects}
-            finance={finance}
-            agendaEvents={agendaEvents}
-          />
-
-          {/* Infrastructure & Redundancy */}
-          <HomeWorkspaceStatus 
-            deploys={deploys}
-            tasks={tasks}
-            projects={projects}
-            finance={finance}
-            agendaEvents={agendaEvents}
-            metrics={metrics}
-            clients={clients}
-          />
-        </div>
+        {/* Business analytics */}
+        <HomeAnalytics financeEntries={finance} />
       </div>
     </div>
   );

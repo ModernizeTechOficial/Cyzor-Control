@@ -10,16 +10,16 @@ import {
   GitBranch, 
   CreditCard, 
   Sparkles,
-  ShieldCheck
+  ShieldCheck,
+  Calendar,
+  Download,
+  ChevronDown
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext.tsx';
 import StatCard from '../components/StatCard.tsx';
-import AIInsightCard from '../components/AIInsightCard.tsx';
-import InfrastructureHealth from '../components/InfrastructureHealth.tsx';
-import DeploymentCard from '../components/DeploymentCard.tsx';
-import ActivityTimeline from '../components/ActivityTimeline.tsx';
 import RevenueFinanceCard from '../components/RevenueFinanceCard.tsx';
 import SaaSAnalyticsCard from '../components/SaaSAnalyticsCard.tsx';
+import DeploymentCard from '../components/DeploymentCard.tsx';
 
 interface PlatformAdminDashboardProps {
   metrics: any;
@@ -35,248 +35,103 @@ export default function PlatformAdminDashboard({ metrics, loading, onRefresh }: 
       <div className="flex flex-col items-center justify-center min-h-[450px]">
         <div className="flex flex-col items-center gap-4 bg-white border border-[#ECECEF] p-8 rounded-[24px] shadow-sm max-w-sm text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-          <p className="text-xs font-bold text-zinc-900 font-mono uppercase tracking-wider">Sincronizando Plataforma...</p>
-          <p className="text-[11px] text-zinc-500 font-sans">Carregando dados consolidados dos microsserviços e billing da CYZOR...</p>
+          <p className="text-xs font-bold text-gray-900 font-mono uppercase tracking-wider">Syncing...</p>
         </div>
       </div>
     );
   }
 
-  // Pre-defined values or fallback values from metrics endpoint
-  const totalTenants = metrics?.totalTenants || 18;
-  const totalUsers = metrics?.totalUsers || 1420;
-  const totalCompanies = metrics?.totalCompanies || 38;
-  const totalProjects = metrics?.totalProjects || 24;
+  const totalRevenue = metrics?.totalRevenue || 0;
+  const totalExpense = metrics?.totalExpense || 0;
+  const totalTenants = metrics?.totalTenants || 0;
+  const totalUsers = metrics?.totalUsers || 0;
+  const totalProjects = metrics?.totalProjects || 0;
+  const totalTasks = metrics?.totalTasks || 0;
 
   const kpis = [
     {
-      label: 'Faturamento Mensal (MRR)',
-      value: 'R$ 42.500',
-      icon: CreditCard,
-      trend: '+12%',
+      label: 'Receita Total',
+      value: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalRevenue),
+      trend: 'Atualizado hoje',
       trendDirection: 'up' as const,
-      sparkData: [32000, 34000, 33000, 35000, 37000, 40000, 42500],
-      accentColor: '#6366F1'
+      sparkData: metrics?.trends?.length > 0 ? metrics.trends.map((t: any) => t.revenue) : [0, 0, 0],
     },
     {
-      label: 'Usuários Ativos Globais',
-      value: totalUsers,
-      icon: Users,
-      trend: '+8.4%',
-      trendDirection: 'up' as const,
-      sparkData: [1100, 1150, 1210, 1280, 1310, 1390, 1420],
-      accentColor: '#06B6D4'
+      label: 'Despesa Total',
+      value: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalExpense),
+      trend: 'Atualizado hoje',
+      trendDirection: 'down' as const,
+      sparkData: metrics?.trends?.length > 0 ? metrics.trends.map((t: any) => t.expense) : [0, 0, 0],
     },
     {
-      label: 'Churn Rate (Mensal)',
-      value: '1.2%',
-      icon: RefreshCw,
-      trend: '-0.5%',
+      label: 'Total de Tenants',
+      value: `${totalTenants} Tenants`,
+      trend: 'SaaS Ativos',
       trendDirection: 'up' as const,
-      sparkData: [2.5, 2.2, 2.0, 1.8, 1.5, 1.3, 1.2],
-      accentColor: '#F43F5E'
+      sparkData: [totalTenants > 0 ? totalTenants - 1 : 0, totalTenants],
     },
     {
-      label: 'Workspaces SaaS Ativos',
-      value: totalTenants,
-      icon: Building2,
-      trend: '+4 novos',
+      label: 'Usuários Globais',
+      value: `${totalUsers} Usuários`,
+      trend: 'Plataforma',
       trendDirection: 'up' as const,
-      sparkData: [12, 14, 13, 15, 15, 17, 18],
-      accentColor: '#10B981'
+      sparkData: [totalUsers > 0 ? totalUsers - 1 : 0, totalUsers],
     }
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 max-w-7xl mx-auto pb-10">
+    <div className="space-y-6 animate-in fade-in duration-500 max-w-[1400px] mx-auto pb-10">
       
-      {/* 1. HERO DO DASHBOARD - WELCOME AREA REDESIGN */}
-      <div className="bg-white border border-[#ECECEF] rounded-[24px] p-8 shadow-[0_1px_3px_rgba(0,0,0,0.01)] relative overflow-hidden transition-all duration-300">
-        {/* Premium subtle graphic layout element (Light ambient blur) */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-[radial-gradient(ellipse_at_top_right,#EEF2FF_0%,transparent_60%)] pointer-events-none -z-10" />
-        
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-          {/* Left Column: Core info and dynamic status grid */}
-          <div className="space-y-6 flex-1">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono font-bold tracking-widest text-zinc-400 uppercase">
-                  SYSTEM CORE
-                </span>
-                <span className="w-1.5 h-1.5 rounded-full bg-[#6366F1] animate-ping" />
-                <span className="text-[10px] font-bold text-zinc-500 font-mono flex items-center gap-1">
-                  ADMIN CYZOR
-                </span>
-              </div>
-
-              <div>
-                <h1 className="text-3xl md:text-4xl font-extrabold text-zinc-950 tracking-tight leading-none mb-2">
-                  Painel de Controle SaaS, {user?.displayName || 'Diego'} 👋
-                </h1>
-                <p className="text-xs md:text-sm text-zinc-500 font-medium">
-                  Acompanhe a saúde financeira, crescimento da base de usuários e performance das instâncias SaaS da CYZOR.
-                </p>
-              </div>
-            </div>
-
-            {/* Premium Interactive Cockpit Grid - Vercel/Linear style */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
-              
-              {/* Status 1: Environment */}
-              <div className="bg-[#FAFAFB] border border-[#ECECEF] rounded-[16px] p-3 hover:border-zinc-300 transition-all group flex flex-col justify-between h-16">
-                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider font-mono">Environment</span>
-                <div className="flex items-center gap-1.5 mt-1">
-                  <span className="relative flex h-2 w-2 shrink-0">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                  </span>
-                  <span className="text-[11px] font-bold text-zinc-950">Production HQ</span>
-                </div>
-              </div>
-
-              {/* Status 2: SaaS Tenants */}
-              <div className="bg-[#FAFAFB] border border-[#ECECEF] rounded-[16px] p-3 hover:border-zinc-300 transition-all group flex flex-col justify-between h-16">
-                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider font-mono">Workspaces</span>
-                <div className="flex items-center gap-1.5 mt-1">
-                  <Building2 size={12} className="text-zinc-600" />
-                  <span className="text-[11px] font-bold text-zinc-950">{totalTenants} Active SaaS</span>
-                </div>
-              </div>
-
-              {/* Status 3: Uptime */}
-              <div className="bg-[#FAFAFB] border border-[#ECECEF] rounded-[16px] p-3 hover:border-zinc-300 transition-all group flex flex-col justify-between h-16">
-                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider font-mono">Uptime Monitor</span>
-                <div className="flex items-center gap-1.5 mt-1">
-                  <span className="text-[11px] font-bold text-emerald-600 font-mono">99.99% Global</span>
-                </div>
-              </div>
-
-              {/* Status 4: Stripe Gate */}
-              <div className="bg-[#FAFAFB] border border-[#ECECEF] rounded-[16px] p-3 hover:border-zinc-300 transition-all group flex flex-col justify-between h-16">
-                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider font-mono">Stripe Gateway</span>
-                <div className="flex items-center gap-1.5 mt-1">
-                  <CreditCard size={12} className="text-[#6366F1]" />
-                  <span className="text-[11px] font-bold text-zinc-950">Connected</span>
-                </div>
-              </div>
-
-              {/* Status 5: API Status */}
-              <div className="bg-[#FAFAFB] border border-[#ECECEF] rounded-[16px] p-3 hover:border-zinc-300 transition-all group flex flex-col justify-between h-16">
-                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider font-mono">Core API</span>
-                <div className="flex items-center gap-1.5 mt-1">
-                  <CheckCircle2 size={12} className="text-emerald-500" />
-                  <span className="text-[11px] font-bold text-zinc-950">Active & Fast</span>
-                </div>
-              </div>
-
-              {/* Status 6: AI Assistant core */}
-              <div className="bg-[#FAFAFB] border border-[#ECECEF] rounded-[16px] p-3 hover:border-zinc-300 transition-all group flex flex-col justify-between h-16">
-                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider font-mono">AI Observers</span>
-                <div className="flex items-center gap-1.5 mt-1">
-                  <Sparkles size={11} className="text-[#8B5CF6] animate-pulse" />
-                  <span className="text-[11px] font-bold text-zinc-950">Enabled</span>
-                </div>
-              </div>
-
-            </div>
+      {/* 1. Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2 mb-4">
+        <h1 className="text-2xl font-medium text-gray-900 tracking-tight">
+          Welcome back, {user?.displayName?.split(' ')[0] || 'Salung'}
+        </h1>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-1.5 shadow-sm text-xs font-medium text-gray-700 cursor-pointer hover:bg-gray-50">
+            <span>Daily</span>
+            <ChevronDown size={14} className="text-gray-400" />
           </div>
-
-          {/* Right Column: Premium Active Latency Card and Resync Button */}
-          <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end justify-between lg:justify-center gap-4 border border-[#ECECEF] p-5 rounded-[20px] bg-[#FAFAFB] lg:min-w-[280px]">
-            <div className="space-y-1.5 text-left lg:text-right w-full">
-              <span className="text-[9px] font-extrabold text-zinc-400 uppercase tracking-widest block font-mono">CYZOR CLOUD METRICS</span>
-              <div className="flex items-center lg:justify-end gap-2">
-                <span className="text-2xl font-black text-zinc-950 tracking-tight font-mono">42ms</span>
-                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.2 rounded">Global Avg</span>
-              </div>
-              <span className="text-[9px] text-zinc-400 font-medium block">Orquestrador AWS & GCP conectado com sucesso</span>
-            </div>
-
-            <div className="h-[1px] w-full bg-[#ECECEF] hidden lg:block" />
-
-            <button 
-              onClick={onRefresh}
-              disabled={loading}
-              className="px-4 py-2.5 bg-zinc-950 hover:bg-zinc-800 border border-zinc-900 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-sm shrink-0 active:scale-95 disabled:opacity-50 w-full"
-            >
-              <RefreshCw size={12} className={loading ? 'animate-spin text-indigo-400' : 'text-zinc-400'} />
-              <span>{loading ? 'Sincronizando...' : 'ATUALIZAR DADOS'}</span>
-            </button>
+          <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-1.5 shadow-sm text-xs font-medium text-gray-700 cursor-pointer hover:bg-gray-50">
+            <Calendar size={14} className="text-gray-400" />
+            <span>6 Nov 2025</span>
           </div>
+          <button 
+            className="flex items-center gap-2 bg-gray-800 text-white border border-gray-900 hover:bg-black rounded-lg px-4 py-1.5 shadow-sm text-xs font-medium transition-colors"
+          >
+            <Download size={14} />
+            <span>Export CSV</span>
+          </button>
         </div>
       </div>
 
-      {/* 2. REUSABLE KPIs CARD BLOCK */}
+      {/* 2. Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((kpi, idx) => (
           <StatCard 
             key={idx}
             label={kpi.label}
             value={kpi.value}
-            icon={kpi.icon}
             trend={kpi.trend}
             trendDirection={kpi.trendDirection}
             sparkData={kpi.sparkData}
-            accentColor={kpi.accentColor}
           />
         ))}
       </div>
 
-      {/* 3. BUSINESS OVERVIEW SECTION */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400 font-mono">
-            Business Overview & Revenue Ledger
-          </h2>
-          <div className="h-[1px] bg-[#ECECEF] flex-1" />
+      {/* 3. Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2">
+          <RevenueFinanceCard metrics={metrics} />
         </div>
-
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <div className="xl:col-span-2">
-            <RevenueFinanceCard />
-          </div>
-          <div>
-            <SaaSAnalyticsCard />
-          </div>
+        <div>
+          <SaaSAnalyticsCard metrics={metrics} />
         </div>
       </div>
 
-      {/* 4. SYSTEM HEALTH & AI INSIGHTS SECTION */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400 font-mono">
-            System Performance & AI Monitoring
-          </h2>
-          <div className="h-[1px] bg-[#ECECEF] flex-1" />
-        </div>
-
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <div className="xl:col-span-2">
-            <InfrastructureHealth />
-          </div>
-          <div>
-            <AIInsightCard />
-          </div>
-        </div>
-      </div>
-
-      {/* 5. WORKSPACE ACTIVITY & OPERATIONAL TIMELINE SECTION */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400 font-mono">
-            SaaS Workspaces & Subscriptions
-          </h2>
-          <div className="h-[1px] bg-[#ECECEF] flex-1" />
-        </div>
-
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <div className="xl:col-span-2">
-            <DeploymentCard />
-          </div>
-          <div>
-            <ActivityTimeline />
-          </div>
-        </div>
+      {/* 4. Table */}
+      <div className="w-full">
+        <DeploymentCard metrics={metrics} />
       </div>
 
     </div>
