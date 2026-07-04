@@ -144,7 +144,7 @@ export default function App() {
       <Sidebar isCollapsed={isSidebarCollapsed} toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)} currentView={currentView} setCurrentView={setCurrentView} />
       
       <div className={`transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-[80px]' : 'lg:ml-[260px]'} flex-1 min-w-0`}>
-        <Topbar isSidebarCollapsed={isSidebarCollapsed} toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)} setCurrentView={setCurrentView} />
+        <Topbar isSidebarCollapsed={isSidebarCollapsed} toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)} setCurrentView={setCurrentView} currentView={currentView} />
         <AnimatePresence mode="wait">
           <motion.main
             key={activeWorkspace?.id}

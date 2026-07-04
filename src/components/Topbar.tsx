@@ -1,11 +1,11 @@
-import { Search, Bell, PanelLeftClose, PanelLeft, Sun, Moon, LogOut, User, CheckCircle2, AlertTriangle, Info, Clock, ShieldCheck, HelpCircle, ChevronDown, ChevronRight, Plus, X } from 'lucide-react';
+import { Search, Bell, PanelLeftClose, PanelLeft, Sun, Moon, LogOut, User, AlertTriangle, Info, Clock, ShieldCheck, HelpCircle, ChevronDown, ChevronRight, Plus, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
-import { useBranding } from '../hooks/useBranding.ts';
 import { View } from '../types.ts';
 import { useNavigation } from '../context/NavigationContext';
 import { useCompanies, useProjects, useProducts } from '../hooks/useCyzorQueries';
+import { useBranding } from '../hooks/useBranding.ts';
 
 function NotificationMenu() {
   const { fetchWithAuth, activeWorkspace } = useAuth();
@@ -391,12 +391,33 @@ function BreadcrumbNavigator({ setCurrentView }: { setCurrentView?: (view: View)
   );
 }
 
-export default function Topbar({ isSidebarCollapsed, toggleSidebar, setCurrentView }: { isSidebarCollapsed: boolean, toggleSidebar: () => void, setCurrentView?: (view: View) => void }) {
+export default function Topbar({ isSidebarCollapsed, toggleSidebar, setCurrentView, currentView }: { isSidebarCollapsed: boolean, toggleSidebar: () => void, setCurrentView?: (view: View) => void, currentView?: View | 'admin' }) {
   const [isDark, setIsDark] = useState(false);
   const [time, setTime] = useState(new Date());
   const { activeWorkspace } = useAuth();
   const { appName } = useBranding();
   const [isOnline, setIsOnline] = useState(true);
+
+  const sectionLabelMap: Record<string, string> = {
+    dashboard: 'Dashboard',
+    roadmap: 'Estratégia',
+    empresas: 'Empresas',
+    clientes: 'Clientes',
+    produtos: 'Produtos',
+    projetos: 'Projetos',
+    ideias: 'Ideias',
+    financeiro: 'Financeiro',
+    documentacao: 'Documentação',
+    ia: 'IA',
+    agenda: 'Agenda',
+    keep: 'Keep',
+    'flow-builder': 'Flow Builder',
+    configuracoes: 'Configurações',
+    equipe: 'Equipe',
+    admin: 'Admin'
+  };
+
+  const sectionLabel = currentView && sectionLabelMap[currentView] ? sectionLabelMap[currentView] : 'Workspace';
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -428,7 +449,7 @@ export default function Topbar({ isSidebarCollapsed, toggleSidebar, setCurrentVi
     const newDark = !isDark;
     setIsDark(newDark);
     localStorage.setItem('theme', newDark ? 'dark' : 'light');
-    
+
     if (newDark) {
       document.documentElement.classList.add('dark');
     } else {
@@ -437,89 +458,93 @@ export default function Topbar({ isSidebarCollapsed, toggleSidebar, setCurrentVi
   };
 
   return (
-    <div className={`fixed top-0 right-0 h-16 lg:h-20 bg-white/80 backdrop-blur-2xl border-b border-[#0F172A08] flex items-center justify-between px-4 sm:px-6 md:px-10 z-20 transition-all duration-300 left-0 ${isSidebarCollapsed ? 'lg:left-[88px]' : 'lg:left-[280px]'}`}>
-      <div className="flex items-center gap-4 lg:gap-8 w-full max-w-4xl">
-        <button onClick={toggleSidebar} className="text-[#64748B] hover:text-[#111111] transition-all flex items-center justify-center w-10 h-10 rounded-2xl hover:bg-white border border-transparent hover:border-[#0F172A0F] flex-shrink-0 group">
-          {isSidebarCollapsed ? <PanelLeft size={18} className="group-hover:scale-110 transition-transform" /> : <PanelLeftClose size={18} className="group-hover:scale-110 transition-transform" />}
-        </button>
-        
-        <div className="hidden lg:flex items-center gap-8 h-8 px-2">
-           <BreadcrumbNavigator setCurrentView={setCurrentView} />
-           <div className="w-px h-6 bg-[#0F172A08]" />
-           <div className="flex flex-col gap-0.5">
-              <span className="text-[9px] font-black text-[#64748B] uppercase tracking-[0.2em] opacity-40">Software</span>
-              <span className="text-[12px] font-bold text-[#111111] tracking-tight">{appName}</span>
-           </div>
-           <div className="w-px h-6 bg-[#0F172A08]" />
-           <div className="flex flex-col gap-0.5">
-              <span className="text-[9px] font-black text-[#64748B] uppercase tracking-[0.2em] opacity-40">Ambiente</span>
-              <div className="flex items-center gap-3">
-                 <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500'}`} />
-                 <WorkspaceSelector />
-              </div>
-           </div>
+    <motion.header
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
+      className={`fixed top-0 right-0 h-16 lg:h-20 bg-white/90 backdrop-blur-xl border-b border-slate-200/70 flex items-center justify-between px-4 sm:px-6 md:px-8 z-20 transition-all duration-300 left-0 shadow-[0_1px_0_rgba(15,23,42,0.03)] ${isSidebarCollapsed ? 'lg:left-[88px]' : 'lg:left-[280px]'}`}
+    >
+      <div className="flex items-center gap-3 lg:gap-4 min-w-0 flex-1">
+        <motion.button
+          whileHover={{ scale: 1.02, y: -1 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={toggleSidebar}
+          className="text-[#64748B] hover:text-[#111111] transition-colors duration-200 flex items-center justify-center w-10 h-10 rounded-2xl hover:bg-[#F8FAFC] border border-slate-200/70 hover:border-slate-300 flex-shrink-0 group shadow-[0_4px_10px_rgba(15,23,42,0.03)]"
+        >
+          {isSidebarCollapsed ? <PanelLeft size={18} className="group-hover:scale-110 transition-transform duration-200" /> : <PanelLeftClose size={18} className="group-hover:scale-110 transition-transform duration-200" />}
+        </motion.button>
+
+        <div className="hidden md:flex min-w-0 items-center gap-3 rounded-[18px] border border-slate-200/70 bg-white/80 px-3 py-2 shadow-[0_6px_18px_rgba(15,23,42,0.03)]">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className={`h-2.5 w-2.5 rounded-full ${isOnline ? 'bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.15)]' : 'bg-amber-500 shadow-[0_0_0_4px_rgba(245,158,11,0.15)]'}`} />
+            <div className="flex flex-col min-w-0">
+              <span className="text-[10px] font-black uppercase tracking-[0.18em] text-[#64748B]">Seção atual</span>
+              <span className="text-sm font-semibold text-[#111111] truncate">{sectionLabel}</span>
+            </div>
+          </div>
+          <div className="hidden lg:flex items-center gap-2 text-[12px] font-medium text-[#64748B]">
+            <BreadcrumbNavigator setCurrentView={setCurrentView} />
+          </div>
         </div>
 
-        <div className="relative w-full hidden md:block max-w-md ml-4">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#64748B] opacity-50" size={16} />
-          <input 
-            type="text" 
-            placeholder="Search anything..." 
-            className="w-full bg-[#FAFAFA] border border-[#0F172A05] hover:border-[#0F172A15] rounded-2xl py-2.5 pl-11 pr-14 text-[13px] outline-none focus:border-[#111111]/10 focus:bg-white transition-all text-[#111111] font-bold placeholder:text-[#64748B]/40 shadow-[inset_0_2px_4px_rgba(0,0,0,0.01)]"
-          />
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 px-1.5 py-1 rounded-lg bg-white border border-[#0F172A08] shadow-sm hidden lg:flex">
-            <span className="text-[10px] font-black text-[#111111] opacity-20">⌘</span>
-            <span className="text-[10px] font-black text-[#111111] opacity-20">K</span>
+        <div className="hidden lg:flex flex-1 max-w-[420px]">
+          <div className="relative w-full">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#64748B] opacity-60" size={15} />
+            <input
+              type="text"
+              placeholder="Buscar no sistema..."
+              className="w-full bg-[#F8FAFC] border border-slate-200/70 hover:border-slate-300 rounded-[16px] py-2.5 pl-10 pr-3 text-[13px] outline-none focus:border-slate-300 focus:bg-white transition-all duration-200 text-[#111111] font-medium placeholder:text-[#64748B]/50 shadow-[inset_0_1px_2px_rgba(15,23,42,0.03)]"
+            />
           </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-4 lg:gap-8">
-        <div className="hidden xl:flex items-center gap-6 pr-6 border-r border-[#0F172A08]">
-           <div className="flex flex-col items-end gap-0.5">
-              <span className="text-[13px] font-bold text-[#111111] tracking-tighter">
-                 BES: {(activeWorkspace?.settings?.besScore || 0).toLocaleString('pt-BR')}
-              </span>
-              <span className="text-[9px] font-black text-[#64748B] uppercase tracking-[0.2em] opacity-40">
-                 Maturidade: {Math.round(activeWorkspace?.settings?.besMaturity || 0)}%
-              </span>
-           </div>
-           <div className="flex flex-col items-end gap-0.5">
-              <span className="text-[13px] font-bold text-[#111111] tracking-tighter">
-                 {time.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-              </span>
-              <span className="text-[9px] font-black text-[#64748B] uppercase tracking-[0.2em] opacity-40">
-                 {time.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()}
-              </span>
-           </div>
-           <div className="flex flex-col items-end gap-0.5">
-              <span className="text-[10px] font-bold text-[#111111] flex items-center gap-1.5 tracking-tight">
-                 <CheckCircle2 size={12} className="text-emerald-500" />
-                 Synced
-              </span>
-              <span className="text-[9px] font-black text-[#64748B] uppercase tracking-[0.2em] opacity-40">Just now</span>
-           </div>
+      <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+        <div className="hidden xl:flex items-center gap-3 rounded-[16px] border border-slate-200/70 bg-slate-50/80 px-3 py-2 shadow-[0_4px_12px_rgba(15,23,42,0.03)]">
+          <div className="flex flex-col items-end gap-0.5">
+            <span className="text-[12px] font-semibold text-[#111111] tracking-tight">
+              BES: {(activeWorkspace?.settings?.besScore || 0).toLocaleString('pt-BR')}
+            </span>
+            <span className="text-[9px] font-black text-[#64748B] uppercase tracking-[0.18em] opacity-60">
+              Maturidade: {Math.round(activeWorkspace?.settings?.besMaturity || 0)}%
+            </span>
+          </div>
+          <div className="h-8 w-px bg-[#0F172A08]" />
+          <div className="flex flex-col items-end gap-0.5">
+            <span className="text-[12px] font-semibold text-[#111111] tracking-tight">
+              {time.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+            <span className="text-[9px] font-black text-[#64748B] uppercase tracking-[0.18em] opacity-60">
+              {time.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()}
+            </span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-           <button 
-             onClick={toggleTheme}
-             className="w-10 h-10 rounded-2xl bg-white border border-[#0F172A08] flex items-center justify-center hover:bg-[#FAFAFA] hover:border-[#0F172A15] transition-all shadow-sm text-[#111111] group"
-           >
-             {isDark ? <Sun size={18} className="text-[#64748B] group-hover:text-[#111111] transition-colors" /> : <Moon size={18} className="text-[#64748B] group-hover:text-[#111111] transition-colors" />}
-           </button>
-           <button 
-             id="help-center-btn"
-             onClick={() => window.dispatchEvent(new Event('restart-tour'))}
-             className="w-10 h-10 rounded-2xl bg-white border border-[#0F172A08] flex items-center justify-center hover:bg-[#FAFAFA] hover:border-[#0F172A15] transition-all shadow-sm text-[#64748B] hover:text-[#111111] group"
-             title="Fazer Tour"
-           >
-             <HelpCircle size={18} />
-           </button>
-           <NotificationMenu />
-           <UserProfileMenu setCurrentView={setCurrentView} />
+        <div className="hidden md:flex items-center rounded-[16px] border border-slate-200/70 bg-white/80 px-2 py-1.5 shadow-[0_4px_12px_rgba(15,23,42,0.03)]">
+          <WorkspaceSelector />
         </div>
+
+        <motion.button
+          whileHover={{ scale: 1.02, y: -1 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={toggleTheme}
+          className="w-10 h-10 rounded-2xl bg-white border border-slate-200/70 flex items-center justify-center hover:bg-[#F8FAFC] hover:border-slate-300 transition-all duration-200 shadow-[0_4px_10px_rgba(15,23,42,0.03)] text-[#111111] group"
+        >
+          {isDark ? <Sun size={18} className="text-[#64748B] group-hover:text-[#111111] transition-colors duration-200" /> : <Moon size={18} className="text-[#64748B] group-hover:text-[#111111] transition-colors duration-200" />}
+        </motion.button>
+        <motion.button
+          whileHover={{ scale: 1.02, y: -1 }}
+          whileTap={{ scale: 0.98 }}
+          id="help-center-btn"
+          onClick={() => window.dispatchEvent(new Event('restart-tour'))}
+          className="w-10 h-10 rounded-2xl bg-white border border-slate-200/70 flex items-center justify-center hover:bg-[#F8FAFC] hover:border-slate-300 transition-all duration-200 shadow-[0_4px_10px_rgba(15,23,42,0.03)] text-[#64748B] hover:text-[#111111] group"
+          title="Fazer Tour"
+        >
+          <HelpCircle size={18} />
+        </motion.button>
+        <NotificationMenu />
+        <UserProfileMenu setCurrentView={setCurrentView} />
       </div>
-    </div>
+    </motion.header>
   );
 }
