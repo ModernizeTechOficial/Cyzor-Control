@@ -8,6 +8,7 @@ import { getOrCreateUser, getUserSaaSState, updateUserActiveWorkspace, getUserWo
 import apiRouter from "./src/db/api.ts";
 import { adminRouter } from "./src/db/admin.ts";
 import { AIController } from "./src/ai/controllers/AIController.ts";
+import aiConfigRouter from "./src/ai/routes/aiConfigRouter.ts";
 
 import { stripeRouter, stripeWebhookRouter } from "./src/routes/stripe.ts";
 
@@ -109,11 +110,13 @@ async function startServer() {
   app.use("/api", stripeRouter);
   app.use("/api", stripeWebhookRouter);
 
-  // Mount modular routes that require an active workspace
-  app.use("/api", apiRouter);
-
   // AI Chat Interface
   app.post("/api/ai/chat", requireAuth, tenantMiddleware as any, AIController.chat);
+  app.post("/api/ai/action", requireAuth, tenantMiddleware as any, AIController.executeAction);
+  app.use("/api/ai/config", aiConfigRouter);
+
+  // Mount modular routes that require an active workspace
+  app.use("/api", apiRouter);
 
   // AI Node Generation
   app.post("/api/flow-builder/generate-node", requireAuth, tenantMiddleware as any, async (req: AuthRequest, res) => {

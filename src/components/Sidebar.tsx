@@ -361,7 +361,7 @@ function CompanyNode({ company, projects, products, currentView, globalFilters, 
             initial={{ height: 0, opacity: 0 }} 
             animate={{ height: 'auto', opacity: 1 }} 
             exit={{ height: 0, opacity: 0 }} 
-            className="flex flex-col gap-0.5 mt-0.5 mb-2 relative before:absolute before:left-[22px] before:top-0 before:bottom-3 before:w-[1.5px] before:bg-[#E4E4E7]"
+            className="flex flex-col gap-0.5 mt-0.5 mb-2 relative before:absolute before:left-[22px] before:top-0 before:bottom-3 before:w-[1.5px] before:bg-[#E4E4E7] before:z-10"
           >
             <SubNode icon={GitBranch} label="Projetos" count={projects.length} onClick={() => handleNavigate('projetos', { companyId: company.id })} active={currentView === 'projetos' && globalFilters.companyId === company.id} items={projects} itemType="projetos" handleNavigate={handleNavigate} companyId={company.id} />
             <SubNode icon={Package} label="Produtos" count={products.length} onClick={() => handleNavigate('produtos', { companyId: company.id })} active={currentView === 'produtos' && globalFilters.companyId === company.id} items={products} itemType="produtos" handleNavigate={handleNavigate} companyId={company.id} />
@@ -381,11 +381,11 @@ function SubNode({ icon: Icon, label, count, onClick, active, items, itemType, h
   return (
     <div className="flex flex-col relative">
       <div 
-        className={`group flex items-center justify-between py-2 pr-3 pl-[35px] rounded-xl cursor-pointer transition-all duration-200 relative ${active ? 'text-[#18181B] bg-[#F9FAFB]' : 'text-[#71717A] hover:bg-[#F4F4F5]'}`}
+        className={`group flex items-center justify-between py-2 pr-3 pl-[35px] rounded-xl cursor-pointer transition-all duration-200 relative z-0 ${active ? 'text-[#18181B] bg-[#F9FAFB]' : 'text-[#71717A] hover:bg-[#F4F4F5]'}`}
         onClick={() => setExpanded(!expanded)}
       >
-        <div className="absolute left-[22px] top-1/2 -translate-y-1/2 w-3.5 h-[1.5px] bg-[#E4E4E7]" />
-        <div className="flex items-center gap-3 overflow-hidden flex-1">
+        <div className="absolute left-[22px] top-1/2 -translate-y-1/2 w-[13px] h-[1.5px] bg-[#E4E4E7] z-10" />
+        <div className="flex items-center gap-3 overflow-hidden flex-1 relative z-20">
           <Icon size={17} className={`flex-shrink-0 ${active ? 'text-[#18181B]' : 'text-[#A1A1AA]'}`} />
           <span className={`text-[13px] tracking-tight truncate ${active ? 'font-black' : 'font-semibold'}`} onClick={(e) => { e.stopPropagation(); onClick(e); }}>{label}</span>
         </div>
@@ -405,7 +405,7 @@ function SubNode({ icon: Icon, label, count, onClick, active, items, itemType, h
             initial={{ height: 0, opacity: 0 }} 
             animate={{ height: 'auto', opacity: 1 }} 
             exit={{ height: 0, opacity: 0 }} 
-            className="flex flex-col gap-0.5 pb-1 relative before:absolute before:left-[51px] before:top-0 before:bottom-3 before:w-[1.5px] before:bg-[#E4E4E7]"
+            className="flex flex-col gap-0.5 pb-1 relative before:absolute before:left-[51px] before:top-0 before:bottom-3 before:w-[1.5px] before:bg-[#E4E4E7] before:z-10"
           >
             {items.map((item: any) => {
               const itemFilters: any = { companyId };
@@ -434,12 +434,12 @@ function SubNode({ icon: Icon, label, count, onClick, active, items, itemType, h
 function LeafNode({ icon: Icon, label, indent = 0, onClick, active, parentIsSubNode = false }: any) {
   return (
     <div 
-      className={`group flex items-center justify-between py-2 pr-3 rounded-xl cursor-pointer transition-all duration-200 relative ${active ? 'text-[#18181B] font-bold bg-[#F9FAFB]' : 'text-[#71717A] hover:bg-[#F4F4F5]'}`}
-      style={{ paddingLeft: `${parentIsSubNode ? 51 : 35}px` }}
+      className={`group flex items-center justify-between py-2 pr-3 rounded-xl cursor-pointer transition-all duration-200 relative z-0 ${active ? 'text-[#18181B] font-bold bg-[#F9FAFB]' : 'text-[#71717A] hover:bg-[#F4F4F5]'}`}
+      style={{ paddingLeft: `${parentIsSubNode ? 64 : 35}px` }}
       onClick={onClick}
     >
-      <div className="absolute left-[22px] top-1/2 -translate-y-1/2 w-3.5 h-[1.5px] bg-[#E4E4E7]" style={parentIsSubNode ? { left: '51px' } : {}} />
-      <div className="flex items-center gap-3 overflow-hidden flex-1">
+      <div className="absolute left-[22px] top-1/2 -translate-y-1/2 w-[13px] h-[1.5px] bg-[#E4E4E7] z-10" style={parentIsSubNode ? { left: '51px' } : {}} />
+      <div className="flex items-center gap-3 overflow-hidden flex-1 relative z-20">
         <Icon size={15} className={`flex-shrink-0 ${active ? 'text-[#18181B]' : 'text-[#A1A1AA]'}`} />
         <span className={`text-[12.5px] tracking-tight truncate ${active ? 'font-black' : 'font-semibold'}`}>{label}</span>
       </div>

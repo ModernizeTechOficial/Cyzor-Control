@@ -1,28 +1,74 @@
 {
   "entities": {
-    "workspace": {
-      "title": "Workspace",
-      "description": "App workspace",
+    "AIModel": {
+      "title": "AIModel",
+      "description": "Definition of an AI model available in the system.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "name": { "type": "string" }
-      }
+        "name": { "type": "string" },
+        "provider": { "type": "string" },
+        "contextWindow": { "type": "number" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["id", "name", "provider"]
     },
-    "user": {
-      "title": "User",
-      "description": "Application User",
+    "AIAgent": {
+      "title": "AIAgent",
+      "description": "Definition of an specialized AI agent.",
       "type": "object",
       "properties": {
-        "uid": { "type": "string" },
-        "email": { "type": "string" }
-      }
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "systemPrompt": { "type": "string" },
+        "modelId": { "type": "string" },
+        "temperature": { "type": "number" }
+      },
+      "required": ["id", "name", "systemPrompt", "modelId"]
+    },
+    "AIConversation": {
+      "title": "AIConversation",
+      "description": "Management of AI conversations.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "workspaceId": { "type": "string" },
+        "agentId": { "type": "string" },
+        "messages": { "type": "array" }
+      },
+      "required": ["id", "workspaceId", "agentId"]
+    },
+    "AICredit": {
+      "title": "AICredit",
+      "description": "Credit balance for AI services in a workspace.",
+      "type": "object",
+      "properties": {
+        "workspaceId": { "type": "string" },
+        "balance": { "type": "number" },
+        "lastUpdated": { "type": "string", "format": "date-time" }
+      },
+      "required": ["workspaceId", "balance"]
+    },
+    "AILog": {
+      "title": "AILog",
+      "description": "Log of an AI interaction.",
+      "type": "object",
+      "properties": {
+        "workspaceId": { "type": "string" },
+        "userId": { "type": "string" },
+        "agentId": { "type": "string" },
+        "tokensConsumed": { "type": "number" },
+        "action": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["workspaceId", "userId", "agentId", "tokensConsumed", "action", "timestamp"]
     }
   },
   "firestore": {
-    "/workspaces/{workspaceId}": {
-      "schema": { "$ref": "#/entities/workspace" },
-      "description": "Workspace data"
-    }
+    "ai_models": { "schema": "AIModel", "description": "Models collection" },
+    "ai_agents": { "schema": "AIAgent", "description": "Agents collection" },
+    "ai_conversations": { "schema": "AIConversation", "description": "Conversations collection" },
+    "ai_credits": { "schema": "AICredit", "description": "Workspace credit balance" },
+    "ai_logs": { "schema": "AILog", "description": "Interaction logs" }
   }
 }

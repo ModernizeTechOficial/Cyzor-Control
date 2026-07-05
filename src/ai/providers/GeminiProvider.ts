@@ -1,4 +1,4 @@
-import { AIProvider, ChatRequest, ChatResponse, ModelInfo } from '../types';
+import { AIProvider, ChatRequest, ChatResponse, ModelInfo, AIAgent } from '../types';
 import { GoogleGenAI } from "@google/genai";
 
 export class GeminiProvider implements AIProvider {
@@ -12,39 +12,37 @@ export class GeminiProvider implements AIProvider {
     });
   }
 
-  async chat(request: ChatRequest): Promise<ChatResponse> {
+  async generate(request: ChatRequest, agent: AIAgent): Promise<ChatResponse> {
     const start = Date.now();
+    let modelToUse = agent.modelId?.includes('gemini') ? agent.modelId : 'gemini-1.5-flash-latest';
+    if (modelToUse === 'gemini-3.5-flash') {
+      modelToUse = 'gemini-1.5-flash-latest';
+    }
+    
     try {
       const response = await this.ai.models.generateContent({
-        model: 'gemini-3.5-flash', // Default model
+        model: modelToUse,
         contents: request.message,
+        config: {
+          systemInstruction: agent.systemPrompt,
+          temperature: agent.temperature
+        }
       });
 
       return {
         message: response.text || '',
         provider: this.name,
-        model: 'gemini-3.5-flash',
+        model: modelToUse,
         duration: Date.now() - start,
+        tokensUsed: {
+          prompt: response.usageMetadata?.promptTokenCount || 0,
+          completion: response.usageMetadata?.candidatesTokenCount || 0,
+          total: response.usageMetadata?.totalTokenCount || 0
+        }
       };
     } catch (error) {
-      console.error('Gemini chat error:', error);
+      console.error('Gemini generate error:', error);
       throw error;
-    }
-  }
-
-  async models(): Promise<ModelInfo[]> {
-    return [
-      { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash', provider: this.name },
-      { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro', provider: this.name },
-    ];
-  }
-
-  async validateKey(): Promise<boolean> {
-    try {
-      await this.models();
-      return true;
-    } catch {
-      return false;
     }
   }
 }

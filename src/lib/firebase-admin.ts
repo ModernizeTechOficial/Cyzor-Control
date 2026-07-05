@@ -10,13 +10,14 @@ function init() {
     try {
       const apps = getApps();
       if (apps.length === 0) {
+        console.log(`[FirebaseAdmin] Initializing app with projectId: ${firebaseConfig.projectId}`);
         initializeApp({
           projectId: firebaseConfig.projectId,
         });
       }
       initialized = true;
     } catch (error) {
-      console.warn("Firebase Admin SDK: Failed to initialize. Auth features may be unavailable.", error);
+      console.error("[FirebaseAdmin] Failed to initialize:", error);
       initialized = false;
     }
   }
@@ -32,6 +33,7 @@ export function getDb() {
     }
     return getFirestore(apps[0]);
   }
+  console.error("[FirebaseAdmin] No Firebase app initialized");
   return {} as any;
 }
 

@@ -10,6 +10,7 @@ import { showSuccess, showError } from '../lib/alerts';
 import { Vision360 } from './common/Vision360';
 import { VisualIdentityTab } from './common/VisualIdentityTab';
 import { EntityHero } from './common/EntityHero';
+import { AIActionDropdown } from './common/AIActionsComponent';
 
 // Tab components
 import AbaVisaoGeral from './project-tabs/AbaVisaoGeral';
@@ -474,6 +475,7 @@ export default function ProjectDetailsModal({ project, isOpen, onClose, onSave }
             onStartEdit={() => setIsEditing(true)}
             actions={
               <div className="flex items-center gap-2">
+                <AIActionDropdown entityId={editedProject.id?.toString()} actions={['analyzeProject', 'generateRoadmap']} />
                 {!isEditing && (
                   editedProject.productId ? (
                     <button

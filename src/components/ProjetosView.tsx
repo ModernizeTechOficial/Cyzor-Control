@@ -23,6 +23,7 @@ import TimelineView from './common/TimelineView';
 import AbaTimeline from './project-tabs/AbaTimeline';
 import Markdown from 'react-markdown';
 import { FormGroup, FormLabel, FormInput, FormSelect, FormTextarea } from './ui/FormComponents';
+import { AIActionDropdown } from './common/AIActionsComponent';
 
 import { useNavigation } from "../context/NavigationContext";
 

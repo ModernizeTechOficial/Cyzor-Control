@@ -47,17 +47,20 @@ export default function HomeIntelligence({ insights, onClose }: Props) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: textToSend,
-          history: messages.map(msg => ({
-            role: msg.role === 'user' ? 'user' : 'model',
-            parts: [{ text: msg.content }]
-          }))
+          message: textToSend,
+          context: {
+            history: messages.map(msg => ({
+              role: msg.role === 'user' ? 'user' : 'model',
+              parts: [{ text: msg.content }]
+            }))
+          },
+          agentId: 'workspace-assistant'
         })
       });
 
       if (response.ok) {
         const data = await response.json();
-        setMessages(prev => [...prev, { role: 'assistant', content: data.text }]);
+        setMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
       } else {
         setMessages(prev => [...prev, { role: 'assistant', content: 'Desculpe, ocorreu um erro ao processar sua solicitação no momento.' }]);
       }

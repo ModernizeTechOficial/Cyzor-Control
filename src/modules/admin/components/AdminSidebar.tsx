@@ -161,6 +161,12 @@ export default function AdminSidebar({ isCollapsed, toggleSidebar, currentView, 
       ]
     },
     {
+      title: 'Intelligence',
+      items: [
+        { id: 'admin-ai-control-center', icon: Cpu, label: 'AI Control Center' },
+      ]
+    },
+    {
       title: 'Settings',
       items: [
         { id: 'admin-logs', icon: HelpCircle, label: 'Customer Support', isBeta: true },

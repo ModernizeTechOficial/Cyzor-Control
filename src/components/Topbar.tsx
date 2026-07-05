@@ -1,4 +1,4 @@
-import { Search, Bell, PanelLeftClose, PanelLeft, Sun, Moon, LogOut, User, AlertTriangle, Info, Clock, ShieldCheck, HelpCircle, ChevronDown, ChevronRight, Plus, X } from 'lucide-react';
+import { Search, Bell, PanelLeftClose, PanelLeft, Sun, Moon, LogOut, User, AlertTriangle, Info, Clock, ShieldCheck, HelpCircle, ChevronDown, ChevronRight, Plus, X, CheckCircle2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';

@@ -484,7 +484,7 @@ Por favor, analise esses fatos operacionais e prescreva:
   });
 
   return (
-    <div className="w-full mx-auto pb-16 flex flex-col gap-10 animate-in fade-in duration-300 relative px-4 sm:px-6 lg:px-10">
+    <div className="w-full max-w-7xl mx-auto pb-16 flex flex-col gap-6 sm:gap-8 lg:gap-10 animate-in fade-in duration-300 relative px-3 sm:px-6 lg:px-8">
       
       {/* Dynamic Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-6">
@@ -501,10 +501,10 @@ Por favor, analise esses fatos operacionais e prescreva:
         </div>
 
         {/* Change Active Stage Action */}
-        <div className="relative">
+        <div className="relative w-full sm:w-auto">
           <button
             onClick={() => setShowStageSelector(!showStageSelector)}
-            className="flex items-center gap-2 bg-white hover:bg-slate-50 border border-[#0F172A0F] hover:border-slate-300 text-slate-700 px-4 py-2.5 rounded-xl font-bold text-xs transition-all shadow-xs"
+            className="flex w-full sm:w-auto items-center justify-center sm:justify-start gap-2 bg-white hover:bg-slate-50 border border-[#0F172A0F] hover:border-slate-300 text-slate-700 px-4 py-2.5 rounded-xl font-bold text-xs transition-all shadow-xs"
           >
             <Settings className="w-4 h-4 text-slate-400" />
             Nível: {currentStage}
@@ -517,7 +517,7 @@ Por favor, analise esses fatos operacionais e prescreva:
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
-                className="absolute right-0 mt-2 w-72 bg-white border border-[#0F172A08] rounded-2xl shadow-xl z-50 p-2 max-h-96 overflow-y-auto custom-scrollbar"
+                className="absolute right-0 mt-2 w-[calc(100vw-1.5rem)] max-w-[18rem] sm:w-72 bg-white border border-[#0F172A08] rounded-2xl shadow-xl z-50 p-2 max-h-96 overflow-y-auto custom-scrollbar"
               >
                 <div className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-50 mb-1">
                   Selecione o nível de maturidade
@@ -561,8 +561,8 @@ Por favor, analise esses fatos operacionais e prescreva:
         </div>
 
         {/* Linear Stage timeline - premium execution */}
-        <div className="relative w-full py-4 md:overflow-visible overflow-visible custom-scrollbar">
-          <div className="min-w-[800px] md:min-w-0 flex items-start justify-between relative px-4 sm:px-12 h-16 mt-16 overflow-visible">
+        <div className="relative w-full py-3 sm:py-4 overflow-x-auto overflow-y-visible custom-scrollbar">
+          <div className="min-w-[720px] sm:min-w-[760px] md:min-w-0 flex items-start justify-between relative px-2 sm:px-6 md:px-10 h-16 mt-12 sm:mt-14 overflow-visible">
             
             {/* Background Line */}
             <div className="absolute left-10 right-10 sm:left-20 sm:right-20 top-[18px] h-1 bg-slate-100 rounded-full z-0" />
@@ -581,11 +581,22 @@ Por favor, analise esses fatos operacionais e prescreva:
               return (
                 <div 
                   key={stage.id} 
-                  className="flex flex-col items-center relative z-10 w-24 text-center cursor-pointer group hover:z-[100]"
+                  className="flex flex-col items-center relative z-10 w-20 sm:w-24 text-center cursor-pointer group hover:z-[100]"
                   onClick={() => handleStageChange(stage.id)}
                 >
+                  {isActive && (
+                    <>
+                      <div className="absolute top-[18px] left-[calc(100%+4px)] h-[1px] w-7 rounded-full bg-slate-200" />
+                      <motion.div
+                        animate={{ x: [0, 8, 0], opacity: [0.4, 1, 0.4] }}
+                        transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                        className="absolute top-[15px] left-[calc(100%+10px)] h-2 w-2 rounded-full bg-[#111111] shadow-[0_0_0_4px_rgba(15,23,42,0.05)]"
+                      />
+                    </>
+                  )}
+
                   {isNextObjective && (
-                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                    <div className="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap hidden sm:block">
                       <span className="bg-blue-600 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest shadow-lg shadow-blue-200 animate-bounce">
                         Próximo
                       </span>
@@ -593,32 +604,32 @@ Por favor, analise esses fatos operacionais e prescreva:
                   )}
 
                   <div 
-                    className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all shadow-sm mb-3 ${
+                    className={`relative w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center border-2 transition-all shadow-sm mb-3 ${
                       isActive 
                         ? 'bg-[#111111] border-[#111111] text-white scale-110 shadow-lg shadow-black/20' 
                         : isPast 
-                          ? 'bg-emerald-50 border-emerald-500 text-emerald-600' 
+                          ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 border-emerald-500 text-white shadow-[0_0_0_0_rgba(16,185,129,0.16),0_10px_24px_rgba(16,185,129,0.20)]' 
                           : isNextObjective
                             ? 'bg-white border-blue-500 text-blue-600 animate-glow-pulse'
                             : 'bg-white border-slate-200 text-slate-400 group-hover:border-slate-400 group-hover:text-slate-700'
                     }`}
                   >
                     {isPast ? (
-                      <CheckCircle2 className="w-5 h-5" />
+                      <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 drop-shadow-sm" />
                     ) : (
-                      <span className="text-xs font-extrabold">{idx + 1}</span>
+                      <span className="text-[10px] sm:text-xs font-extrabold">{idx + 1}</span>
                     )}
                   </div>
                   
-                  <span className={`text-[10px] font-black uppercase tracking-tight leading-tight px-1 transition-colors ${isActive ? 'text-[#111111]' : 'text-slate-500 group-hover:text-slate-800'}`}>
+                  <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-tight leading-tight px-1 transition-colors ${isActive ? 'text-[#111111]' : 'text-slate-500 group-hover:text-slate-800'}`}>
                     {stage.label}
                   </span>
 
                   {/* Enhanced Tooltip - Positioned above with z-index to overlap everything */}
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-6 opacity-0 group-hover:opacity-100 transition-all duration-300 w-64 bg-[#18181B] text-white text-[11px] rounded-2xl p-4 z-[200] shadow-[0_20px_50px_rgba(0,0,0,0.4)] pointer-events-none text-left border border-white/10 -translate-y-2 group-hover:translate-y-0">
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-6 opacity-0 group-hover:opacity-100 transition-all duration-300 w-[220px] sm:w-64 bg-[#18181B] text-white text-[11px] rounded-2xl p-4 z-[200] shadow-[0_20px_50px_rgba(0,0,0,0.4)] pointer-events-none text-left border border-white/10 -translate-y-2 group-hover:translate-y-0">
                     <div className="flex items-center justify-between mb-3 border-b border-white/10 pb-2">
                       <span className="font-black uppercase tracking-widest text-[9px] text-blue-400">{idx + 1}. {stage.label}</span>
-                      {isPast && <Check className="w-3 h-3 text-emerald-400" />}
+                      {isPast && <Check className="w-3 h-3 text-emerald-500" />}
                     </div>
                     <p className="text-white/80 leading-relaxed font-medium mb-3">{stage.description}</p>
                     <div className="pt-2.5 border-t border-white/5 flex items-center justify-between">
@@ -636,22 +647,22 @@ Por favor, analise esses fatos operacionais e prescreva:
       </div>
 
       {/* Layout Tabs for focused study */}
-      <div className="flex border-b border-slate-100 gap-1 sm:gap-2">
+      <div className="flex border-b border-slate-100 gap-1 sm:gap-2 overflow-x-auto pb-1">
         <button
           onClick={() => setActiveTab('journey')}
-          className={`px-4 sm:px-6 py-3.5 text-xs font-extrabold border-b-2 transition-all ${activeTab === 'journey' ? 'border-[#111111] text-[#111111]' : 'border-transparent text-[#64748B] hover:text-[#111111]'}`}
+          className={`px-3 sm:px-6 py-3.5 text-[11px] sm:text-xs font-extrabold border-b-2 transition-all whitespace-nowrap ${activeTab === 'journey' ? 'border-[#111111] text-[#111111]' : 'border-transparent text-[#64748B] hover:text-[#111111]'}`}
         >
           Foco do Estágio Ativo
         </button>
         <button
           onClick={() => setActiveTab('ai')}
-          className={`px-4 sm:px-6 py-3.5 text-xs font-extrabold border-b-2 transition-all ${activeTab === 'ai' ? 'border-[#111111] text-[#111111]' : 'border-transparent text-[#64748B] hover:text-[#111111]'}`}
+          className={`px-3 sm:px-6 py-3.5 text-[11px] sm:text-xs font-extrabold border-b-2 transition-all whitespace-nowrap ${activeTab === 'ai' ? 'border-[#111111] text-[#111111]' : 'border-transparent text-[#64748B] hover:text-[#111111]'}`}
         >
           Consultor Executivo IA
         </button>
         <button
           onClick={() => setActiveTab('initiatives')}
-          className={`px-4 sm:px-6 py-3.5 text-xs font-extrabold border-b-2 transition-all ${activeTab === 'initiatives' ? 'border-[#111111] text-[#111111]' : 'border-transparent text-[#64748B] hover:text-[#111111]'}`}
+          className={`px-3 sm:px-6 py-3.5 text-[11px] sm:text-xs font-extrabold border-b-2 transition-all whitespace-nowrap ${activeTab === 'initiatives' ? 'border-[#111111] text-[#111111]' : 'border-transparent text-[#64748B] hover:text-[#111111]'}`}
         >
           Central de Iniciativas
         </button>

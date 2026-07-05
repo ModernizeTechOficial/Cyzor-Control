@@ -1,9 +1,23 @@
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { motion } from 'motion/react';
-import { Sparkles, RefreshCw, Layers, ShieldCheck, Zap } from 'lucide-react';
+import { Sparkles, RefreshCw, Layers, ShieldCheck, Zap, X } from 'lucide-react';
 
 export default function HomeHeader() {
   const { user, activeWorkspace } = useAuth();
+  const [isAiAdviceVisible, setIsAiAdviceVisible] = useState(true);
+
+  useEffect(() => {
+    const storageKey = `cyzor-home-ai-advice-dismissed:${activeWorkspace?.id || 'default'}`;
+    const storedValue = window.localStorage.getItem(storageKey);
+    setIsAiAdviceVisible(storedValue !== 'true');
+  }, [activeWorkspace?.id]);
+
+  const handleDismissAiAdvice = () => {
+    const storageKey = `cyzor-home-ai-advice-dismissed:${activeWorkspace?.id || 'default'}`;
+    window.localStorage.setItem(storageKey, 'true');
+    setIsAiAdviceVisible(false);
+  };
   
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -79,17 +93,26 @@ export default function HomeHeader() {
           {getGreeting()}, {user?.displayName || user?.email?.split('@')[0] || 'Diretor'}.
         </h1>
         
-        <div className="flex items-start gap-3 bg-gradient-to-r from-slate-50 to-white border border-[#0F172A03] p-4 rounded-[20px]">
-          <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 flex-shrink-0 mt-0.5">
-            <Sparkles size={14} className="animate-pulse" />
+        {isAiAdviceVisible && (
+          <div className="relative flex items-start gap-3 bg-gradient-to-r from-slate-50 to-white border border-[#0F172A03] p-4 rounded-[20px]">
+            <button
+              onClick={handleDismissAiAdvice}
+              className="absolute right-3 top-3 text-[#94A3B8] hover:text-[#111111] p-1 rounded-full hover:bg-white transition-colors"
+              aria-label="Fechar conselho da IA"
+            >
+              <X size={14} />
+            </button>
+            <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 flex-shrink-0 mt-0.5">
+              <Sparkles size={14} className="animate-pulse" />
+            </div>
+            <div className="flex flex-col pr-7">
+              <span className="text-[10px] font-black uppercase text-blue-600 tracking-wider">Cyzor IA • Consultor de Operações</span>
+              <p className="text-[13px] text-[#334155] font-medium mt-1 leading-relaxed">
+                "{getAiAdvice(currentStage)}"
+              </p>
+            </div>
           </div>
-          <div className="flex flex-col">
-            <span className="text-[10px] font-black uppercase text-blue-600 tracking-wider">Cyzor IA • Consultor de Operações</span>
-            <p className="text-[13px] text-[#334155] font-medium mt-1 leading-relaxed">
-              "{getAiAdvice(currentStage)}"
-            </p>
-          </div>
-        </div>
+        )}
       </div>
     </motion.header>
   );

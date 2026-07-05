@@ -12,6 +12,7 @@ import { PlansAdminView } from './views/PlansAdminView.tsx';
 import { BillingAdminView } from './views/BillingAdminView.tsx';
 import GlobalSettingsAdminView from './views/GlobalSettingsAdminView.tsx';
 import AdminBESView from './views/AdminBESView.tsx';
+import AIControlCenterView from './views/AIControlCenterView.tsx';
 import { useAuth } from '../../context/AuthContext.tsx';
 import WelcomeModal from '../../components/layout/WelcomeModal.tsx';
 
@@ -108,6 +109,7 @@ export default function AdminLayout({ currentView, setCurrentView }: AdminLayout
           {currentView === 'admin-billing' && <BillingAdminView />}
           {currentView === 'admin-settings' && <GlobalSettingsAdminView />}
           {currentView === 'admin-bes' && <AdminBESView />}
+          {currentView === 'admin-ai-control-center' && <AIControlCenterView />}
           
           {/* Elegant placeholders for Beta modules */}
           {['admin-infrastructure', 'admin-logs', 'dev-playground'].includes(currentView as string) && (

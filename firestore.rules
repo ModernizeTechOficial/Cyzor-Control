@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isSignedIn() { return request.auth != null; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function isAdmin() { return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
+
+    // Global default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // AI Credits
+    match /ai_credits/{workspaceId} {
+      allow read: if isSignedIn() && workspaceId == request.auth.token.workspaceId;
+      allow write: if isAdmin();
+    }
+
+    // AI Logs
+    match /ai_logs/{logId} {
+      allow read: if isSignedIn() && resource.data.workspaceId == request.auth.token.workspaceId;
+      allow create: if isSignedIn() && request.resource.data.workspaceId == request.auth.token.workspaceId;
+    }
+  }
+}
