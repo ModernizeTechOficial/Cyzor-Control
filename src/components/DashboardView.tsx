@@ -85,7 +85,7 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
       setProductsList(productsData);
       setIdeas(ideasData);
 
-      const totalRevenue = financeData
+      const totalRevenue = (financeData || [])
         .filter((f: any) => f.type === 'RECEITA')
         .reduce((sum: number, entry: any) => sum + Number(entry.amount), 0);
 
@@ -115,7 +115,7 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
     const companyId = globalFilters.companyId;
 
     if (!companyId) {
-      const totalRev = finance.filter((f: any) => f.type === 'RECEITA').reduce((sum, e) => sum + Number(e.amount || 0), 0);
+      const totalRev = (finance || []).filter((f: any) => f.type === 'RECEITA').reduce((sum, e) => sum + Number(e.amount || 0), 0);
       return {
         filteredProjects: projects,
         filteredTasks: tasks,
@@ -148,7 +148,7 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
     );
 
     const financeFiltered = finance.filter((f: any) => f.companyId?.toString() === companyIdStr);
-    const totalRev = financeFiltered.filter((f: any) => f.type === 'RECEITA').reduce((sum, e) => sum + Number(e.amount || 0), 0);
+    const totalRev = (financeFiltered || []).filter((f: any) => f.type === 'RECEITA').reduce((sum, e) => sum + Number(e.amount || 0), 0);
 
     return {
       filteredProjects: projFiltered,

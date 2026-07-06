@@ -2,11 +2,11 @@ import { AIAgent, ChatRequest, ChatResponse } from '../types';
 import { GroqProvider } from '../providers/GroqProvider';
 import { db } from '../../db';
 import { aiProviders, aiHistory } from '../../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 
 export class AIService {
-  private static async getProvider(workspaceId: string) {
-    console.log(`[AIService] Getting provider for workspaceId: ${workspaceId}`);
+  private static async getProvider(workspaceId: string, tenantId?: string) {
+    console.log(`[AIService] Getting provider for workspaceId: ${workspaceId}, tenantId: ${tenantId}`);
     // 1. Fetch from database (PostgreSQL)
     try {
       const wsId = parseInt(workspaceId);
@@ -25,10 +25,28 @@ export class AIService {
           console.log(`[AIService] Found Groq API key in DB for workspace ${wsId}`);
           return new GroqProvider(providerRecord.apiKey);
         } else {
-          console.log(`[AIService] No Groq API key found in DB for workspace ${wsId}`);
+          console.log(`[AIService] No Groq API key found in DB for workspace ${wsId}, checking tenant...`);
         }
       } else {
         console.warn(`[AIService] Invalid workspaceId for DB lookup: ${workspaceId}`);
+      }
+
+      // Fallback to tenant level config
+      if (tenantId) {
+        const [tenantProvider] = await db.select()
+          .from(aiProviders)
+          .where(
+            and(
+              eq(aiProviders.name, 'Groq'),
+              eq(aiProviders.tenantId, tenantId)
+            )
+          )
+          .limit(1);
+
+        if (tenantProvider?.apiKey) {
+           console.log(`[AIService] Found Groq API key in DB for tenant ${tenantId}`);
+           return new GroqProvider(tenantProvider.apiKey);
+        }
       }
     } catch (e) {
       console.warn('[AIService] Failed to fetch provider from DB:', e);
@@ -89,10 +107,52 @@ export class AIService {
     };
 
     try {
-      const provider = await this.getProvider(request.workspaceId);
+      const { ContextBuilder } = await import('../context/ContextBuilder');
+      const wsId = parseInt(request.workspaceId);
+      
+      let enrichedContext = request.context;
+      
+      // Auto-build workspace context
+      if (!isNaN(wsId)) {
+         const builtContext = await ContextBuilder.buildContext(wsId, request.context?.module || 'global');
+         const formattedBuiltContext = ContextBuilder.formatContextForPrompt(builtContext);
+         
+         // Fetch recent chat history for memory
+         let historyContext = "";
+         try {
+            const recentHistory = await db.select({ prompt: aiHistory.prompt, response: aiHistory.response })
+              .from(aiHistory)
+              .where(
+                 and(
+                   eq(aiHistory.workspaceId, wsId),
+                   eq(aiHistory.userUid, request.userId),
+                   eq(aiHistory.contextType, 'chat')
+                 )
+              )
+              .orderBy(desc(aiHistory.id)) // wait, id doesn't guarantee order if no createdAt. But wait, schema has id and createdAt. Let's assume order by id desc is fine.
+              .limit(5);
+              
+            if (recentHistory.length > 0) {
+               historyContext = `\n\n[MEMÓRIA DA SESSÃO RECENTE]\nHistórico das últimas interações com este usuário:\n`;
+               recentHistory.reverse().forEach(h => {
+                  historyContext += `Usuário: ${h.prompt}\nIA: ${h.response}\n\n`;
+               });
+               historyContext += `[/MEMÓRIA DA SESSÃO RECENTE]\n`;
+            }
+         } catch (e) {
+            console.warn('[AIService] Error fetching chat history for memory:', e);
+         }
+
+         enrichedContext = {
+            ...request.context,
+            _rawString: `${formattedBuiltContext}${historyContext}`
+         };
+      }
+
+      const provider = await this.getProvider(request.workspaceId, request.tenantId);
       const response = await provider.generate({
         message: request.message,
-        context: request.context,
+        context: enrichedContext,
         userId: request.userId,
         workspaceId: request.workspaceId,
         agentId: request.agentId,
@@ -146,14 +206,14 @@ export class AIService {
        };
     }
 
-    const context = await ContextBuilder.buildContext(action.contextModule, entityId);
+    const context = await ContextBuilder.buildContext(parseInt(workspaceId, 10) || 0, action.contextModule, entityId);
     const formattedContext = ContextBuilder.formatContextForPrompt(context);
 
     const finalPrompt = additionalInput 
       ? `${action.promptTemplate}\n\nDetalhes adicionais do usuário:\n${additionalInput}`
       : action.promptTemplate;
 
-    const provider = await this.getProvider(workspaceId);
+    const provider = await this.getProvider(workspaceId, tenantId);
     const response = await provider.generate({
       message: finalPrompt,
       context: { _rawString: formattedContext, ...context.data },

@@ -57,11 +57,13 @@ export default function EmpresasView() {
       }
       if (finRes.ok) {
         const finData = await finRes.json();
-        setFinance(finData);
-        const revenue = finData
-          .filter((f: any) => f.type === 'RECEITA')
-          .reduce((sum: number, entry: any) => sum + Number(entry.amount), 0);
-        setTotalRevenue(revenue);
+        if (Array.isArray(finData)) {
+          setFinance(finData);
+          const revenue = finData
+            .filter((f: any) => f.type === 'RECEITA')
+            .reduce((sum: number, entry: any) => sum + Number(entry.amount), 0);
+          setTotalRevenue(revenue);
+        }
       }
       if (cliRes.ok) {
         const cliData = await cliRes.json();

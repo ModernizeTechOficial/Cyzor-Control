@@ -59,7 +59,10 @@ export default function BusinessOverview({ stats }: { stats?: any[] }) {
   ];
 
   const data = stats || defaultData;
-  const overallHealth = Math.round(data.reduce((acc, curr) => acc + curr.score, 0) / data.length);
+  const arrayData = Array.isArray(data) ? data : [];
+  const overallHealth = arrayData.length > 0 
+    ? Math.round(arrayData.reduce((acc, curr) => acc + curr.score, 0) / arrayData.length)
+    : 0;
 
   return (
     <section className="bg-white border border-[#0F172A08] rounded-[32px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.015)] relative overflow-hidden group/main">

@@ -24,7 +24,7 @@ export default function CompanyTable({
   };
 
   const getRevenue = (companyId: string) => {
-    return finance
+    return (finance || [])
       .filter(f => f.companyId === companyId && f.type === 'RECEITA')
       .reduce((sum, f) => sum + Number(f.amount), 0);
   };
