@@ -87,11 +87,11 @@ function DashboardTab() {
     { label: 'Providers Ativos', value: store.providers.filter(p => p.status === 'Ativo').length.toString(), trend: 'OK', icon: Network },
     { label: 'Modelos Disponíveis', value: store.models.filter(m => m.isActive).length.toString(), trend: 'OK', icon: Layers },
     { label: 'Agentes Ativos', value: store.agents.length.toString(), trend: 'OK', icon: Bot },
-    { label: 'Total de Requisições', value: (store.history || []).length.toString(), trend: '100%', icon: Activity },
-    { label: 'Tokens Utilizados', value: (store.history || []).reduce((acc, h) => acc + (h.tokens?.total || 0), 0).toLocaleString(), trend: '-', icon: Zap },
-    { label: 'Tempo Médio', value: (store.history || []).length > 0 ? Math.round((store.history || []).reduce((acc, h) => acc + (h.duration || 0), 0) / (store.history || []).length) + 'ms' : '0ms', trend: '-', icon: Terminal },
+    { label: 'Total de Requisições', value: store.history.length.toString(), trend: '100%', icon: Activity },
+    { label: 'Tokens Utilizados', value: store.history.reduce((acc, h) => acc + (h.tokens?.total || 0), 0).toLocaleString(), trend: '-', icon: Zap },
+    { label: 'Tempo Médio', value: store.history.length > 0 ? Math.round(store.history.reduce((acc, h) => acc + (h.duration || 0), 0) / store.history.length) + 'ms' : '0ms', trend: '-', icon: Terminal },
     { label: 'Custo Estimado', value: '$ 0.00', trend: '-', icon: LineChart },
-    { label: 'Erros (24h)', value: (store.history || []).filter(h => h.error).length.toString(), trend: '-', icon: Wrench },
+    { label: 'Erros (24h)', value: store.history.filter(h => h.error).length.toString(), trend: '-', icon: Wrench },
   ];
 
   return (
@@ -590,11 +590,11 @@ function LogsTab() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {!(store.history || []).length ? (
+            {store.history.length === 0 ? (
                <tr>
                  <td colSpan={6} className="px-4 py-6 text-center text-gray-500">Nenhum log registrado ainda. Realize testes ou use a IA na plataforma.</td>
                </tr>
-            ) : (store.history || []).map((log, i) => (
+            ) : store.history.map((log, i) => (
               <tr key={i} className="hover:bg-gray-50/50">
                 <td className="px-4 py-3 font-medium text-gray-900">{new Date(log.date).toLocaleString()}</td>
                 <td className="px-4 py-3 text-gray-600">{log.agentName}</td>
@@ -617,7 +617,7 @@ function LogsTab() {
 
 function TestingTab() {
   const store = useAIStore();
-  const { fetchWithAuth, activeWorkspace } = useAuth();
+  const { fetchWithAuth } = useAuth();
   const [selectedAgentId, setSelectedAgentId] = useState<string>(store.agents[0]?.id || '');
   const [module, setModule] = useState('project');
   const [selectedProvider, setSelectedProvider] = useState<string>('Auto');
@@ -634,7 +634,7 @@ function TestingTab() {
 
      try {
        const { ContextBuilder } = await import('../../../ai/context/ContextBuilder');
-       const context = await ContextBuilder.buildContext(Number(activeWorkspace?.id || 0), module as any, 'test-entity-123');
+       const context = await ContextBuilder.buildContext(module as any, 'test-entity-123');
        
        const finalPrompt = input 
           ? `Input do usuário:\n${input}`
@@ -671,9 +671,9 @@ function TestingTab() {
        aiStore.logHistory({
           date: new Date().toISOString(),
           agentName: selectedAgent.name,
-          provider: responseData.provider || 'Unknown',
-          duration: responseData.duration || 0,
-          tokens: responseData.tokensUsed || { total: 0 },
+          provider: responseData.metrics?.provider || 'Groq',
+          duration: responseData.metrics?.duration || 0,
+          tokens: responseData.metrics?.tokens || { total: 0 },
        });
 
      } catch (e: any) {

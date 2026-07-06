@@ -212,37 +212,60 @@ async function retryGenerateContent(ai: any, params: any, retries = 3) {
   }
 }
 
-export async function generateProactiveInsights(workspaceId: number) {
-  const ai = await getAIInstance(workspaceId);
-  // Obter contexto resumido
-  const allProjects = await db.select({
-    id: projects.id,
-    name: projects.name,
-    status: projects.status,
-    dueDate: projects.dueDate,
-    priority: projects.priority
-  }).from(projects)
-    .where(eq(projects.workspaceId, workspaceId))
-    .limit(20);
-    
-  const projectIds = allProjects.map(p => p.id);
-  
-  let allTasksCount = 0;
-  if (projectIds.length > 0) {
-    const tasksData = await db.select({ id: tasks.id }).from(tasks).where(inArray(tasks.projectId, projectIds));
-    allTasksCount = tasksData.length;
+function handleAIError(error: any, contextMessage: string): { isPrepayDepleted: boolean; message: string } {
+  const errorStr = String(error?.message || error || "");
+  const isPrepayDepleted = errorStr.includes("RESOURCE_EXHAUSTED") || 
+                           errorStr.includes("prepayment credits") || 
+                           errorStr.includes("quota") || 
+                           errorStr.includes("depleted") ||
+                           (error?.status === 429);
+                           
+  if (isPrepayDepleted) {
+    console.warn(`[AI Warning] Gemini API Prepayment Credits Depleted or Quota Limit reached during "${contextMessage}". Please configure a valid API key in Workspace Settings.`);
+  } else {
+    console.error(`[AI Error] ${contextMessage}:`, error);
   }
+  
+  return {
+    isPrepayDepleted,
+    message: isPrepayDepleted 
+      ? "Créditos da API Gemini esgotados. Por favor, adicione sua própria Chave API do Gemini em Configurações > Inteligência Artificial para continuar usando esta função."
+      : "Ocorreu um erro inesperado ao processar os dados da IA."
+  };
+}
 
-  const allFinances = await db.select({
-    type: financeEntries.type,
-    amount: financeEntries.amount
-  }).from(financeEntries)
-    .where(eq(financeEntries.workspaceId, workspaceId));
-  
-  const totalReceita = allFinances.filter(f => f.type === 'RECEITA').reduce((acc, curr) => acc + Number(curr.amount), 0);
-  const totalDespesa = allFinances.filter(f => f.type === 'DESPESA').reduce((acc, curr) => acc + Number(curr.amount), 0);
-  
-  const prompt = `Analise os seguintes dados do usuário e gere um JSON com 3 insights proativos (oportunidades, riscos e recomendações).
+export async function generateProactiveInsights(workspaceId: number) {
+  try {
+    const ai = await getAIInstance(workspaceId);
+    // Obter contexto resumido
+    const allProjects = await db.select({
+      id: projects.id,
+      name: projects.name,
+      status: projects.status,
+      dueDate: projects.dueDate,
+      priority: projects.priority
+    }).from(projects)
+      .where(eq(projects.workspaceId, workspaceId))
+      .limit(20);
+      
+    const projectIds = allProjects.map(p => p.id);
+    
+    let allTasksCount = 0;
+    if (projectIds.length > 0) {
+      const tasksData = await db.select({ id: tasks.id }).from(tasks).where(inArray(tasks.projectId, projectIds));
+      allTasksCount = tasksData.length;
+    }
+
+    const allFinances = await db.select({
+      type: financeEntries.type,
+      amount: financeEntries.amount
+    }).from(financeEntries)
+      .where(eq(financeEntries.workspaceId, workspaceId));
+    
+    const totalReceita = allFinances.filter(f => f.type === 'RECEITA').reduce((acc, curr) => acc + Number(curr.amount), 0);
+    const totalDespesa = allFinances.filter(f => f.type === 'DESPESA').reduce((acc, curr) => acc + Number(curr.amount), 0);
+    
+    const prompt = `Analise os seguintes dados do usuário e gere um JSON com 3 insights proativos (oportunidades, riscos e recomendações).
 Retorne APENAS um JSON no formato:
 {
   "summary": "Resumo geral curto do estado da empresa",
@@ -258,7 +281,6 @@ DADOS:
 - Despesa total: R$ ${totalDespesa.toFixed(2)}
 `;
 
-  try {
     const response = await retryGenerateContent(ai, {
       model: 'gemini-3.1-flash-lite',
       contents: prompt,
@@ -268,53 +290,58 @@ DADOS:
     });
 
     return JSON.parse(response.text || '{}');
-  } catch (error) {
-    console.error("Error generating insights:", error);
+  } catch (error: any) {
+    const handled = handleAIError(error, "generateProactiveInsights");
     return {
-      summary: "Falha ao analisar métricas automáticas.",
-      opportunity: "Verifique os relatórios manualmente.",
-      risk: "Conexão com a base analítica interrompida.",
+      summary: "Análise de métricas automáticas indisponível.",
+      opportunity: handled.isPrepayDepleted 
+        ? "Configure sua Chave API do Gemini em Configurações > Inteligência Artificial para reativar os insights automáticos."
+        : "Verifique os relatórios manualmente.",
+      risk: handled.isPrepayDepleted 
+        ? "Os créditos da API padrão estão esgotados."
+        : "Conexão com a base analítica interrompida.",
       recommendation: "Tente recarregar a IA mais tarde."
     };
   }
 }
 
 export async function processAIChat(prompt: string, workspaceId: number, history: any[] = []) {
-  const ai = await getAIInstance(workspaceId);
+  try {
+    const ai = await getAIInstance(workspaceId);
 
-  // Coletar contexto otimizado
-  const allProjects = await db.select({
-    id: projects.id,
-    name: projects.name,
-    status: projects.status,
-    priority: projects.priority
-  }).from(projects).where(eq(projects.workspaceId, workspaceId)).limit(20);
-  
-  const projectIds = allProjects.map(p => p.id);
-  
-  let pendingTasksCount = 0;
-  if (projectIds.length > 0) {
-    const tasksData = await db.select({ id: tasks.id, status: tasks.status })
-      .from(tasks)
-      .where(and(inArray(tasks.projectId, projectIds), sql`${tasks.status} != 'Concluído'`));
-    pendingTasksCount = tasksData.length;
-  }
+    // Coletar contexto otimizado
+    const allProjects = await db.select({
+      id: projects.id,
+      name: projects.name,
+      status: projects.status,
+      priority: projects.priority
+    }).from(projects).where(eq(projects.workspaceId, workspaceId)).limit(20);
+    
+    const projectIds = allProjects.map(p => p.id);
+    
+    let pendingTasksCount = 0;
+    if (projectIds.length > 0) {
+      const tasksData = await db.select({ id: tasks.id, status: tasks.status })
+        .from(tasks)
+        .where(and(inArray(tasks.projectId, projectIds), sql`${tasks.status} != 'Concluído'`));
+      pendingTasksCount = tasksData.length;
+    }
 
-  const allFinances = await db.select({
-    type: financeEntries.type,
-    amount: financeEntries.amount
-  }).from(financeEntries).where(eq(financeEntries.workspaceId, workspaceId));
+    const allFinances = await db.select({
+      type: financeEntries.type,
+      amount: financeEntries.amount
+    }).from(financeEntries).where(eq(financeEntries.workspaceId, workspaceId));
 
-  const allMemories = await db.select().from(aiMemories)
-    .where(eq(aiMemories.workspaceId, workspaceId))
-    .orderBy(desc(aiMemories.importance))
-    .limit(10);
+    const allMemories = await db.select().from(aiMemories)
+      .where(eq(aiMemories.workspaceId, workspaceId))
+      .orderBy(desc(aiMemories.importance))
+      .limit(10);
 
-  const totalReceita = allFinances.filter(f => f.type === 'RECEITA').reduce((acc, curr) => acc + Number(curr.amount), 0);
-  const totalDespesa = allFinances.filter(f => f.type === 'DESPESA').reduce((acc, curr) => acc + Number(curr.amount), 0);
-  const lucro = totalReceita - totalDespesa;
+    const totalReceita = allFinances.filter(f => f.type === 'RECEITA').reduce((acc, curr) => acc + Number(curr.amount), 0);
+    const totalDespesa = allFinances.filter(f => f.type === 'DESPESA').reduce((acc, curr) => acc + Number(curr.amount), 0);
+    const lucro = totalReceita - totalDespesa;
 
-  const systemInstruction = `Você é o "Olimpo AI", um assistente executivo e consultor operacional nativo da plataforma. 
+    const systemInstruction = `Você é o "Olimpo AI", um assistente executivo e consultor operacional nativo da plataforma. 
 Você possui acesso completo à plataforma do usuário e age como um coadministrador inteligente.
 
 SUA PERSONALIDADE:
@@ -345,42 +372,41 @@ INSTRUÇÕES:
 - Você deve SEMPRE usar essas funções em vez de apenas dizer que vai fazer. AJA na plataforma!
 - Responda como "Olimpo AI". Resuma informações de forma clara, não cite todos os detalhes um-a-um. Use formatação limpa.`;
 
-  // Filter and map history, ensuring it starts with a 'user' role
-  const chatContents: any[] = [];
-  let lastRole: string | null = null;
+    // Filter and map history, ensuring it starts with a 'user' role
+    const chatContents: any[] = [];
+    let lastRole: string | null = null;
 
-  // Find the first user message to start the conversation
-  const firstUserIndex = history.findIndex(h => h.role === 'user');
-  const validHistory = firstUserIndex !== -1 ? history.slice(firstUserIndex) : [];
+    // Find the first user message to start the conversation
+    const firstUserIndex = history.findIndex(h => h.role === 'user');
+    const validHistory = firstUserIndex !== -1 ? history.slice(firstUserIndex) : [];
 
-  for (const h of validHistory) {
-    if (h.role !== 'system' && h.text && h.text.trim()) {
-      const mappedRole = h.role === 'assistant' ? 'model' : h.role;
-      if (mappedRole === 'model' || mappedRole === 'user') {
-        if (mappedRole !== lastRole) {
-          chatContents.push({
-            role: mappedRole,
-            parts: [{ text: h.text }]
-          });
-          lastRole = mappedRole;
-        } else if (chatContents.length > 0) {
-          chatContents[chatContents.length - 1].parts[0].text += "\n" + h.text;
+    for (const h of validHistory) {
+      if (h.role !== 'system' && h.text && h.text.trim()) {
+        const mappedRole = h.role === 'assistant' ? 'model' : h.role;
+        if (mappedRole === 'model' || mappedRole === 'user') {
+          if (mappedRole !== lastRole) {
+            chatContents.push({
+              role: mappedRole,
+              parts: [{ text: h.text }]
+            });
+            lastRole = mappedRole;
+          } else if (chatContents.length > 0) {
+            chatContents[chatContents.length - 1].parts[0].text += "\n" + h.text;
+          }
         }
       }
     }
-  }
 
-  // Append current prompt
-  if (lastRole === 'user' && chatContents.length > 0) {
-    chatContents[chatContents.length - 1].parts[0].text += "\n" + prompt;
-  } else {
-    chatContents.push({
-      role: 'user',
-      parts: [{ text: prompt }]
-    });
-  }
+    // Append current prompt
+    if (lastRole === 'user' && chatContents.length > 0) {
+      chatContents[chatContents.length - 1].parts[0].text += "\n" + prompt;
+    } else {
+      chatContents.push({
+        role: 'user',
+        parts: [{ text: prompt }]
+      });
+    }
 
-  try {
     const response = await retryGenerateContent(ai, {
       model: 'gemini-3.1-flash-lite',
       contents: chatContents,
@@ -496,9 +522,11 @@ INSTRUÇÕES:
     }
 
     return response.text;
-  } catch(e) {
-    console.error(e);
-    return "Desculpe, ocorreu um erro ao analisar os dados operacionais.";
+  } catch (e: any) {
+    const handled = handleAIError(e, "processAIChat");
+    return handled.isPrepayDepleted 
+      ? "Os créditos da API padrão do Gemini estão temporariamente esgotados no momento. Por favor, configure sua própria Chave API em Configurações > Inteligência Artificial para reativar o Olimpo AI."
+      : "Desculpe, ocorreu um erro ao analisar os dados operacionais.";
   }
 }
 
@@ -523,9 +551,11 @@ export async function generateEntityInsights(workspaceId: number, entityType: st
     });
 
     return response.text;
-  } catch (error) {
-    console.error("Error generating entity insights:", error);
-    return "Não foi possível carregar as recomendações da IA no momento. Certifique-se de que a chave de API do Gemini esteja configurada nas configurações de Inteligência Artificial.";
+  } catch (error: any) {
+    const handled = handleAIError(error, "generateEntityInsights");
+    return handled.isPrepayDepleted
+      ? "Créditos da API Gemini esgotados. Por favor, adicione sua própria Chave API em Configurações > Inteligência Artificial para gerar recomendações automáticas por IA."
+      : "Não foi possível carregar as recomendações da IA no momento. Certifique-se de que a chave de API do Gemini esteja configurada nas configurações de Inteligência Artificial.";
   }
 }
 

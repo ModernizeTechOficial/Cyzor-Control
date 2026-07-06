@@ -2,7 +2,7 @@ import { AIAgent, ChatRequest, ChatResponse } from '../types';
 import { GroqProvider } from '../providers/GroqProvider';
 import { db } from '../../db';
 import { aiProviders, aiHistory } from '../../db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 export class AIService {
   private static async getProvider(workspaceId: string, tenantId?: string) {
@@ -107,52 +107,10 @@ export class AIService {
     };
 
     try {
-      const { ContextBuilder } = await import('../context/ContextBuilder');
-      const wsId = parseInt(request.workspaceId);
-      
-      let enrichedContext = request.context;
-      
-      // Auto-build workspace context
-      if (!isNaN(wsId)) {
-         const builtContext = await ContextBuilder.buildContext(wsId, request.context?.module || 'global');
-         const formattedBuiltContext = ContextBuilder.formatContextForPrompt(builtContext);
-         
-         // Fetch recent chat history for memory
-         let historyContext = "";
-         try {
-            const recentHistory = await db.select({ prompt: aiHistory.prompt, response: aiHistory.response })
-              .from(aiHistory)
-              .where(
-                 and(
-                   eq(aiHistory.workspaceId, wsId),
-                   eq(aiHistory.userUid, request.userId),
-                   eq(aiHistory.contextType, 'chat')
-                 )
-              )
-              .orderBy(desc(aiHistory.id)) // wait, id doesn't guarantee order if no createdAt. But wait, schema has id and createdAt. Let's assume order by id desc is fine.
-              .limit(5);
-              
-            if (recentHistory.length > 0) {
-               historyContext = `\n\n[MEMÓRIA DA SESSÃO RECENTE]\nHistórico das últimas interações com este usuário:\n`;
-               recentHistory.reverse().forEach(h => {
-                  historyContext += `Usuário: ${h.prompt}\nIA: ${h.response}\n\n`;
-               });
-               historyContext += `[/MEMÓRIA DA SESSÃO RECENTE]\n`;
-            }
-         } catch (e) {
-            console.warn('[AIService] Error fetching chat history for memory:', e);
-         }
-
-         enrichedContext = {
-            ...request.context,
-            _rawString: `${formattedBuiltContext}${historyContext}`
-         };
-      }
-
       const provider = await this.getProvider(request.workspaceId, request.tenantId);
       const response = await provider.generate({
         message: request.message,
-        context: enrichedContext,
+        context: request.context,
         userId: request.userId,
         workspaceId: request.workspaceId,
         agentId: request.agentId,
@@ -206,7 +164,7 @@ export class AIService {
        };
     }
 
-    const context = await ContextBuilder.buildContext(parseInt(workspaceId, 10) || 0, action.contextModule, entityId);
+    const context = await ContextBuilder.buildContext(action.contextModule, entityId);
     const formattedContext = ContextBuilder.formatContextForPrompt(context);
 
     const finalPrompt = additionalInput 

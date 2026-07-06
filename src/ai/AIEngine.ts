@@ -86,7 +86,7 @@ export class AIEngine {
        agent = Object.values(Agents).find(a => a.id === action.agentId) || Agents.WorkspaceAssistant;
     }
 
-    const context = await ContextBuilder.buildContext(parseInt(workspaceId, 10) || 0, action.contextModule, entityId);
+    const context = await ContextBuilder.buildContext(action.contextModule, entityId);
     const formattedContext = ContextBuilder.formatContextForPrompt(context);
 
     const finalPrompt = additionalInput 

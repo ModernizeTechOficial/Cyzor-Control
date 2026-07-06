@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Mic, Paperclip, Globe, Send, ArrowRight, User, Bot, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import Markdown from 'react-markdown';
 
 interface Props {
   insights?: any[];
@@ -136,7 +137,13 @@ export default function HomeIntelligence({ insights, onClose }: Props) {
                   </div>
                 )}
                 <div className={`max-w-[80%] rounded-[20px] p-4 text-xs leading-relaxed ${msg.role === 'user' ? 'bg-[#111111] text-white rounded-tr-none' : 'bg-slate-50 text-[#334155] rounded-tl-none border border-[#0F172A05]'}`}>
-                  {msg.content}
+                  {msg.role === 'user' ? (
+                    msg.content
+                  ) : (
+                    <div className="markdown-body text-left">
+                      <Markdown>{msg.content}</Markdown>
+                    </div>
+                  )}
                 </div>
                 {msg.role === 'user' && (
                   <div className="w-7 h-7 rounded-full bg-[#111111] flex items-center justify-center text-white flex-shrink-0 mt-0.5">
