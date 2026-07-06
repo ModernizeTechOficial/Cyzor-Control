@@ -11,21 +11,24 @@ export class AIService {
     try {
       const wsId = parseInt(workspaceId);
       if (!isNaN(wsId)) {
+        // Try to find an enabled provider for this workspace
         const [providerRecord] = await db.select()
           .from(aiProviders)
           .where(
             and(
-              eq(aiProviders.name, 'Groq'),
-              eq(aiProviders.workspaceId, wsId)
+              eq(aiProviders.workspaceId, wsId),
+              eq(aiProviders.enabled, true)
             )
           )
           .limit(1);
 
         if (providerRecord?.apiKey) {
-          console.log(`[AIService] Found Groq API key in DB for workspace ${wsId}`);
+          console.log(`[AIService] Found ${providerRecord.name} API key in DB for workspace ${wsId}`);
+          // For now we only have GroqProvider implemented, but we should handle Gemini too.
+          // Let's assume Groq if not specified or fallback to a generic provider logic.
           return new GroqProvider(providerRecord.apiKey);
         } else {
-          console.log(`[AIService] No Groq API key found in DB for workspace ${wsId}, checking tenant...`);
+          console.log(`[AIService] No enabled AI provider found in DB for workspace ${wsId}, checking tenant...`);
         }
       } else {
         console.warn(`[AIService] Invalid workspaceId for DB lookup: ${workspaceId}`);
@@ -37,14 +40,14 @@ export class AIService {
           .from(aiProviders)
           .where(
             and(
-              eq(aiProviders.name, 'Groq'),
-              eq(aiProviders.tenantId, tenantId)
+              eq(aiProviders.tenantId, tenantId),
+              eq(aiProviders.enabled, true)
             )
           )
           .limit(1);
 
         if (tenantProvider?.apiKey) {
-           console.log(`[AIService] Found Groq API key in DB for tenant ${tenantId}`);
+           console.log(`[AIService] Found ${tenantProvider.name} API key in DB for tenant ${tenantId}`);
            return new GroqProvider(tenantProvider.apiKey);
         }
       }

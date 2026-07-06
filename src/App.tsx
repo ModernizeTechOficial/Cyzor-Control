@@ -164,7 +164,7 @@ export default function App() {
             {currentView === 'ideias' && <IdeiasView />}
             {currentView === 'financeiro' && <FinanceiroView />}
             {currentView === 'documentacao' && <DocumentacaoView />}
-            {currentView === 'ia' && <IAView />}
+            {currentView === 'ia' && <IAView setCurrentView={setCurrentView} />}
             {currentView === 'agenda' && <AgendaPage />}
             {currentView === 'keep' && <GoogleKeepView />}
             {currentView === 'flow-builder' && <VisualSystemsStudioView />}

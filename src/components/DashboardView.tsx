@@ -12,6 +12,8 @@ import HomeAnalytics from './home/HomeAnalytics';
 import OnboardingWizard from './OnboardingWizard';
 import StrategicPriorityCard from './home/StrategicPriorityCard';
 import BusinessInsightCard from './home/BusinessInsightCard';
+import { Sparkles, ArrowRight } from 'lucide-react';
+import { motion } from 'motion/react';
 
 export default function DashboardView({ setCurrentView }: { setCurrentView: (view: View) => void }) {
   const { activeWorkspace, fetchWithAuth } = useAuth();
@@ -234,6 +236,40 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
             </div>
             <div className="flex-1">
               <BusinessInsightCard setCurrentView={setCurrentView} currentStage={currentStage} />
+            </div>
+            {/* New: Global AI Intelligence Access Widget for everyone */}
+            <div className="flex-1">
+               <motion.div 
+                whileHover={{ y: -2 }}
+                onClick={() => setCurrentView('ia')}
+                className="bg-white border border-[#0F172A0F] rounded-[24px] p-5 shadow-sm hover:shadow-md transition-all cursor-pointer group h-full flex flex-col justify-between"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                      <Sparkles size={20} className="animate-pulse" />
+                    </div>
+                    <div className="flex flex-col">
+                      <h3 className="text-sm font-black text-[#111111]">Olimpo AI</h3>
+                      <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">SaaS Intelligence</span>
+                    </div>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-[#111111] transition-colors">
+                    <ArrowRight size={16} />
+                  </div>
+                </div>
+                <p className="text-[11px] text-[#64748B] leading-relaxed mb-4">
+                  Sua inteligência artificial está ativa e monitorando todos os dados do seu workspace em tempo real.
+                </p>
+                <div className="flex items-center gap-2">
+                   <div className="flex -space-x-2">
+                      <div className="w-6 h-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[8px] font-bold">DB</div>
+                      <div className="w-6 h-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[8px] font-bold">AI</div>
+                      <div className="w-6 h-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[8px] font-bold">360</div>
+                   </div>
+                   <span className="text-[10px] font-bold text-[#111111]">Análise 360º Ativa</span>
+                </div>
+              </motion.div>
             </div>
         </div>
       </div>
