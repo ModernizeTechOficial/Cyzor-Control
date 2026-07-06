@@ -617,6 +617,7 @@ function LogsTab() {
 
 function TestingTab() {
   const store = useAIStore();
+  const { fetchWithAuth } = useAuth();
   const [selectedAgentId, setSelectedAgentId] = useState<string>(store.agents[0]?.id || '');
   const [module, setModule] = useState('project');
   const [selectedProvider, setSelectedProvider] = useState<string>('Auto');
@@ -632,34 +633,38 @@ function TestingTab() {
      setOutput(null);
 
      try {
-       // Using the router directly to test just the agent + prompt + context without specific Action definition
-       // We'll mock a simple context for the playground
        const { ContextBuilder } = await import('../../../ai/context/ContextBuilder');
        const context = await ContextBuilder.buildContext(module as any, 'test-entity-123');
-       const formattedContext = ContextBuilder.formatContextForPrompt(context);
        
-       const { AIRouterService } = await import('../../../ai/services/AIRouterService');
-       const router = new AIRouterService();
-
        const finalPrompt = input 
           ? `Input do usuário:\n${input}`
           : 'Teste genérico do agente.';
 
-       const response = await router.route({
-          message: finalPrompt,
-          context: { _rawString: formattedContext, ...context.data },
-          userId: 'test-user',
-          workspaceId: 'test-ws',
-          agentId: selectedAgent.id
-       }, selectedAgent, selectedProvider !== 'Auto' ? selectedProvider : undefined);
+       const response = await fetchWithAuth('/api/ai/chat', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+           message: finalPrompt,
+           context,
+           agentId: selectedAgent.id,
+           overrideAgent: selectedAgent
+         })
+       });
+
+       if (!response.ok) {
+         const errorText = await response.text();
+         throw new Error(`Erro na API: ${errorText}`);
+       }
+
+       const responseData = await response.json();
 
        setOutput({
-          rawString: formattedContext,
-          result: response.message,
+          rawString: ContextBuilder.formatContextForPrompt(context),
+          result: responseData.text,
           metrics: {
-            duration: response.duration,
-            tokens: response.tokensUsed,
-            provider: response.provider
+            duration: responseData.duration || 0,
+            tokens: responseData.tokensUsed || { total: responseData.tokensUsed || 0 },
+            provider: responseData.provider || 'Groq'
           }
        });
 

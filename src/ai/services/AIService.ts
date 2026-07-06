@@ -1,15 +1,13 @@
 import { AIAgent, ChatRequest, ChatResponse } from '../types';
 import { GroqProvider } from '../providers/GroqProvider';
-import { aiStore } from '../store';
-import { getDb } from '../../lib/firebase-admin';
 import { db } from '../../db';
-import { aiProviders } from '../../db/schema';
+import { aiProviders, aiHistory } from '../../db/schema';
 import { eq, and } from 'drizzle-orm';
 
 export class AIService {
   private static async getProvider(workspaceId: string) {
     console.log(`[AIService] Getting provider for workspaceId: ${workspaceId}`);
-    // 1. Try to fetch from database (PostgreSQL)
+    // 1. Fetch from database (PostgreSQL)
     try {
       const wsId = parseInt(workspaceId);
       if (!isNaN(wsId)) {
@@ -36,47 +34,32 @@ export class AIService {
       console.warn('[AIService] Failed to fetch provider from DB:', e);
     }
 
-    // 2. Fallback to Environment Variable
-    if (process.env.GROQ_API_KEY) {
-      return new GroqProvider(process.env.GROQ_API_KEY);
-    }
-
-    // 3. Fallback to Client-side Store (local fallback if running in dev or mock context)
-    const state = aiStore.getState();
-    const groqProviderConfig = state.providers.find(p => p.name === 'Groq');
-    const key = groqProviderConfig?.apiKey;
-    
-    return new GroqProvider(key || '');
+    // Retorna Groq sem chave para gerar o erro adequado para o front-end pedindo configuração
+    return new GroqProvider('');
   }
 
   private static async checkAndDeductCredits(workspaceId: string, amount: number) {
-    const db = getDb();
-    const creditRef = db.collection('ai_credits').doc(workspaceId);
-    
-    // In a real app, use a transaction for atomicity.
-    const doc = await creditRef.get();
-    const balance = doc.exists ? (doc.data()?.balance || 0) : 0;
-    
-    if (balance < amount) {
-        throw new Error('Créditos insuficientes.');
-    }
-    
-    await creditRef.set({
-        balance: balance - amount,
-        lastUpdated: new Date().toISOString()
-    }, { merge: true });
+    // TODO: Migrate credit system to PostgreSQL
+    // Firebase code removed to fix PERMISSION_DENIED issues in production
+    return Promise.resolve();
   }
 
-  private static async logInteraction(workspaceId: string, userId: string, agentId: string, tokens: number, action: string) {
-    const db = getDb();
-    await db.collection('ai_logs').add({
-        workspaceId,
-        userId,
-        agentId,
-        tokensConsumed: tokens,
-        action,
-        timestamp: new Date().toISOString()
-    });
+  private static async logInteraction(workspaceId: string, userId: string, agentId: string, tokens: number, action: string, prompt: string, response: string, tenantId?: string) {
+    try {
+      const wsId = parseInt(workspaceId);
+      if (isNaN(wsId)) return;
+      
+      await db.insert(aiHistory).values({
+        workspaceId: wsId,
+        userUid: userId,
+        prompt: prompt.substring(0, 5000), // Ensure we don't exceed any reasonable limits if not set
+        response: response.substring(0, 5000),
+        contextType: action,
+        tenantId: tenantId || undefined
+      });
+    } catch (e) {
+       console.warn('[AIService] Failed to log interaction to DB:', e);
+    }
   }
 
   static async execute(request: {
@@ -85,6 +68,8 @@ export class AIService {
     userId: string;
     message: string;
     context: any;
+    tenantId?: string;
+    overrideAgent?: AIAgent;
   }): Promise<{ message: string; tokensUsed: number }> {
     const COST = 10; // Simple credit model: 10 credits per request
     
@@ -94,11 +79,11 @@ export class AIService {
       console.warn('[AIService] Failed to deduct credits, proceeding anyway:', e);
     }
 
-    const agent: AIAgent = {
+    let agent: AIAgent = request.overrideAgent || {
       id: request.agentId,
       name: 'Workspace Assistant',
       description: 'Workspace Assistant',
-      systemPrompt: 'You are a helpful assistant.',
+      systemPrompt: 'Você é um assistente prestativo.',
       modelId: 'llama-3.3-70b-versatile',
       temperature: 0.7
     };
@@ -115,7 +100,7 @@ export class AIService {
 
       const tokens = response.tokensUsed?.total || 0;
       try {
-        await this.logInteraction(request.workspaceId, request.userId, request.agentId, tokens, 'chat');
+        await this.logInteraction(request.workspaceId, request.userId, request.agentId, tokens, 'chat', request.message, response.message, request.tenantId);
       } catch (e) {
         console.warn('[AIService] Failed to log interaction:', e);
       }
@@ -136,8 +121,10 @@ export class AIService {
     additionalInput?: string;
     userId: string;
     workspaceId: string;
+    tenantId?: string;
+    overrideAgent?: AIAgent;
   }): Promise<string> {
-    const { actionId, entityId, additionalInput, userId, workspaceId } = request;
+    const { actionId, entityId, additionalInput, userId, workspaceId, tenantId, overrideAgent } = request;
     const { AIActions } = await import('../AIEngine');
     const { Agents } = await import('../agents');
     const { ContextBuilder } = await import('../context/ContextBuilder');
@@ -147,13 +134,13 @@ export class AIService {
       throw new Error(`Ação de IA não encontrada: ${actionId}`);
     }
 
-    let agent = Object.values(Agents).find(a => a.id === action.agentId);
+    let agent = overrideAgent || Object.values(Agents).find(a => a.id === action.agentId);
     if (!agent) {
        agent = {
          id: action.agentId,
          name: 'Agent',
          description: 'AI Agent',
-         systemPrompt: 'You are a helpful assistant.',
+         systemPrompt: 'Você é um assistente prestativo.',
          modelId: 'llama-3.3-70b-versatile',
          temperature: 0.7
        };
@@ -177,7 +164,7 @@ export class AIService {
 
     const tokens = response.tokensUsed?.total || 0;
     try {
-      await this.logInteraction(workspaceId, userId, agent.id, tokens, 'action');
+      await this.logInteraction(workspaceId, userId, agent.id, tokens, actionId, finalPrompt, response.message, tenantId);
     } catch (e) {
       console.warn('[AIService] Failed to log action interaction:', e);
     }

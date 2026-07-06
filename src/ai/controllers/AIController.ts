@@ -5,7 +5,7 @@ import { AIService } from '../services/AIService';
 export class AIController {
   static async chat(req: AuthRequest, res: Response) {
     try {
-      const { message, prompt, context, agentId } = req.body;
+      const { message, prompt, context, agentId, overrideAgent } = req.body;
       const actualMessage = message || prompt;
       
       const response = await AIService.execute({
@@ -13,7 +13,9 @@ export class AIController {
         context,
         userId: req.user?.uid || 'anonymous', 
         workspaceId: req.workspaceId?.toString() || 'default',
+        tenantId: req.tenantId || 'default',
         agentId: agentId || 'workspace-assistant',
+        overrideAgent
       });
       
       res.json({
@@ -28,13 +30,15 @@ export class AIController {
 
   static async executeAction(req: AuthRequest, res: Response) {
     try {
-      const { actionId, entityId, additionalInput } = req.body;
+      const { actionId, entityId, additionalInput, overrideAgent } = req.body;
       const response = await AIService.executeAction({
         actionId,
         entityId,
         additionalInput,
         userId: req.user?.uid || 'anonymous',
         workspaceId: req.workspaceId?.toString() || 'default',
+        tenantId: req.tenantId || 'default',
+        overrideAgent
       });
       res.json({ text: response, message: response });
     } catch (error) {

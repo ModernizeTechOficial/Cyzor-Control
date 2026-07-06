@@ -24,7 +24,7 @@ export class GeminiProvider implements AIProvider {
         model: modelToUse,
         contents: request.message,
         config: {
-          systemInstruction: agent.systemPrompt,
+          systemInstruction: `${agent.systemPrompt || 'Você é um assistente prestativo.'}\n\nIMPORTANTE: Responda SEMPRE no mesmo idioma em que o usuário está falando, priorizando o Português do Brasil (PT-BR) a menos que solicitado o contrário.\n\nContexto fornecido:\n${request.context?._rawString || JSON.stringify(request.context || {})}`,
           temperature: agent.temperature
         }
       });

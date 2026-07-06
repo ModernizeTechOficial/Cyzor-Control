@@ -21,7 +21,7 @@ export class GroqProvider implements AIProvider {
     // Check if key is present
     if (!this.apiKey || this.apiKey === 'mock_groq_key' || this.apiKey.startsWith('mock_')) {
       return {
-        message: 'Configuração da API Groq pendente. Por favor, configure sua GROQ_API_KEY no painel de segredos.',
+        message: 'Configuração da API Groq pendente. Por favor, adicione sua chave de API nas configurações de IA no painel Admin.',
         provider: this.name,
         model: actualModel,
         duration: 50,
@@ -39,7 +39,10 @@ export class GroqProvider implements AIProvider {
         body: JSON.stringify({
           model: actualModel,
           messages: [
-            { role: 'system', content: agent.systemPrompt || 'You are a helpful assistant.' },
+            { 
+              role: 'system', 
+              content: `${agent.systemPrompt || 'Você é um assistente prestativo.'}\n\nIMPORTANTE: Responda SEMPRE no mesmo idioma em que o usuário está falando, priorizando o Português do Brasil (PT-BR) a menos que solicitado o contrário.\n\nContexto fornecido:\n${request.context?._rawString || JSON.stringify(request.context || {})}` 
+            },
             { role: 'user', content: request.message }
           ],
           temperature: agent.temperature || 0.7,
