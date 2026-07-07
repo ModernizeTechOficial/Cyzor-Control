@@ -13,7 +13,6 @@ export default function GlobalVoiceActivator() {
   const [isSupported, setIsSupported] = useState(true);
   
   const isWakeWordMode = useRef(true);
-  const isTransitioning = useRef(false);
   const spokenTextRef = useRef('');
   const recognitionRef = useRef<any>(null);
   const silenceTimerRef = useRef<any>(null);
@@ -44,33 +43,52 @@ export default function GlobalVoiceActivator() {
       }
       
       const currentTranscript = (finalTranscript + interimTranscript).toLowerCase();
+      
+      let remainder = currentTranscript;
+      let idxCyzor = currentTranscript.lastIndexOf('cyzor');
+      let idxOlimpo = currentTranscript.lastIndexOf('olimpo');
+      let lastIdx = Math.max(idxCyzor, idxOlimpo);
+      
+      if (lastIdx !== -1) {
+         let wakeWord = lastIdx === idxCyzor ? 'cyzor' : 'olimpo';
+         remainder = currentTranscript.substring(lastIdx + wakeWord.length).trim();
+      }
 
       if (isWakeWordMode.current) {
-        if (currentTranscript.includes('cyzor') || currentTranscript.includes('olimpo')) {
+        if (lastIdx !== -1) {
           isWakeWordMode.current = false;
-          isTransitioning.current = true;
           setIsActive(true);
-          setSpokenText('');
-          spokenTextRef.current = '';
           
-          // Stop to clear the buffer and start listening to command
-          recognition.stop();
+          setSpokenText(remainder);
+          spokenTextRef.current = remainder;
+          
+          if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+          silenceTimerRef.current = setTimeout(() => {
+            if (spokenTextRef.current.trim()) {
+              recognition.stop();
+            } else {
+               isWakeWordMode.current = true;
+               setIsActive(false);
+               recognition.stop(); // to clear buffer
+            }
+          }, 3500); // 3.5s to start speaking command
         }
       } else {
-         setSpokenText(currentTranscript);
-         spokenTextRef.current = currentTranscript;
+         setSpokenText(remainder);
+         spokenTextRef.current = remainder;
          
-         // Silence detection
-         if (silenceTimerRef.current) {
-           clearTimeout(silenceTimerRef.current);
-         }
+         // Silence detection for end of command
+         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
          
          silenceTimerRef.current = setTimeout(() => {
-           // User stopped speaking for 2 seconds
            if (spokenTextRef.current.trim()) {
-             recognition.stop(); // This will trigger onend and handleCommand
+             recognition.stop(); 
+           } else {
+             isWakeWordMode.current = true;
+             setIsActive(false);
+             recognition.stop();
            }
-         }, 2500);
+         }, 2500); // 2.5s of silence means command is done
       }
     };
 
@@ -84,22 +102,23 @@ export default function GlobalVoiceActivator() {
     };
 
     recognition.onend = () => {
-      if (isTransitioning.current) {
-        // We are just transitioning from wake word to command mode
-        isTransitioning.current = false;
-      } else if (!isWakeWordMode.current) {
-        // We were recording a command and it ended (silence detected or stopped)
+      if (!isWakeWordMode.current) {
+        // We were recording a command and it ended
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-        handleCommand(spokenTextRef.current);
+        if (spokenTextRef.current.trim()) {
+           handleCommand(spokenTextRef.current);
+        }
         isWakeWordMode.current = true;
         setIsActive(false);
       }
       
       // Auto restart to keep listening for wake word or next command
       if (!hasPermissionError) {
-        try {
-          recognition.start();
-        } catch (e) {}
+        setTimeout(() => {
+          try {
+            recognition.start();
+          } catch (e) {}
+        }, 100);
       }
     };
 

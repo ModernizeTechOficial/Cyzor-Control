@@ -8,9 +8,11 @@ export default function GlobalVoiceActivator() {
   const [isActive, setIsActive] = useState(false);
   const [spokenText, setSpokenText] = useState('');
   const [isSupported, setIsSupported] = useState(true);
+  
   const isWakeWordMode = useRef(true);
   const spokenTextRef = useRef('');
   const recognitionRef = useRef<any>(null);
+  const silenceTimerRef = useRef<any>(null);
   const { activeWorkspace, dbUser } = useAuth();
 
   useEffect(() => {
@@ -38,20 +40,52 @@ export default function GlobalVoiceActivator() {
       }
       
       const currentTranscript = (finalTranscript + interimTranscript).toLowerCase();
+      
+      let remainder = currentTranscript;
+      let idxCyzor = currentTranscript.lastIndexOf('cyzor');
+      let idxOlimpo = currentTranscript.lastIndexOf('olimpo');
+      let lastIdx = Math.max(idxCyzor, idxOlimpo);
+      
+      if (lastIdx !== -1) {
+         let wakeWord = lastIdx === idxCyzor ? 'cyzor' : 'olimpo';
+         remainder = currentTranscript.substring(lastIdx + wakeWord.length).trim();
+      }
 
       if (isWakeWordMode.current) {
-        if (currentTranscript.includes('cyzor') || currentTranscript.includes('olimpo')) {
+        if (lastIdx !== -1) {
           isWakeWordMode.current = false;
           setIsActive(true);
-          setSpokenText('');
-          spokenTextRef.current = '';
           
-          // Stop and restart to clear the buffer and start listening to command
-          recognition.stop();
+          setSpokenText(remainder);
+          spokenTextRef.current = remainder;
+          
+          if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+          silenceTimerRef.current = setTimeout(() => {
+            if (spokenTextRef.current.trim()) {
+              recognition.stop();
+            } else {
+               isWakeWordMode.current = true;
+               setIsActive(false);
+               recognition.stop(); // to clear buffer
+            }
+          }, 3500); // 3.5s to start speaking command
         }
       } else {
-         setSpokenText(currentTranscript);
-         spokenTextRef.current = currentTranscript;
+         setSpokenText(remainder);
+         spokenTextRef.current = remainder;
+         
+         // Silence detection for end of command
+         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+         
+         silenceTimerRef.current = setTimeout(() => {
+           if (spokenTextRef.current.trim()) {
+             recognition.stop(); 
+           } else {
+             isWakeWordMode.current = true;
+             setIsActive(false);
+             recognition.stop();
+           }
+         }, 2500); // 2.5s of silence means command is done
       }
     };
 
@@ -66,17 +100,22 @@ export default function GlobalVoiceActivator() {
 
     recognition.onend = () => {
       if (!isWakeWordMode.current) {
-        // We were recording a command and it ended (silence detected or stopped)
-        handleCommand(spokenTextRef.current);
+        // We were recording a command and it ended
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+        if (spokenTextRef.current.trim()) {
+           handleCommand(spokenTextRef.current);
+        }
         isWakeWordMode.current = true;
         setIsActive(false);
       }
       
       // Auto restart to keep listening for wake word or next command
       if (!hasPermissionError) {
-        try {
-          recognition.start();
-        } catch (e) {}
+        setTimeout(() => {
+          try {
+            recognition.start();
+          } catch (e) {}
+        }, 100);
       }
     };
 
@@ -87,6 +126,7 @@ export default function GlobalVoiceActivator() {
     } catch (e) {}
 
     return () => {
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       if (recognitionRef.current) {
         recognitionRef.current.onend = null;
         recognitionRef.current.stop();
@@ -96,7 +136,7 @@ export default function GlobalVoiceActivator() {
 
   const handleCommand = async (text: string) => {
     if (!text.trim()) return;
-    showSuccess(`Processando comando de voz: "${text}"`);
+    showSuccess(`Comando reconhecido...`);
     
     // Dispara evento para abrir o chat se estiver fechado
     window.dispatchEvent(new CustomEvent('open-cyzor-chat'));
@@ -133,7 +173,7 @@ export default function GlobalVoiceActivator() {
             
             <div className="flex flex-col items-center gap-3 max-w-2xl text-center px-6">
               <h2 className="text-3xl sm:text-5xl font-display font-black text-white tracking-tight">Olimpo está ouvindo...</h2>
-              <p className="text-xl sm:text-2xl text-blue-200 font-medium h-12 mt-4 italic">
+              <p className="text-xl sm:text-2xl text-blue-200 font-medium min-h-12 mt-4 italic">
                 {spokenText ? `"${spokenText}"` : "Diga o que você precisa..."}
               </p>
             </div>
@@ -142,6 +182,7 @@ export default function GlobalVoiceActivator() {
               onClick={() => {
                 isWakeWordMode.current = true;
                 setIsActive(false);
+                if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
                 if (recognitionRef.current) recognitionRef.current.stop();
               }}
               className="mt-8 px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-bold tracking-widest uppercase transition-colors"
