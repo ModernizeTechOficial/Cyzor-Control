@@ -114,8 +114,12 @@ export default function ProductTour({ onComplete, onSkip, forceStart = false }: 
 
   const saveTourStatus = async () => {
     setTourCompleted(true);
+    localStorage.setItem('tourCompleted', 'true');
     try {
-      await fetchWithAuth('/api/user/complete-tour', { method: 'POST' });
+      const response = await fetchWithAuth('/api/user/complete-tour', { method: 'POST' });
+      if (!response.ok) {
+        console.error("[ProductTour] Failed to save tour status, status:", response.status);
+      }
     } catch (e) {
       console.error("Failed to save tour status:", e);
     }

@@ -56,7 +56,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [workspaces, setWorkspaces] = useState<any[]>([]);
   const [activeWorkspace, setActiveWorkspace] = useState<any>(null);
   const [isSwitchingWorkspace, setIsSwitchingWorkspace] = useState(false);
-  const [tourCompleted, setTourCompleted] = useState<boolean>(true);
+  const [tourCompleted, setTourCompleted] = useState<boolean>(() => {
+    return localStorage.getItem('tourCompleted') === 'true';
+  });
   const [isCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen] = useState(false);
   const [globalBranding, setGlobalBranding] = useState<any>(null);
   
@@ -126,6 +128,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (userRes.ok) {
           const udata = await userRes.json();
           setTourCompleted(udata.tourCompleted || false);
+          if (udata.tourCompleted) {
+            localStorage.setItem('tourCompleted', 'true');
+          }
+        } else {
+          console.error("[AuthContext] Failed to load user profile from DB, status:", userRes.status);
         }
       }
       
