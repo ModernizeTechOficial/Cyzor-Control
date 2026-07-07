@@ -35,6 +35,8 @@ import { CreateWorkspaceModal } from './components/CreateWorkspaceModal';
 import { CommandPalette } from './components/common/CommandPalette';
 import ContextBanner from './components/layout/ContextBanner';
 
+import GlobalVoiceActivator from './components/GlobalVoiceActivator';
+
 export default function App() {
   const { user, dbUser, loading, activeWorkspace, isSwitchingWorkspace, isCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen } = useAuth();
   const [currentView, setCurrentView] = useState<View | 'admin'>('landing');
@@ -75,11 +77,16 @@ export default function App() {
   useEffect(() => {
     const handleRestartTour = () => setRestartTour(prev => prev + 1);
     const handleToggleChat = () => setIsChatOpen(prev => !prev);
+    const handleOpenChat = () => setIsChatOpen(true);
+
     window.addEventListener('restart-tour', handleRestartTour);
     window.addEventListener('toggle-cyzor-chat', handleToggleChat);
+    window.addEventListener('open-cyzor-chat', handleOpenChat);
+
     return () => {
       window.removeEventListener('restart-tour', handleRestartTour);
       window.removeEventListener('toggle-cyzor-chat', handleToggleChat);
+      window.removeEventListener('open-cyzor-chat', handleOpenChat);
     };
   }, []);
 
@@ -174,6 +181,8 @@ export default function App() {
         </AnimatePresence>
       </div>
       <BottomBar currentView={currentView} setCurrentView={setCurrentView} />
+      
+      {user && <GlobalVoiceActivator />}
 
       {/* Floating Copilot Widget */}
       <div className="fixed bottom-24 lg:bottom-8 right-6 lg:right-8 z-50 flex flex-col items-end gap-4 pointer-events-none">

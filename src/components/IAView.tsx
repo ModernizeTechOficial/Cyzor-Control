@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
-import { BotMessageSquare, Send, Sparkles, AlertTriangle, TrendingUp, Compass, Clock, Database, CheckCircle2, RefreshCw } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { BotMessageSquare, Send, Sparkles, AlertTriangle, TrendingUp, Compass, Clock, Database, CheckCircle2, RefreshCw, Mic, Paperclip, Globe } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
 import Markdown from 'react-markdown';
 import StandardHeader from './layout/StandardHeader';
 import { motion } from 'motion/react';
 import { View } from '../types';
+import { showSuccess, showError } from '../lib/alerts';
 
 const SUGGESTIONS = [
   "Qual projeto devo priorizar?",
@@ -23,9 +24,93 @@ export default function IAView({ setCurrentView }: { setCurrentView: (view: View
   const [loadingInsights, setLoadingInsights] = useState(true);
   const [memoryStats, setMemoryStats] = useState<any>(null);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [isRecording, setIsRecording] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { fetchWithAuth, activeWorkspace, dbUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'chat' | 'insights' | 'usage'>('chat');
+
+  const handleMicClick = () => {
+    if (isRecording) {
+      setIsRecording(false);
+      showSuccess('Gravação finalizada.');
+      return;
+    }
+
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      showError('Seu navegador não suporta reconhecimento de voz.');
+      return;
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'pt-BR';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      setIsRecording(true);
+      showSuccess('Ouvindo... Fale agora.');
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setQuery(prev => prev + (prev ? ' ' : '') + transcript);
+      setIsRecording(false);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error('Speech recognition error', event.error);
+      setIsRecording(false);
+      if (event.error === 'not-allowed') {
+        showError('Permissão de microfone negada. Autorize o uso do microfone no navegador.');
+      } else if (event.error !== 'no-speech') {
+        showError('Erro ao gravar áudio. Tente novamente.');
+      }
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+    };
+
+    try {
+      recognition.start();
+    } catch (e) {
+      setIsRecording(false);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type.startsWith('text/') || file.name.endsWith('.md') || file.name.endsWith('.csv')) {
+        try {
+          const text = await file.text();
+          // Truncate if too long to avoid token limits
+          const truncated = text.substring(0, 3000);
+          setQuery(prev => prev + `\n[Conteúdo do arquivo ${file.name}]:\n${truncated}\n`);
+          showSuccess(`O arquivo ${file.name} foi lido e adicionado ao contexto.`);
+        } catch (err) {
+          showError('Falha ao ler o arquivo.');
+        }
+      } else {
+         setQuery(prev => prev + ` [Arquivo anexado: ${file.name}] `);
+         showSuccess(`O arquivo ${file.name} foi anexado (apenas nome). Para ler o conteúdo, use arquivos de texto.`);
+      }
+    }
+  };
+
+  const handlePaperclipClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleGlobeClick = () => {
+    const url = window.prompt("Insira o link (URL) que deseja enviar para o Olimpo AI analisar:");
+    if (url) {
+      setQuery(prev => prev + ` [Link: ${url}] `);
+      showSuccess('Link adicionado ao chat.');
+    }
+  };
 
   useEffect(() => {
     const fetchInsightsAndStats = async () => {
@@ -234,17 +319,46 @@ export default function IAView({ setCurrentView }: { setCurrentView: (view: View
 
           {/* Input Area */}
           <div className="p-5 sm:p-6 border-t border-[#0F172A05] bg-[#FFFFFF] flex-shrink-0">
-            <div className="relative group flex items-center">
+          <div className="relative group flex items-center gap-2 border border-slate-200 bg-slate-50/50 rounded-xl focus-within:border-indigo-500 focus-within:bg-white transition-all shadow-sm pr-14 pl-2">
+            <div className="flex items-center gap-1">
+              <button 
+                onClick={handleMicClick}
+                className={`p-2 rounded-lg transition-all ${isRecording ? 'text-red-500 bg-red-50 animate-pulse' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'}`}
+                title="Gravar áudio"
+              >
+                <Mic size={16} />
+              </button>
               <input 
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSend(query);
-                }}
-                placeholder="Pergunte sobre seus projetos, finanças ou clientes..."
-                className="w-full bg-slate-50/50 border border-slate-200 rounded-xl py-3.5 pl-5 pr-14 outline-none focus:border-indigo-500 focus:bg-white transition-all text-sm font-medium placeholder:text-slate-400 shadow-sm"
+                type="file" 
+                ref={fileInputRef} 
+                style={{ display: 'none' }} 
+                onChange={handleFileChange} 
               />
+              <button 
+                onClick={handlePaperclipClick}
+                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 p-2 rounded-lg transition-all"
+                title="Anexar arquivo"
+              >
+                <Paperclip size={16} />
+              </button>
+              <button 
+                onClick={handleGlobeClick}
+                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 p-2 rounded-lg transition-all"
+                title="Enviar link"
+              >
+                <Globe size={16} />
+              </button>
+            </div>
+            <input 
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSend(query);
+              }}
+              placeholder="Pergunte sobre seus projetos, finanças ou clientes..."
+              className="w-full bg-transparent py-3.5 outline-none text-sm font-medium placeholder:text-slate-400"
+            />
               <button 
                 onClick={() => handleSend(query)}
                 disabled={!query.trim()}

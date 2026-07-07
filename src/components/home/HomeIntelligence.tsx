@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Mic, Paperclip, Globe, Send, ArrowRight, User, Bot, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Markdown from 'react-markdown';
+import { showSuccess, showError } from '../../lib/alerts';
 
 interface Props {
   insights?: any[];
@@ -19,9 +20,93 @@ export default function HomeIntelligence({ insights, onClose }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const name = user?.displayName || 'Admin';
+
+  const handleMicClick = () => {
+    if (isRecording) {
+      setIsRecording(false);
+      showSuccess('Gravação finalizada.');
+      return;
+    }
+
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      showError('Seu navegador não suporta reconhecimento de voz.');
+      return;
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'pt-BR';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      setIsRecording(true);
+      showSuccess('Ouvindo... Fale agora.');
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setInput(prev => prev + (prev ? ' ' : '') + transcript);
+      setIsRecording(false);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error('Speech recognition error', event.error);
+      setIsRecording(false);
+      if (event.error === 'not-allowed') {
+        showError('Permissão de microfone negada. Autorize o uso do microfone no navegador.');
+      } else if (event.error !== 'no-speech') {
+        showError('Erro ao gravar áudio. Tente novamente.');
+      }
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+    };
+
+    try {
+      recognition.start();
+    } catch (e) {
+      setIsRecording(false);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type.startsWith('text/') || file.name.endsWith('.md') || file.name.endsWith('.csv')) {
+        try {
+          const text = await file.text();
+          // Truncate if too long to avoid token limits
+          const truncated = text.substring(0, 3000);
+          setInput(prev => prev + `\n[Conteúdo do arquivo ${file.name}]:\n${truncated}\n`);
+          showSuccess(`O arquivo ${file.name} foi lido e adicionado ao contexto.`);
+        } catch (err) {
+          showError('Falha ao ler o arquivo.');
+        }
+      } else {
+         setInput(prev => prev + ` [Arquivo anexado: ${file.name}] `);
+         showSuccess(`O arquivo ${file.name} foi anexado (apenas nome). Para ler o conteúdo, use arquivos de texto.`);
+      }
+    }
+  };
+
+  const handlePaperclipClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleGlobeClick = () => {
+    const url = window.prompt("Insira o link (URL) que deseja enviar para o Olimpo AI analisar:");
+    if (url) {
+      setInput(prev => prev + ` [Link: ${url}] `);
+      showSuccess('Link adicionado ao chat.');
+    }
+  };
 
   const quickActions = [
     { label: 'Projetos', prompt: 'Me dê um resumo do andamento dos projetos ativos.' },
@@ -72,6 +157,17 @@ export default function HomeIntelligence({ insights, onClose }: Props) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const handleVoiceCommand = (e: any) => {
+      if (e.detail?.text) {
+        handleSend(e.detail.text);
+      }
+    };
+    
+    window.addEventListener('voice-command-received', handleVoiceCommand);
+    return () => window.removeEventListener('voice-command-received', handleVoiceCommand);
+  }, [messages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -189,9 +285,33 @@ export default function HomeIntelligence({ insights, onClose }: Props) {
         {/* Input Text Area Wrapper */}
         <div className="flex items-center gap-2 border border-[#0F172A08] bg-[#FAFAFA] rounded-2xl p-2 focus-within:border-slate-300 transition-all">
           <div className="flex items-center gap-1.5 pl-1.5">
-            <button className="text-[#94A3B8] hover:text-[#111111] p-1.5 rounded-lg hover:bg-white transition-all"><Mic size={14} /></button>
-            <button className="text-[#94A3B8] hover:text-[#111111] p-1.5 rounded-lg hover:bg-white transition-all"><Paperclip size={14} /></button>
-            <button className="text-[#94A3B8] hover:text-[#111111] p-1.5 rounded-lg hover:bg-white transition-all"><Globe size={14} /></button>
+            <button 
+              onClick={handleMicClick}
+              className={`p-1.5 rounded-lg hover:bg-white transition-all ${isRecording ? 'text-red-500 bg-red-50 animate-pulse' : 'text-[#94A3B8] hover:text-[#111111]'}`}
+              title="Gravar áudio"
+            >
+              <Mic size={14} />
+            </button>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              style={{ display: 'none' }} 
+              onChange={handleFileChange} 
+            />
+            <button 
+              onClick={handlePaperclipClick}
+              className="text-[#94A3B8] hover:text-[#111111] p-1.5 rounded-lg hover:bg-white transition-all"
+              title="Anexar arquivo"
+            >
+              <Paperclip size={14} />
+            </button>
+            <button 
+              onClick={handleGlobeClick}
+              className="text-[#94A3B8] hover:text-[#111111] p-1.5 rounded-lg hover:bg-white transition-all"
+              title="Enviar link"
+            >
+              <Globe size={14} />
+            </button>
           </div>
           <input
             type="text"

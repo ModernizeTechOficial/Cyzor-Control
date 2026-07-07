@@ -1,6 +1,8 @@
 {
   "name": "Cyzor Control",
   "description": "An executive-level corporate platform for managing businesses, projects, and agendas.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": [
+    "microphone"
+  ],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
