@@ -42,12 +42,20 @@ export default function GlobalVoiceActivator() {
       const currentTranscript = (finalTranscript + interimTranscript).toLowerCase();
       
       let remainder = currentTranscript;
-      let idxCyzor = currentTranscript.lastIndexOf('cyzor');
-      let idxOlimpo = currentTranscript.lastIndexOf('olimpo');
-      let lastIdx = Math.max(idxCyzor, idxOlimpo);
+      // Check for variations of the pronunciation "cybot"
+      const wakeWords = ['cybot', 'saibot', 'cibot', 'cy bot', 'sai bot', 'seibot'];
+      let lastIdx = -1;
+      let wakeWord = '';
+      
+      for (const word of wakeWords) {
+        const idx = currentTranscript.lastIndexOf(word);
+        if (idx > lastIdx) {
+          lastIdx = idx;
+          wakeWord = word;
+        }
+      }
       
       if (lastIdx !== -1) {
-         let wakeWord = lastIdx === idxCyzor ? 'cyzor' : 'olimpo';
          remainder = currentTranscript.substring(lastIdx + wakeWord.length).trim();
       }
 
@@ -172,7 +180,7 @@ export default function GlobalVoiceActivator() {
             </div>
             
             <div className="flex flex-col items-center gap-3 max-w-2xl text-center px-6">
-              <h2 className="text-3xl sm:text-5xl font-display font-black text-white tracking-tight">Olimpo está ouvindo...</h2>
+              <h2 className="text-3xl sm:text-5xl font-display font-black text-white tracking-tight">Cyzor está ouvindo...</h2>
               <p className="text-xl sm:text-2xl text-blue-200 font-medium min-h-12 mt-4 italic">
                 {spokenText ? `"${spokenText}"` : "Diga o que você precisa..."}
               </p>
