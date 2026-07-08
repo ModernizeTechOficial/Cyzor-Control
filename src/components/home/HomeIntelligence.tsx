@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, Mic, Paperclip, Globe, Send, ArrowRight, User, Bot, AlertCircle } from 'lucide-react';
+import { Sparkles, Mic, Paperclip, Globe, Send, ArrowRight, User, Bot, AlertCircle, Volume2, VolumeX } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Markdown from 'react-markdown';
 import { showSuccess, showError } from '../../lib/alerts';
@@ -18,6 +18,7 @@ interface Message {
 export default function HomeIntelligence({ insights, onClose }: Props) {
   const { user, fetchWithAuth } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
+  const [isMuted, setIsMuted] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -120,6 +121,77 @@ export default function HomeIntelligence({ insights, onClose }: Props) {
     { label: 'Análise de deploys', prompt: 'Existem riscos em homologação ou produção hoje?' },
   ];
 
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const speakText = async (text: string) => {
+    if (isMuted) return;
+    
+    // Stop any ongoing native speech
+    window.speechSynthesis.cancel();
+    
+    // Stop any ongoing ElevenLabs audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    
+    // Remove markdown symbols and format text for better narration
+    const cleanText = text.replace(/[#*_~`]/g, '').replace(/\[(.*?)\]\(.*?\)/g, '$1');
+    
+    try {
+      const response = await fetchWithAuth('/api/ai/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: cleanText })
+      });
+
+      if (response.ok) {
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("audio/mpeg")) {
+          const blob = await response.blob();
+          const audioUrl = URL.createObjectURL(blob);
+          const audio = new Audio(audioUrl);
+          audioRef.current = audio;
+          await audio.play();
+          return; // Success! Realistic ElevenLabs audio is playing.
+        }
+      } else {
+        const errData = await response.json();
+        console.error("[ElevenLabs TTS Error]", errData);
+        if (errData.error) {
+          showError(`Erro ElevenLabs: ${errData.error}`);
+        }
+      }
+    } catch (err: any) {
+      console.warn("[ElevenLabs TTS] Failed, falling back to Web Speech Synthesis:", err);
+    }
+    
+    // Fallback: Web Speech Synthesis
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'pt-BR';
+    utterance.rate = 1.1; // Slightly faster for natural feel
+    
+    const voices = window.speechSynthesis.getVoices();
+    const ptVoice = voices.find(v => v.lang === 'pt-BR' && v.name.includes('Google')) || 
+                    voices.find(v => v.lang === 'pt-BR');
+    if (ptVoice) {
+      utterance.voice = ptVoice;
+    }
+    
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // Ensure voices are loaded (Chrome sometimes needs a trigger) and handle cleanup
+  useEffect(() => {
+    window.speechSynthesis.getVoices();
+    return () => {
+      window.speechSynthesis.cancel();
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    };
+  }, []);
+
   const handleSend = async (textToSend: string) => {
     if (!textToSend.trim() || loading) return;
 
@@ -147,6 +219,7 @@ export default function HomeIntelligence({ insights, onClose }: Props) {
       if (response.ok) {
         const data = await response.json();
         setMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
+        speakText(data.message);
       } else {
         setMessages(prev => [...prev, { role: 'assistant', content: 'Desculpe, ocorreu um erro ao processar sua solicitação no momento.' }]);
       }
@@ -182,6 +255,16 @@ export default function HomeIntelligence({ insights, onClose }: Props) {
           <span className="text-sm font-bold text-[#111111] tracking-tight">Cyzor Intelligence</span>
         </div>
         <div className="flex items-center gap-2">
+          <button 
+            onClick={() => {
+              setIsMuted(!isMuted);
+              if (!isMuted) window.speechSynthesis.cancel();
+            }}
+            className="text-[#94A3B8] hover:text-[#111111] p-1.5 rounded-lg hover:bg-slate-100 transition-all"
+            title={isMuted ? "Ativar som" : "Desativar som"}
+          >
+            {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+          </button>
           <span className="hidden sm:inline-block text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase tracking-wider">Copilot</span>
           {onClose && (
             <button 

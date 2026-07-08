@@ -358,7 +358,7 @@ export const aiMemories = pgTable('ai_memories', {
 export const aiProviders = pgTable('ai_providers', {
   id: serial('id').primaryKey(),
   tenantId: uuid('tenant_id').defaultRandom().notNull(),
-  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  workspaceId: integer('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   enabled: boolean('enabled').default(true),
   apiKey: text('api_key').notNull(),
@@ -389,6 +389,7 @@ export const financeEntries = pgTable('finance_entries', {
   projectId: integer('project_id').references(() => projects.id, { onDelete: 'set null' }),
   isRecurrent: boolean('is_recurrent').default(false),
   dueDate: timestamp('due_date'),
+  paymentDate: timestamp('payment_date'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 }, (t) => ({

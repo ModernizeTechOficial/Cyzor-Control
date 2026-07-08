@@ -23,6 +23,7 @@ export default function FinanceEntryModal({ isOpen, onClose, onSuccess, entry }:
   const [projectId, setProjectId] = useState('');
   const [isRecurrent, setIsRecurrent] = useState(false);
   const [dueDate, setDueDate] = useState('');
+  const [paymentDate, setPaymentDate] = useState('');
   const [loading, setLoading] = useState(false);
   
   const [companies, setCompanies] = useState<any[]>([]);
@@ -41,6 +42,7 @@ export default function FinanceEntryModal({ isOpen, onClose, onSuccess, entry }:
         setProjectId(entry.projectId?.toString() || '');
         setIsRecurrent(entry.isRecurrent || false);
         setDueDate(entry.dueDate ? safeToISOString(entry.dueDate).split('T')[0] : '');
+        setPaymentDate(entry.paymentDate ? safeToISOString(entry.paymentDate).split('T')[0] : '');
       } else {
         resetForm();
       }
@@ -81,6 +83,7 @@ export default function FinanceEntryModal({ isOpen, onClose, onSuccess, entry }:
           projectId: projectId ? Number(projectId) : null,
           isRecurrent,
           dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+          paymentDate: paymentDate ? new Date(paymentDate).toISOString() : null,
           date: safeToISOString(entry?.date) || new Date().toISOString(),
           status
         })
@@ -129,6 +132,7 @@ export default function FinanceEntryModal({ isOpen, onClose, onSuccess, entry }:
     setProjectId('');
     setIsRecurrent(false);
     setDueDate('');
+    setPaymentDate('');
   };
 
   return (
@@ -192,7 +196,16 @@ export default function FinanceEntryModal({ isOpen, onClose, onSuccess, entry }:
 
             <FormGroup>
               <FormLabel>Status</FormLabel>
-              <FormSelect value={status} onChange={(e) => setStatus(e.target.value)}>
+              <FormSelect 
+                value={status} 
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setStatus(val);
+                  if (val === 'PAGO' && !paymentDate) {
+                    setPaymentDate(new Date().toISOString().split('T')[0]);
+                  }
+                }}
+              >
                 <option value="PAGO">Pago</option>
                 <option value="PENDENTE">Pendente</option>
                 <option value="ATRASADO">Atrasado</option>
@@ -248,6 +261,17 @@ export default function FinanceEntryModal({ isOpen, onClose, onSuccess, entry }:
               />
             </FormGroup>
           </div>
+
+          {status === 'PAGO' && (
+            <FormGroup>
+              <FormLabel>Data de Pagamento</FormLabel>
+              <FormInput 
+                type="date"
+                value={paymentDate}
+                onChange={(e) => setPaymentDate(e.target.value)}
+              />
+            </FormGroup>
+          )}
 
           {/* Action buttons */}
           <div className="flex items-center justify-between pt-4 border-t border-[#0F172A05]">
