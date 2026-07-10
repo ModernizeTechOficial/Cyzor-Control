@@ -6,6 +6,7 @@ import StandardHeader from './layout/StandardHeader';
 import { motion } from 'motion/react';
 import { View } from '../types';
 import { showSuccess, showError } from '../lib/alerts';
+import { useQueryClient } from '@tanstack/react-query';
 
 const SUGGESTIONS = [
   "Qual projeto devo priorizar?",
@@ -29,6 +30,7 @@ export default function IAView({ setCurrentView }: { setCurrentView: (view: View
 
   const { fetchWithAuth, activeWorkspace, dbUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'chat' | 'insights' | 'usage'>('chat');
+  const queryClient = useQueryClient();
 
   const handleMicClick = () => {
     if (isRecording) {
@@ -179,18 +181,17 @@ export default function IAView({ setCurrentView }: { setCurrentView: (view: View
     // Add temporary assistant loading
     setMessages(prev => [
       ...prev,
-      { role: 'assistant', text: 'Analisando dados...' }
+      { role: 'assistant', text: 'Olimpo AI executando comando...' }
     ]);
 
     try {
-      const response = await fetchWithAuth('/api/ai/chat', {
+      const response = await fetchWithAuth('/api/ai/agent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ 
-          prompt: text,
-          history: messages
+          prompt: text
         }),
       });
 
@@ -202,14 +203,20 @@ export default function IAView({ setCurrentView }: { setCurrentView: (view: View
 
       setMessages(prev => {
         const newMessages = [...prev];
-        newMessages[newMessages.length - 1] = { role: 'assistant', text: data.text };
+        newMessages[newMessages.length - 1] = { role: 'assistant', text: data.explanation };
         return newMessages;
       });
+
+      // If the AI actually executed a database mutation, invalidate React Query queries so other screens sync up instantly!
+      if (data.executedObject) {
+        showSuccess('Ação executada com sucesso e sincronizada com o banco de dados!');
+        queryClient.invalidateQueries();
+      }
     } catch (error) {
       console.error('Gemini API Error:', error);
       setMessages(prev => {
         const newMessages = [...prev];
-        newMessages[newMessages.length - 1] = { role: 'assistant', text: 'Desculpe, ocorreu um erro ao se conectar com a IA.' };
+        newMessages[newMessages.length - 1] = { role: 'assistant', text: 'Desculpe, ocorreu um erro ao se conectar com a IA ativa.' };
         return newMessages;
       });
     }

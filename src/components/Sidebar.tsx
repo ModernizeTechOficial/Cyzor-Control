@@ -182,116 +182,272 @@ export default function Sidebar({
         {/* Categories */}
         <div className="flex flex-col gap-2 w-full flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar pb-20">
           
-          {/* Section: Main Menu */}
-          {!isCollapsed && (
-            <div className="px-6 py-2">
-              <span className="text-[10px] font-black text-[#A1A1AA] uppercase tracking-[0.2em]">Main Menu</span>
-            </div>
-          )}
-          
-          <div className="flex flex-col gap-0.5">
-            <NavItem 
-              icon={LayoutDashboard} 
-              label="Dashboard" 
-              active={currentView === 'dashboard'} 
-              onClick={() => handleNavigate('dashboard')} 
-            />
-            <NavItem 
-              icon={TrendingUp} 
-              label="Estratégia" 
-              active={currentView === 'roadmap'} 
-              onClick={() => handleNavigate('roadmap')} 
-            />
-            <NavItem 
-              icon={BotMessageSquare} 
-              label="IA Intel" 
-              active={currentView === 'ia'} 
-              onClick={() => handleNavigate('ia')} 
-              badge={badges?.ia > 0 ? badges.ia.toString() : null}
-            />
-          </div>
-
-          {/* Section: Organização */}
-          {!isCollapsed && (
-            <div className="px-6 py-2 mt-2">
-              <span className="text-[10px] font-black text-[#A1A1AA] uppercase tracking-[0.2em]">Empresas</span>
-            </div>
-          )}
-
-          {/* Hierarchy: Empresas -> Projetos, Produtos, etc */}
-          <div className="flex flex-col gap-0.5">
-            {!isCollapsed && (
-              <div 
-                className="flex items-center justify-between px-6 py-2 cursor-pointer text-[#A1A1AA] hover:text-[#18181B] group transition-colors"
-                onClick={toggleEmpresas}
-              >
-                <div className="flex items-center gap-2">
-                   <span className="text-[10px] font-black uppercase tracking-[0.1em]">Minhas Empresas</span>
-                   <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-[#F4F4F5] text-[#71717A]">{companies.length}</span>
-                </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button className="p-1 hover:bg-black/5 rounded-md" onClick={(e) => { e.stopPropagation(); handleNavigate('empresas'); }}><Plus size={14} /></button>
-                  {empresasExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                </div>
-              </div>
-            )}
-            
-            <AnimatePresence>
-              {empresasExpanded && !isCollapsed && (
-                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="flex flex-col gap-0.5">
-                  
-                  {/* Search bar inside group */}
-                  <div className="px-5 py-2 mb-2">
-                     <div className="relative flex items-center w-full">
-                        <Search size={14} className="absolute left-3 text-[#A1A1AA]" />
-                        <input 
-                           type="text" 
-                           placeholder="Pesquisar..."
-                           value={companySearch}
-                           onChange={(e) => setCompanySearch(e.target.value)}
-                           className="w-full bg-[#F4F4F5] border-none text-[12px] rounded-xl pl-9 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-black/5 text-[#18181B] placeholder:text-[#A1A1AA] transition-all"
-                        />
-                     </div>
-                  </div>
-
-                  {filteredCompanies.length === 0 && (
-                    <div className="text-[11px] text-[#94A3B8] px-10 py-2 font-medium">Nenhuma empresa encontrada.</div>
-                  )}
-                  {filteredCompanies.map((company: any) => (
-                    <CompanyNode 
-                      key={company.id} 
-                      company={company} 
-                      projects={projects.filter((p: any) => p.companyId === company.id)}
-                      products={products.filter((p: any) => p.companyId === company.id)}
-                      currentView={currentView}
-                      globalFilters={globalFilters}
-                      handleNavigate={handleNavigate}
-                    />
-                  ))}
-                </motion.div>
+          {/* Dynamic Navigation for Expanded or Collapsed States */}
+          {isCollapsed ? (
+            <div className="flex flex-col gap-0.5">
+              <NavItem 
+                icon={LayoutDashboard} 
+                label="Dashboard" 
+                active={currentView === 'dashboard'} 
+                onClick={() => handleNavigate('dashboard')} 
+              />
+              <NavItem 
+                icon={TrendingUp} 
+                label="Estratégia" 
+                active={currentView === 'roadmap'} 
+                onClick={() => handleNavigate('roadmap')} 
+              />
+              <NavItem 
+                icon={Calendar} 
+                label="Agenda" 
+                active={currentView === 'agenda'} 
+                onClick={() => handleNavigate('agenda')} 
+              />
+              <NavItem 
+                icon={Building2} 
+                label="Empresas" 
+                active={currentView === 'empresas'} 
+                onClick={() => {
+                  setGlobalFilters({});
+                  setCurrentView('empresas');
+                }} 
+              />
+              <NavItem 
+                icon={Users} 
+                label="Clientes" 
+                active={currentView === 'clientes'} 
+                onClick={() => handleNavigate('clientes')} 
+              />
+              <NavItem 
+                icon={Lightbulb} 
+                label="Ideias" 
+                active={currentView === 'ideias'} 
+                onClick={() => handleNavigate('ideias')} 
+              />
+              <NavItem 
+                icon={DollarSign} 
+                label="Financeiro" 
+                active={currentView === 'financeiro'} 
+                onClick={() => handleNavigate('financeiro')} 
+              />
+              <NavItem 
+                icon={Users} 
+                label="Equipe" 
+                active={currentView === 'equipe'} 
+                onClick={() => handleNavigate('equipe')} 
+              />
+              <NavItem 
+                icon={BotMessageSquare} 
+                label="IA Intel" 
+                active={currentView === 'ia'} 
+                onClick={() => handleNavigate('ia')} 
+                badge={badges?.ia > 0 ? badges.ia.toString() : null}
+              />
+              <NavItem 
+                icon={Workflow} 
+                label="Flow Builder" 
+                active={currentView === 'flow-builder'} 
+                onClick={() => handleNavigate('flow-builder')} 
+              />
+              <NavItem 
+                icon={FileText} 
+                label="Documentação" 
+                active={currentView === 'documentacao'} 
+                onClick={() => handleNavigate('documentacao')} 
+              />
+              <NavItem 
+                icon={StickyNote} 
+                label="Keep Notas" 
+                active={currentView === 'keep'} 
+                onClick={() => handleNavigate('keep')} 
+              />
+              <NavItem 
+                icon={Settings} 
+                label="Configurações" 
+                active={currentView === 'configuracoes'} 
+                onClick={() => handleNavigate('configuracoes')} 
+              />
+              {dbUser?.isPlatformAdmin && (
+                 <NavItem icon={ShieldCheck} label="Admin" active={currentView === 'admin'} onClick={() => handleNavigate('admin')} />
               )}
-            </AnimatePresence>
-          </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              
+              {/* Section: Operacional */}
+              <div className="flex flex-col gap-0.5">
+                <div className="px-6 py-1">
+                  <span className="text-[10px] font-black text-[#A1A1AA] uppercase tracking-[0.2em]">Operacional</span>
+                </div>
+                <NavItem 
+                  icon={LayoutDashboard} 
+                  label="Dashboard" 
+                  active={currentView === 'dashboard'} 
+                  onClick={() => handleNavigate('dashboard')} 
+                />
+                <NavItem 
+                  icon={TrendingUp} 
+                  label="Estratégia" 
+                  active={currentView === 'roadmap'} 
+                  onClick={() => handleNavigate('roadmap')} 
+                />
+                <NavItem 
+                  icon={Building2} 
+                  label="Empresas" 
+                  active={currentView === 'empresas'} 
+                  onClick={() => {
+                    setGlobalFilters({});
+                    setCurrentView('empresas');
+                  }} 
+                />
+                <NavItem 
+                  icon={Calendar} 
+                  label="Agenda" 
+                  active={currentView === 'agenda'} 
+                  onClick={() => handleNavigate('agenda')} 
+                />
+              </div>
 
-          {/* Section: Preferências */}
-          {!isCollapsed && (
-            <div className="px-6 py-2 mt-4">
-              <span className="text-[10px] font-black text-[#A1A1AA] uppercase tracking-[0.2em]">Preferências</span>
+              {/* Section: Relacionamento & Vendas */}
+              <div className="flex flex-col gap-0.5">
+                <div className="px-6 py-1">
+                  <span className="text-[10px] font-black text-[#A1A1AA] uppercase tracking-[0.2em]">Relacionamento</span>
+                </div>
+                <NavItem 
+                  icon={Users} 
+                  label="Clientes" 
+                  active={currentView === 'clientes'} 
+                  onClick={() => handleNavigate('clientes')} 
+                />
+                <NavItem 
+                  icon={Lightbulb} 
+                  label="Ideias & Negócios" 
+                  active={currentView === 'ideias'} 
+                  onClick={() => handleNavigate('ideias')} 
+                />
+              </div>
+
+              {/* Section: Controladoria */}
+              <div className="flex flex-col gap-0.5">
+                <div className="px-6 py-1">
+                  <span className="text-[10px] font-black text-[#A1A1AA] uppercase tracking-[0.2em]">Controladoria</span>
+                </div>
+                <NavItem 
+                  icon={DollarSign} 
+                  label="Financeiro" 
+                  active={currentView === 'financeiro'} 
+                  onClick={() => handleNavigate('financeiro')} 
+                />
+                <NavItem 
+                  icon={Users} 
+                  label="Equipe" 
+                  active={currentView === 'equipe'} 
+                  onClick={() => handleNavigate('equipe')} 
+                />
+              </div>
+
+              {/* Section: Tecnologia & Processos */}
+              <div className="flex flex-col gap-0.5">
+                <div className="px-6 py-1">
+                  <span className="text-[10px] font-black text-[#A1A1AA] uppercase tracking-[0.2em]">Tecnologia & IA</span>
+                </div>
+                <NavItem 
+                  icon={BotMessageSquare} 
+                  label="IA Intel" 
+                  active={currentView === 'ia'} 
+                  onClick={() => handleNavigate('ia')} 
+                  badge={badges?.ia > 0 ? badges.ia.toString() : null}
+                />
+                <NavItem 
+                  icon={Workflow} 
+                  label="Flow Builder" 
+                  active={currentView === 'flow-builder'} 
+                  onClick={() => handleNavigate('flow-builder')} 
+                />
+                <NavItem 
+                  icon={FileText} 
+                  label="Documentação" 
+                  active={currentView === 'documentacao'} 
+                  onClick={() => handleNavigate('documentacao')} 
+                />
+                <NavItem 
+                  icon={StickyNote} 
+                  label="Keep Notas" 
+                  active={currentView === 'keep'} 
+                  onClick={() => handleNavigate('keep')} 
+                />
+              </div>
+
+              {/* Section: Empresas Hierarchy */}
+              <div className="flex flex-col gap-0.5">
+                <div 
+                  className="flex items-center justify-between px-6 py-1.5 cursor-pointer text-[#A1A1AA] hover:text-[#18181B] group transition-colors"
+                  onClick={toggleEmpresas}
+                >
+                  <div className="flex items-center gap-2">
+                     <span className="text-[10px] font-black uppercase tracking-[0.1em]">Minhas Empresas</span>
+                     <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-[#F4F4F5] text-[#71717A]">{companies.length}</span>
+                  </div>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button className="p-1 hover:bg-black/5 rounded-md" onClick={(e) => { e.stopPropagation(); handleNavigate('empresas'); }}><Plus size={14} /></button>
+                    {empresasExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                  </div>
+                </div>
+                
+                <AnimatePresence>
+                  {empresasExpanded && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="flex flex-col gap-0.5">
+                      {/* Search bar inside group */}
+                      <div className="px-5 py-2 mb-2">
+                         <div className="relative flex items-center w-full">
+                            <Search size={14} className="absolute left-3 text-[#A1A1AA]" />
+                            <input 
+                               type="text" 
+                               placeholder="Pesquisar..."
+                               value={companySearch}
+                               onChange={(e) => setCompanySearch(e.target.value)}
+                               className="w-full bg-[#F4F4F5] border-none text-[12px] rounded-xl pl-9 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-black/5 text-[#18181B] placeholder:text-[#A1A1AA] transition-all"
+                            />
+                         </div>
+                      </div>
+
+                      {filteredCompanies.length === 0 && (
+                        <div className="text-[11px] text-[#94A3B8] px-10 py-2 font-medium">Nenhuma empresa encontrada.</div>
+                      )}
+                      {filteredCompanies.map((company: any) => (
+                        <CompanyNode 
+                          key={company.id} 
+                          company={company} 
+                          projects={projects.filter((p: any) => p.companyId === company.id)}
+                          products={products.filter((p: any) => p.companyId === company.id)}
+                          currentView={currentView}
+                          globalFilters={globalFilters}
+                          handleNavigate={handleNavigate}
+                        />
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Section: Configurações & Geral */}
+              <div className="flex flex-col gap-0.5">
+                <div className="px-6 py-1">
+                  <span className="text-[10px] font-black text-[#A1A1AA] uppercase tracking-[0.2em]">Preferências</span>
+                </div>
+                <NavItem 
+                  icon={Settings} 
+                  label="Configurações" 
+                  active={currentView === 'configuracoes'} 
+                  onClick={() => handleNavigate('configuracoes')} 
+                />
+                {dbUser?.isPlatformAdmin && (
+                   <NavItem icon={ShieldCheck} label="Admin" active={currentView === 'admin'} onClick={() => handleNavigate('admin')} />
+                )}
+              </div>
+
             </div>
           )}
-
-          {/* Secondary Groups */}
-          <div className="flex flex-col gap-0.5">
-            <NavItem icon={Users} label="Clientes" active={currentView === 'clientes'} onClick={() => handleNavigate('clientes')} />
-            <NavItem icon={DollarSign} label="Financeiro" active={currentView === 'financeiro'} onClick={() => handleNavigate('financeiro')} />
-            <NavItem icon={Users} label="Equipe" active={currentView === 'equipe'} onClick={() => handleNavigate('equipe')} />
-            <NavItem icon={Lightbulb} label="Ideias" active={currentView === 'ideias'} onClick={() => handleNavigate('ideias')} />
-            <NavItem icon={FileText} label="Documentação" active={currentView === 'documentacao'} onClick={() => handleNavigate('documentacao')} />
-            <NavItem icon={Settings} label="Configurações" active={currentView === 'configuracoes'} onClick={() => handleNavigate('configuracoes')} />
-            {dbUser?.isPlatformAdmin && (
-               <NavItem icon={ShieldCheck} label="Admin" active={currentView === 'admin'} onClick={() => handleNavigate('admin')} />
-            )}
-          </div>
         </div>
 
         {/* Bottom Profile */}

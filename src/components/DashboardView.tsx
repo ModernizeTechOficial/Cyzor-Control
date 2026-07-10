@@ -12,7 +12,7 @@ import HomeAnalytics from './home/HomeAnalytics';
 import OnboardingWizard from './OnboardingWizard';
 import StrategicPriorityCard from './home/StrategicPriorityCard';
 import BusinessInsightCard from './home/BusinessInsightCard';
-import { Sparkles, ArrowRight } from 'lucide-react';
+import { Sparkles, ArrowRight, Activity, ShieldAlert, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export default function DashboardView({ setCurrentView }: { setCurrentView: (view: View) => void }) {
@@ -46,12 +46,13 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
   useEffect(() => { if (companiesData) setClients(companiesData); }, [companiesData]);
   const [productsList, setProductsList] = useState<any[]>([]);
   const [ideas, setIdeas] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchDashboardData = async () => {
     if (!activeWorkspace) return;
     try {
-      const [compRes, prodRes, projRes, finRes, depRes, taskRes, memberRes, agendaRes, clientRes, ideasRes] = await Promise.all([
+      const [compRes, prodRes, projRes, finRes, depRes, taskRes, memberRes, agendaRes, clientRes, ideasRes, notifRes] = await Promise.all([
         fetchWithAuth('/api/companies'),
         fetchWithAuth('/api/products'),
         fetchWithAuth('/api/projects'),
@@ -61,10 +62,11 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
         fetchWithAuth('/api/workspace/members'),
         fetchWithAuth('/api/agenda'),
         fetchWithAuth('/api/clients'),
-        fetchWithAuth('/api/ideas')
+        fetchWithAuth('/api/ideas'),
+        fetchWithAuth('/api/notifications')
       ]);
 
-      const [companies, productsData, projectsData, financeData, deploysData, tasksData, membersData, agendaData, clientsData, ideasData] = await Promise.all([
+      const [companies, productsData, projectsData, financeData, deploysData, tasksData, membersData, agendaData, clientsData, ideasData, notifData] = await Promise.all([
         compRes.ok ? compRes.json() : [],
         prodRes.ok ? prodRes.json() : [],
         projRes.ok ? projRes.json() : [],
@@ -74,7 +76,8 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
         memberRes.ok ? memberRes.json() : [],
         agendaRes.ok ? agendaRes.json() : [],
         clientRes.ok ? clientRes.json() : [],
-        ideasRes && ideasRes.ok ? ideasRes.json() : []
+        ideasRes && ideasRes.ok ? ideasRes.json() : [],
+        notifRes && notifRes.ok ? notifRes.json() : []
       ]);
 
       setProjects(projectsData);
@@ -86,6 +89,7 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
       setClients(clientsData);
       setProductsList(productsData);
       setIdeas(ideasData);
+      setNotifications(notifData);
 
       const totalRevenue = financeData
         .filter((f: any) => f.type === 'RECEITA')
@@ -168,6 +172,83 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
     };
   }, [globalFilters.companyId, projects, tasks, agendaEvents, finance, metrics.products, companiesData, clients]);
 
+  // Command Center - Calculate active risks
+  const activeAlerts = useMemo(() => {
+    const alerts: any[] = [];
+    const today = new Date();
+    
+    // 1. Overdue projects
+    projects.forEach((proj: any) => {
+      if (proj.dueDate && new Date(proj.dueDate) < today && (proj.progress || 0) < 100 && proj.status !== 'Concluido' && proj.status !== 'CONCLUÍDO') {
+        const daysOverdue = Math.ceil((today.getTime() - new Date(proj.dueDate).getTime()) / (1000 * 3600 * 24));
+        alerts.push({
+          id: `proj-overdue-${proj.id}`,
+          type: 'danger',
+          title: `Projeto Atrasado: ${proj.name}`,
+          desc: `O prazo de entrega venceu há ${daysOverdue} dias. Progresso atual: ${proj.progress || 0}%.`,
+          actionLabel: 'Ver Projetos',
+          action: () => setCurrentView('projetos')
+        });
+      }
+    });
+
+    // 2. High priority tasks pending
+    const highTasks = tasks.filter((t: any) => t.priority === 'Alta' && t.column !== 'done' && t.column !== 'concluido' && t.status !== 'DONE');
+    if (highTasks.length > 2) {
+      alerts.push({
+        id: 'high-tasks-alert',
+        type: 'warning',
+        title: 'Acúmulo de Tarefas Críticas',
+        desc: `Existem ${highTasks.length} tarefas de prioridade Alta aguardando conclusão no backlog do Kanban.`,
+        actionLabel: 'Ver Backlog',
+        action: () => setCurrentView('projetos')
+      });
+    }
+
+    // 3. Financial alert
+    const expenses = finance.filter((f: any) => f.type === 'DESPESA');
+    const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+    const totalRevenue = finance.filter((f: any) => f.type === 'RECEITA').reduce((sum, e) => sum + Number(e.amount || 0), 0);
+    if (totalExpenses > totalRevenue && totalExpenses > 0) {
+      alerts.push({
+        id: 'cashflow-alert',
+        type: 'warning',
+        title: 'Controle de Caixa Ativo',
+        desc: `Despesas do período (R$ ${totalExpenses.toLocaleString('pt-BR')}) superam as receitas (R$ ${totalRevenue.toLocaleString('pt-BR')}).`,
+        actionLabel: 'Financeiro',
+        action: () => setCurrentView('financeiro')
+      });
+    }
+
+    // Default informative alerts if none are critical
+    if (alerts.length === 0) {
+      alerts.push({
+        id: 'all-clear',
+        type: 'success',
+        title: 'Sinal Verde: Operações Estáveis',
+        desc: 'Todos os projetos e finanças estão operando dentro dos parâmetros recomendados pela Cyzor IA.',
+        actionLabel: 'Acessar IA',
+        action: () => setCurrentView('ia')
+      });
+    }
+
+    return alerts;
+  }, [projects, tasks, finance]);
+
+  // BES Calculation
+  const besScore = activeWorkspace?.settings?.besScore || 120;
+  const besMilestones = [
+    { value: 1000, label: 'Estruturação', desc: 'Foco em organizar backlog e validar MVP.' },
+    { value: 3000, label: 'Operação', desc: 'Foco em lançar produto e captar clientes.' },
+    { value: 6000, label: 'Crescimento', desc: 'Foco em escalar canais e receitas.' },
+    { value: 10000, label: 'Escala', desc: 'Foco em consolidar processos e governança.' }
+  ];
+
+  // Find next milestone
+  const nextMilestone = besMilestones.find(m => m.value > besScore) || { value: 15000, label: 'Líder de Setor', desc: 'Pronto para dominar o mercado global.' };
+  const prevMilestoneValue = besMilestones.slice().reverse().find(m => m.value <= besScore)?.value || 0;
+  const percentToNext = Math.min(100, Math.max(0, ((besScore - prevMilestoneValue) / (nextMilestone.value - prevMilestoneValue)) * 100));
+
   const isOnboardingCompleted = activeWorkspace?.settings?.onboardingCompleted === true;
   const currentStage = activeWorkspace?.settings?.stage || 'Ideia';
 
@@ -175,30 +256,111 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
     return (
       <div className="w-full mx-auto py-2">
         <OnboardingWizard onComplete={() => {
-          // 1. Mark that we just finished onboarding in this session
           sessionStorage.setItem('just_finished_onboarding', 'true');
-          // 2. Mark that welcome modal was already "handled" for this flow
           sessionStorage.setItem('welcome_modal_shown', 'true');
-          // 3. Trigger the product tour
           window.dispatchEvent(new Event('restart-tour'));
         }} />
       </div>
     );
   }
 
-  // Define layout categories:
-  // 1. Discovery (Ideia, Validação)
-  // 2. Construction (Projeto, Planejamento, Desenvolvimento)
-  // 3. Growth & Scale (Produto, Clientes, Financeiro, Crescimento, Gestão)
-  const isConstruction = ['Projeto', 'Planejamento', 'Desenvolvimento'].includes(currentStage);
   const isGrowthScale = ['Produto', 'Clientes', 'Financeiro', 'Crescimento', 'Gestão'].includes(currentStage);
 
   return (
-    <div id="main-dashboard" className="w-full mx-auto pb-12 flex flex-col gap-10 animate-in fade-in duration-500 relative px-4 sm:px-6 lg:px-10">
+    <div id="main-dashboard" className="w-full mx-auto pb-12 flex flex-col gap-8 animate-in fade-in duration-500 relative px-4 sm:px-6 lg:px-10">
       {/* Header (Full Width) */}
       <HomeHeader />
 
-      {/* Dynamic Widget Grid prioritized by Maturity Stage */}
+      {/* COMMAND CENTER EXECUTIVE PANEL */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+        {/* BES Maturity Meter Card */}
+        <div className="bg-white border border-[#0F172A0F] rounded-[32px] p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <Activity size={18} />
+                </div>
+                <h4 className="text-sm font-black text-[#111111]">Business Event Score (BES)</h4>
+              </div>
+              <span className="text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
+                Maturidade: {currentStage}
+              </span>
+            </div>
+
+            <div className="flex items-baseline gap-2 mb-2">
+              <span className="text-4xl font-black text-[#111111] tracking-tight">{besScore}</span>
+              <span className="text-xs font-bold text-[#64748B]">pontos operacionais</span>
+            </div>
+
+            <p className="text-xs text-[#64748B] leading-relaxed mb-6">
+              O BES mede o engajamento e a evolução real do seu negócio. Cada tarefa concluída, cliente cadastrado ou faturamento gerado impulsiona sua maturidade.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <div className="flex justify-between text-xs font-bold">
+              <span className="text-[#64748B]">Progresso para {nextMilestone.label}</span>
+              <span className="text-[#111111]">{besScore} / {nextMilestone.value} pts</span>
+            </div>
+            <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+              <div className="bg-emerald-500 h-full rounded-full transition-all duration-1000" style={{ width: `${percentToNext}%` }} />
+            </div>
+            <span className="text-[10px] text-[#94A3B8] italic">{nextMilestone.desc}</span>
+          </div>
+        </div>
+
+        {/* Actionable Risk and Overdue Alerts Card */}
+        <div className="bg-white border border-[#0F172A0F] rounded-[32px] p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+                <ShieldAlert size={18} />
+              </div>
+              <h4 className="text-sm font-black text-[#111111]">Alertas & Diagnóstico IA</h4>
+            </div>
+
+            <div className="flex flex-col gap-3 overflow-y-auto max-h-[140px] pr-2">
+              {activeAlerts.map((alert: any, idx: number) => (
+                <div key={idx} className={`p-3.5 rounded-2xl border flex items-start gap-3 transition-colors ${
+                  alert.type === 'danger' 
+                    ? 'bg-rose-50/50 border-rose-100 text-rose-950' 
+                    : alert.type === 'warning'
+                    ? 'bg-amber-50/50 border-amber-100 text-amber-950'
+                    : 'bg-emerald-50/50 border-emerald-100 text-emerald-950'
+                }`}>
+                  <div className="flex-shrink-0 mt-0.5">
+                    {alert.type === 'danger' ? (
+                      <AlertTriangle size={16} className="text-rose-500" />
+                    ) : alert.type === 'warning' ? (
+                      <AlertTriangle size={16} className="text-amber-500" />
+                    ) : (
+                      <CheckCircle2 size={16} className="text-emerald-500" />
+                    )}
+                  </div>
+                  <div className="flex-1 flex flex-col gap-1">
+                    <span className="text-xs font-black">{alert.title}</span>
+                    <span className="text-[11px] text-[#64748B] leading-relaxed">{alert.desc}</span>
+                  </div>
+                  <button 
+                    onClick={alert.action}
+                    className="text-[10px] font-black underline flex-shrink-0 hover:text-black transition-colors uppercase tracking-wider cursor-pointer"
+                  >
+                    {alert.actionLabel}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-[#0F172A05] flex items-center justify-between">
+            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">Diagnóstico Operacional</span>
+            <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full uppercase">100% Protegido</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Dynamic Widget Grid */}
       <div className="grid grid-cols-12 gap-6 w-full">
         {/* KPI Row (Full Width) */}
         <div className="col-span-12">
@@ -211,7 +373,7 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
               <div className="flex flex-col gap-4 h-full">
                 <div className="flex items-center justify-between border-b border-[#0F172A05] pb-2">
                   <h3 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Desempenho Comercial & Tração</h3>
-                  <span className="text-[11px] text-[#64748B] font-medium">Estágio de Crescimento Ativo: {currentStage}</span>
+                  <span className="text-[11px] text-[#64748B] font-medium">Estágio Ativo: {currentStage}</span>
                 </div>
                 <HomeAnalytics financeEntries={filteredFinance} />
               </div>
@@ -222,6 +384,42 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
 
         {/* Sidebar Content Area (4 columns) */}
         <div className="col-span-12 md:col-span-4 flex flex-col gap-4 h-full">
+            {/* Real-time Event-driven operations feed */}
+            <div className="bg-white border border-[#0F172A0F] rounded-[32px] p-6 shadow-sm flex flex-col gap-4 max-h-[350px]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <Clock size={14} className="animate-pulse" />
+                  </div>
+                  <h4 className="text-xs font-black text-[#111111] uppercase tracking-wider">Feed Operacional (Eventos)</h4>
+                </div>
+                <span className="text-[10px] font-bold text-[#64748B]">Real-time</span>
+              </div>
+
+              <div className="flex-1 flex flex-col gap-3 overflow-y-auto pr-1">
+                {notifications.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <p className="text-xs font-medium text-[#94A3B8]">Nenhum evento registrado ainda.</p>
+                  </div>
+                ) : (
+                  notifications.slice(0, 4).map((notif: any) => (
+                    <div key={notif.id} className="flex gap-3 items-start border-b border-[#0F172A03] pb-2.5 last:border-0 last:pb-0">
+                      <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+                        notif.type === 'error' ? 'bg-rose-500 animate-ping' : notif.type === 'success' ? 'bg-emerald-500' : 'bg-blue-500'
+                      }`} />
+                      <div className="flex-1 flex flex-col">
+                        <span className="text-xs font-bold text-[#111111]">{notif.title}</span>
+                        <span className="text-[10px] text-[#64748B] leading-relaxed">{notif.description}</span>
+                        <span className="text-[9px] text-[#94A3B8] font-mono mt-0.5">
+                          {new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
             <div className="flex-1">
               <StrategicPriorityCard 
                 setCurrentView={setCurrentView} 
@@ -234,10 +432,12 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
                 tasks={filteredTasks}
               />
             </div>
+            
             <div className="flex-1">
               <BusinessInsightCard setCurrentView={setCurrentView} currentStage={currentStage} />
             </div>
-            {/* New: Global AI Intelligence Access Widget for everyone */}
+
+            {/* Global AI Intelligence Access Widget */}
             <div className="flex-1">
                <motion.div 
                 whileHover={{ y: -2 }}
@@ -251,7 +451,7 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
                     </div>
                     <div className="flex flex-col">
                       <h3 className="text-sm font-black text-[#111111]">Olimpo AI</h3>
-                      <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">SaaS Intelligence</span>
+                      <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Operação por IA</span>
                     </div>
                   </div>
                   <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-[#111111] transition-colors">
@@ -259,7 +459,7 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
                   </div>
                 </div>
                 <p className="text-[11px] text-[#64748B] leading-relaxed mb-4">
-                  Sua inteligência artificial está ativa e monitorando todos os dados do seu workspace em tempo real.
+                  Sua inteligência artificial está ativa e monitorando todos os dados do seu workspace em tempo real. Peça para a IA cadastrar registros ou atualizar status de projetos.
                 </p>
                 <div className="flex items-center gap-2">
                    <div className="flex -space-x-2">
@@ -267,9 +467,9 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
                       <div className="w-6 h-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[8px] font-bold">AI</div>
                       <div className="w-6 h-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[8px] font-bold">360</div>
                    </div>
-                   <span className="text-[10px] font-bold text-[#111111]">Análise 360º Ativa</span>
+                   <span className="text-[10px] font-bold text-[#111111]">Operação Autônoma Ativa</span>
                 </div>
-              </motion.div>
+               </motion.div>
             </div>
         </div>
       </div>

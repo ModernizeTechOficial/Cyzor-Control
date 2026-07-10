@@ -283,14 +283,14 @@ apiRouter.get("/workspaces", async (req: AuthRequest, res) => {
 
 apiRouter.post("/workspaces", async (req: AuthRequest, res) => {
   try {
-    const { name, description } = req.body;
+    const { name, description, segment } = req.body;
     if (!name) return res.status(400).json({ error: "Name is required" });
 
     const [newWs] = await db.insert(workspaces).values({
       name,
       tenantId: req.tenantId as any,
       ownerUid: req.user!.uid,
-      settings: { description }
+      settings: { description, segment: segment || 'General', stage: segment === 'SaaS' ? 'Produto' : (segment === 'Serviços' ? 'Clientes' : 'Ideia'), besScore: 120, besMaturity: 1.2 }
     }).returning();
 
     // Add owner as member
@@ -301,6 +301,15 @@ apiRouter.post("/workspaces", async (req: AuthRequest, res) => {
       role: 'OWNER',
       cargo: 'Proprietário'
     });
+
+    if (segment && ['SaaS', 'Serviços', 'E-commerce'].includes(segment)) {
+      try {
+        const { WorkspaceTemplateService } = await import("../services/WorkspaceTemplateService.ts");
+        await WorkspaceTemplateService.applyTemplate(newWs.id, segment, req.tenantId as any);
+      } catch (err) {
+        console.error("Failed to apply workspace segment template:", err);
+      }
+    }
 
     await logAction(req, 'CREATE', 'workspaces', newWs.id.toString(), null, newWs);
     res.json(newWs);
@@ -671,6 +680,13 @@ apiRouter.post("/clients", async (req: AuthRequest, res) => {
     if (businessEvent) {
         await BESIntegrationService.processBusinessEvent(businessEvent);
     }
+
+    try {
+      const { EventCascadeService } = await import("../services/EventCascadeService.ts");
+      await EventCascadeService.handleClientCreated(req.workspaceId!, data[0].id, name, req.tenantId as any);
+    } catch (err) {
+      console.error("Failed to run client creation cascade:", err);
+    }
   
     try {
       await db.insert(notifications).values({
@@ -862,9 +878,15 @@ apiRouter.put("/projects/:id", async (req: AuthRequest, res) => {
         description: `O projeto "${data[0].name}" agora está em "${status}".`,
         type: "success"
       });
+
+      const sLower = status.toLowerCase();
+      if (sLower === 'concluido' || sLower === 'concluído' || sLower === 'completed') {
+        const { EventCascadeService } = await import("../services/EventCascadeService.ts");
+        await EventCascadeService.handleProjectCompleted(req.workspaceId!, data[0].id, data[0].name, req.tenantId as any);
+      }
     }
   } catch (e) {
-    console.error("Error creating project update notification:", e);
+    console.error("Error creating project update notification / running cascade:", e);
   }
 
   res.json(data[0]);
@@ -2256,7 +2278,145 @@ apiRouter.get("/flow-builder/:id", async (req: AuthRequest, res) => {
   }
 });
 
-import { generateNodeDefinition } from "../lib/gemini";
+import { generateNodeDefinition, executeOperationalAgent } from "../lib/gemini";
+
+apiRouter.post("/ai/agent", async (req: AuthRequest, res) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt) return res.status(400).json({ error: "Prompt is required" });
+
+    // 1. Gather context data of the workspace to ground the AI
+    const [dbProjects, dbTasks, dbClients, dbProducts, dbFinance] = await Promise.all([
+      db.select().from(projects).where(eq(projects.workspaceId, req.workspaceId!)),
+      db.select().from(tasks).where(eq(tasks.workspaceId, req.workspaceId!)),
+      db.select().from(clients).where(eq(clients.workspaceId, req.workspaceId!)),
+      db.select().from(products).where(eq(products.workspaceId, req.workspaceId!)),
+      db.select().from(financeEntries).where(eq(financeEntries.workspaceId, req.workspaceId!))
+    ]);
+
+    const totalRevenue = dbFinance
+      .filter((f: any) => f.type === 'RECEITA')
+      .reduce((sum, f) => sum + parseFloat(f.amount || "0"), 0);
+
+    const totalExpenses = dbFinance
+      .filter((f: any) => f.type === 'DESPESA')
+      .reduce((sum, f) => sum + parseFloat(f.amount || "0"), 0);
+
+    const contextData = {
+      projects: dbProjects.map(p => ({ id: p.id, name: p.name, status: p.status, budget: p.budget })),
+      tasks: dbTasks.map(t => ({ id: t.id, title: t.title, column: t.status, priority: t.priority })),
+      clients: dbClients.map(c => ({ id: c.id, name: c.name })),
+      products: dbProducts.map(p => ({ id: p.id, name: p.name })),
+      totalRevenue,
+      totalExpenses
+    };
+
+    // 2. Call Gemini
+    const aiResult = await executeOperationalAgent(prompt, contextData);
+
+    const { action, parameters, explanation } = aiResult;
+    let executedObject = null;
+
+    // 3. Execute DB mutations if requested
+    if (action === "CREATE_PROJECT" && parameters.name) {
+      const [newProj] = await db.insert(projects).values({
+        workspaceId: req.workspaceId!,
+        name: parameters.name,
+        budget: parameters.budget || "0",
+        priority: parameters.priority || "Média",
+        status: parameters.status || "planejamento",
+        description: parameters.description || "",
+        dueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
+      }).returning();
+      executedObject = newProj;
+
+      await db.insert(notifications).values({
+        workspaceId: req.workspaceId!,
+        tenantId: req.tenantId as any,
+        title: "Projeto Criado via IA",
+        description: `Olimpo AI registrou o projeto "${newProj.name}" com orçamento de R$ ${parseFloat(newProj.budget || "0").toLocaleString('pt-BR')}.`,
+        type: "success"
+      });
+    } 
+    else if (action === "CREATE_TASK" && parameters.title) {
+      const [newTask] = await db.insert(tasks).values({
+        workspaceId: req.workspaceId!,
+        projectId: dbProjects[0]?.id || 0, // Relies on a project id context
+        title: parameters.title,
+        priority: parameters.priority || "Média",
+        description: parameters.description || "",
+        status: (parameters.column || "TODO").toUpperCase()
+      }).returning();
+      executedObject = newTask;
+
+      await db.insert(notifications).values({
+        workspaceId: req.workspaceId!,
+        tenantId: req.tenantId as any,
+        title: "Tarefa Criada via IA",
+        description: `Olimpo AI inseriu a tarefa "${newTask.title}" no Kanban de operações.`,
+        type: "success"
+      });
+    }
+    else if (action === "UPDATE_TASK_STATUS" && parameters.taskId && parameters.column) {
+      const [updated] = await db.update(tasks).set({ 
+        status: (parameters.column || "TODO").toUpperCase()
+      })
+      .where(and(eq(tasks.id, Number(parameters.taskId)), eq(tasks.workspaceId, req.workspaceId!)))
+      .returning();
+      executedObject = updated;
+
+      if (updated) {
+        await db.insert(notifications).values({
+          workspaceId: req.workspaceId!,
+          tenantId: req.tenantId as any,
+          title: "Tarefa Atualizada via IA",
+          description: `Olimpo AI moveu a tarefa "${updated.title}" para a coluna "${parameters.column}".`,
+          type: "success"
+        });
+      }
+    }
+    else if (action === "UPDATE_PROJECT_STATUS" && parameters.projectId && parameters.status) {
+      const [updated] = await db.update(projects).set({ 
+        status: parameters.status 
+      })
+      .where(and(eq(projects.id, Number(parameters.projectId)), eq(projects.workspaceId, req.workspaceId!)))
+      .returning();
+      executedObject = updated;
+
+      if (updated) {
+        await db.insert(notifications).values({
+          workspaceId: req.workspaceId!,
+          tenantId: req.tenantId as any,
+          title: "Projeto Atualizado via IA",
+          description: `Olimpo AI atualizou o projeto "${updated.name}" para o status "${parameters.status}".`,
+          type: "success"
+        });
+
+        // Trigger Event Cascade if completed
+        const sLower = parameters.status.toLowerCase();
+        if (sLower === 'concluido' || sLower === 'concluído' || sLower === 'completed') {
+          try {
+            const { EventCascadeService } = await import("../services/EventCascadeService.ts");
+            await EventCascadeService.handleProjectCompleted(req.workspaceId!, updated.id, updated.name, req.tenantId as any);
+          } catch (err) {
+            console.error("Failed to run completed cascade via AI action:", err);
+          }
+        }
+      }
+    }
+
+    res.json({
+      action,
+      parameters,
+      explanation,
+      executedObject
+    });
+
+  } catch (error: any) {
+    console.error("AI Operational Agent Route Error:", error);
+    res.status(500).json({ error: "Failed to process AI agent instruction", details: error.message });
+  }
+});
 
 apiRouter.post("/flow-builder/generate-node", async (req: AuthRequest, res) => {
   try {

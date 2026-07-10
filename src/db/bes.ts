@@ -46,4 +46,11 @@ export async function updateBesScore(workspaceId: number, actionType: keyof type
       besMaturity: newMaturity
     }
   }).where(eq(workspaces.id, workspaceId));
+
+  try {
+    const { EventCascadeService } = await import("../services/EventCascadeService.ts");
+    await EventCascadeService.handleBesScoreMilestone(workspaceId, newBes, currentBes, ws.tenantId as any);
+  } catch (err) {
+    console.error("Failed to run BES milestone cascade:", err);
+  }
 }

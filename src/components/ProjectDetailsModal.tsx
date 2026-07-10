@@ -43,7 +43,7 @@ export default function ProjectDetailsModal({ project, isOpen, onClose, onSave }
   const { fetchWithAuth } = useAuth();
   const { setGlobalFilters } = useNavigation();
 
-  const [activeTab, setActiveTab] = useState('visao_geral');
+  const [activeTab, setActiveTab] = useState('visao_360');
   const [isEditing, setIsEditing] = useState(false);
   const [editedProject, setEditedProject] = useState<ProjectExtended | null>(null);
   const [prevProjectId, setPrevProjectId] = useState<number | null>(null);
