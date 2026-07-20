@@ -12,9 +12,10 @@ import HomeAnalytics from './home/HomeAnalytics';
 import OnboardingWizard from './OnboardingWizard';
 import StrategicPriorityCard from './home/StrategicPriorityCard';
 import BusinessInsightCard from './home/BusinessInsightCard';
-import { Sparkles, ArrowRight, Activity, ShieldAlert, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
+import { Sparkles, ArrowRight, Activity, ShieldAlert, AlertTriangle, CheckCircle2, Clock, Zap, Target, TrendingUp } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
+import { getMaturityInfo, generateAIDiagnostics } from '../utils/besCalculator';
 
 const RadarCustomTick = (props: any) => {
   const { payload, x, y, textAnchor } = props;
@@ -254,20 +255,21 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
 
   // BES Calculation
   const besScore = activeWorkspace?.settings?.besScore || 120;
-  const besMilestones = [
-    { value: 1000, label: 'Estruturação', desc: 'Foco em organizar backlog e validar MVP.' },
-    { value: 3000, label: 'Operação', desc: 'Foco em lançar produto e captar clientes.' },
-    { value: 6000, label: 'Crescimento', desc: 'Foco em escalar canais e receitas.' },
-    { value: 10000, label: 'Escala', desc: 'Foco em consolidar processos e governança.' }
-  ];
-
-  // Find next milestone
-  const nextMilestone = besMilestones.find(m => m.value > besScore) || { value: 15000, label: 'Líder de Setor', desc: 'Pronto para dominar o mercado global.' };
-  const prevMilestoneValue = besMilestones.slice().reverse().find(m => m.value <= besScore)?.value || 0;
-  const percentToNext = Math.min(100, Math.max(0, ((besScore - prevMilestoneValue) / (nextMilestone.value - prevMilestoneValue)) * 100));
+  
+  const entitiesCount = {
+    companies: companiesData?.length || 0,
+    projects: projectsData?.length || 0,
+    products: 0,
+    tasks: 0,
+    financeEntries: financeData?.length || 0,
+    clients: 0 
+  };
+  
+  const { currentStage, nextStage, progress, pointsToNext } = getMaturityInfo(besScore);
+  const { diagnostics, recommendations, reasons } = generateAIDiagnostics(besScore, entitiesCount);
 
   const isOnboardingCompleted = activeWorkspace?.settings?.onboardingCompleted === true;
-  const currentStage = activeWorkspace?.settings?.stage || 'Ideia';
+  const stage = currentStage.label || 'Ideia';
 
   if (activeWorkspace && !isOnboardingCompleted) {
     return (
@@ -281,7 +283,7 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
     );
   }
 
-  const isGrowthScale = ['Produto', 'Clientes', 'Financeiro', 'Crescimento', 'Gestão'].includes(currentStage);
+  const isGrowthScale = ['Produto', 'Clientes', 'Financeiro', 'Crescimento', 'Gestão', 'Operação', 'Escala'].includes(stage);
 
   return (
     <div id="main-dashboard" className="w-full mx-auto pb-12 flex flex-col gap-8 animate-in fade-in duration-500 relative px-4 sm:px-6 lg:px-10">
@@ -291,66 +293,88 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
       {/* COMMAND CENTER EXECUTIVE PANEL */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
         {/* BES Maturity Meter Card */}
-        <div className="lg:col-span-2 bg-white border border-[#0F172A0F] rounded-[32px] p-6 shadow-sm flex flex-col md:flex-row gap-6 items-center justify-between relative">
+        <div className="lg:col-span-2 bg-white border border-[#0F172A0F] rounded-[32px] p-6 sm:p-8 shadow-sm flex flex-col relative overflow-hidden">
           
-          {/* Left Side: Score & Info */}
-          <div className="flex-1 w-full flex flex-col justify-center">
-            <div className="flex justify-between items-start mb-4 w-full">
-              <span className="text-[10px] font-black uppercase text-[#64748B] tracking-wider font-display">
-                Progresso para {nextMilestone.label}
-              </span>
-              <button 
-                onClick={() => setCurrentView('admin-bes')}
-                className="hidden md:inline-flex bg-blue-50 text-blue-600 px-3 py-1.5 rounded-[12px] text-xs font-bold hover:bg-blue-100 transition-colors"
-              >
-                Ver detalhes
-              </button>
-            </div>
+          <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
+            <Sparkles className="w-48 h-48" />
+          </div>
 
-            <h4 className="text-base font-display font-black text-[#111111] mb-4">Business Event Score (BES)</h4>
-
-            <div className="flex items-baseline gap-2 mb-4 font-display">
-              <span className="text-4xl md:text-5xl font-black text-blue-600 tracking-tight">{besScore}</span>
-              <span className="text-xs font-bold text-[#64748B]">/ {nextMilestone.value} pts</span>
-            </div>
-
-            <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden mb-3">
-              <div 
-                className="bg-blue-600 h-full rounded-full transition-all duration-1000" 
-                style={{ width: `${percentToNext}%` }} 
-              />
-            </div>
-            
-            <p className="text-xs font-medium text-[#64748B]">
-              {nextMilestone.desc}
-            </p>
-            
-            {/* Mobile Ver Detalhes Button */}
+          <div className="flex justify-between items-start mb-6 relative z-10">
+            <span className="text-[10px] font-black uppercase text-[#64748B] tracking-wider font-display flex items-center gap-2">
+              <Zap className="w-3.5 h-3.5" />
+              Maturidade Operacional (BES)
+            </span>
             <button 
-              onClick={() => setCurrentView('admin-bes')}
-              className="mt-4 md:hidden self-start bg-blue-50 text-blue-600 px-4 py-2 rounded-[12px] text-sm font-bold hover:bg-blue-100 transition-colors"
+              onClick={() => setCurrentView('roadmap')}
+              className="hidden md:inline-flex bg-blue-50 text-blue-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-blue-100 transition-colors gap-1.5 items-center font-display"
             >
-              Ver detalhes
+              Planejamento Estratégico <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          {/* Right Side: Radar Chart */}
-          <div className="w-full md:w-[300px] h-[200px] flex-shrink-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart cx="50%" cy="50%" outerRadius="65%" data={[
-                { subject: 'Mercado|60%', A: 60, fullMark: 100 },
-                { subject: 'Produto|40%', A: 40, fullMark: 100 },
-                { subject: 'Cliente|30%', A: 30, fullMark: 100 },
-                { subject: 'Execução|50%', A: 50, fullMark: 100 },
-                { subject: 'Financeiro|45%', A: 45, fullMark: 100 },
-                { subject: 'Time|55%', A: 55, fullMark: 100 },
-              ]}>
-                <PolarGrid stroke="#E2E8F0" />
-                <PolarAngleAxis dataKey="subject" tick={<RadarCustomTick />} />
-                <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                <Radar name="Score" dataKey="A" stroke="#2563EB" strokeWidth={2} fill="#3B82F6" fillOpacity={0.15} />
-              </RadarChart>
-            </ResponsiveContainer>
+          <div className="flex flex-col md:flex-row gap-8 relative z-10 w-full mb-8">
+            <div className="flex-1 flex flex-col justify-center border-r border-[#0F172A05] pr-8">
+               <h4 className="text-xl font-display font-black text-[#111111] mb-1">{currentStage.label}</h4>
+               <p className="text-xs font-bold text-[#64748B] mb-6">{currentStage.role}</p>
+
+               <div className="flex items-baseline gap-2 mb-2 font-display">
+                 <span className="text-5xl font-black text-blue-600 tracking-tight">{progress}%</span>
+               </div>
+               
+               <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mb-2">
+                 <div 
+                   className="bg-blue-600 h-full rounded-full transition-all duration-1000" 
+                   style={{ width: `${progress}%` }} 
+                 />
+               </div>
+               
+               <p className="text-[10px] font-bold text-slate-400 mt-1">
+                 Score atual: <strong className="text-slate-600">{besScore.toLocaleString()} pontos</strong>
+               </p>
+            </div>
+
+            <div className="flex-1 flex flex-col justify-center">
+               <h4 className="text-xs font-display font-black text-slate-800 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                 <Target className="w-3.5 h-3.5 text-slate-500" /> Próximo Objetivo
+               </h4>
+               {nextStage ? (
+                 <>
+                   <p className="text-sm font-bold text-[#111111] mb-2">Chegar ao estágio de {nextStage.label}.</p>
+                   <p className="text-xs font-medium text-slate-600 mb-4 leading-relaxed">
+                     Para atingir este marco e desbloquear novas análises da IA, você precisa acumular mais <strong>{pointsToNext.toLocaleString()} pontos BES</strong> através de execução operacional.
+                   </p>
+                   
+                   <div className="space-y-2">
+                     {recommendations.slice(0, 2).map((rec: any, idx: number) => (
+                       <div key={idx} className="flex items-start gap-2 bg-slate-50 border border-slate-100 rounded-xl p-2.5">
+                         <CheckCircle2 className="w-3.5 h-3.5 text-blue-500 mt-0.5 shrink-0" />
+                         <div className="flex-1 min-w-0">
+                           <p className="text-[11px] font-bold text-slate-700 truncate">{rec.title}</p>
+                           <p className="text-[9px] font-black text-blue-600 tracking-wider uppercase mt-0.5">{rec.impact}</p>
+                         </div>
+                       </div>
+                     ))}
+                   </div>
+                 </>
+               ) : (
+                 <div className="bg-emerald-50 text-emerald-800 p-4 rounded-2xl border border-emerald-100 h-full flex flex-col justify-center">
+                   <p className="text-sm font-bold mb-1">Maturidade Máxima</p>
+                   <p className="text-xs">Sua empresa atingiu o nível mais alto de maturidade no ecossistema.</p>
+                 </div>
+               )}
+            </div>
+          </div>
+          
+          <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-4 flex gap-4 items-start relative z-10">
+             <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
+               <Sparkles className="w-4 h-4 text-blue-600" />
+             </div>
+             <div>
+               <p className="text-xs font-medium text-slate-700 leading-relaxed">
+                 <strong className="font-display font-black text-blue-900 mr-1">Diagnóstico:</strong>
+                 {diagnostics}
+               </p>
+             </div>
           </div>
         </div>
 
@@ -417,7 +441,7 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
               <div className="flex flex-col gap-4 h-full">
                 <div className="flex items-center justify-between border-b border-[#0F172A05] pb-2">
                   <h3 className="text-xs font-display font-black text-[#64748B] uppercase tracking-wider">Desempenho Comercial & Tração</h3>
-                  <span className="text-[11px] text-[#64748B] font-medium font-display">Estágio Ativo: {currentStage}</span>
+                  <span className="text-[11px] text-[#64748B] font-medium font-display">Estágio Ativo: {stage}</span>
                 </div>
                 <HomeAnalytics financeEntries={filteredFinance} />
               </div>
@@ -467,7 +491,7 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
             <div className="flex-1">
               <StrategicPriorityCard 
                 setCurrentView={setCurrentView} 
-                currentStage={currentStage}
+                currentStage={stage}
                 ideas={ideas}
                 projects={filteredProjects}
                 products={productsList}
@@ -478,7 +502,7 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
             </div>
             
             <div className="flex-1">
-              <BusinessInsightCard setCurrentView={setCurrentView} currentStage={currentStage} />
+              <BusinessInsightCard setCurrentView={setCurrentView} currentStage={stage} />
             </div>
 
             {/* Global AI Intelligence Access Widget */}

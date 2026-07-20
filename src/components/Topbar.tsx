@@ -118,11 +118,11 @@ function NotificationMenu() {
     <div className="relative" id="notifications-btn">
       <button 
         onClick={handleToggleNotifications}
-        className="relative w-10 h-10 rounded-[14px] bg-[#FFFFFF] border border-[#0F172A0F] flex items-center justify-center hover:bg-[#FAFAFA] transition-all shadow-[0_2px_8px_rgba(0,0,0,0.02)] text-[#111111]"
+        className="relative w-9 h-9 rounded-xl flex items-center justify-center hover:bg-[#FAFAFA] transition-colors text-[#64748B] hover:text-[#111111]"
       >
-        <Bell size={18} className={unreadCount > 0 ? "text-[#111111]" : "text-[#64748B]"} />
+        <Bell size={16} className={unreadCount > 0 ? "text-[#111111]" : ""} />
         {unreadCount > 0 && (
-          <div className="absolute top-2 right-2 flex min-w-[14px] h-[14px] items-center justify-center rounded-full bg-[#111111] border-2 border-[#FFFFFF] px-[3px] text-[8px] font-bold text-white">
+          <div className="absolute top-1.5 right-1.5 flex min-w-[14px] h-[14px] items-center justify-center rounded-full bg-[#111111] border-2 border-[#FFFFFF] px-[3px] text-[8px] font-bold text-white">
             {unreadCount}
           </div>
         )}
@@ -215,12 +215,12 @@ function UserProfileMenu({ setCurrentView }: { setCurrentView?: (view: View) => 
     <div className="relative" id="user-profile-btn">
       <button 
         onClick={() => setShowMenu(!showMenu)}
-        className="w-10 h-10 rounded-[14px] bg-[#FFFFFF] border border-[#0F172A0F] overflow-hidden flex items-center justify-center hover:bg-[#FAFAFA] transition-all shadow-[0_2px_8px_rgba(0,0,0,0.02)]"
+        className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center hover:opacity-90 transition-opacity border border-[#0F172A0A]"
       >
         {user.photoURL ? (
           <img src={user.photoURL} alt={user.displayName || 'User'} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
         ) : (
-          <div className="bg-[#111111] text-white font-bold w-full h-full flex items-center justify-center text-sm uppercase">
+          <div className="bg-[#111111] text-white font-display font-black w-full h-full flex items-center justify-center text-sm uppercase">
             {user.email ? user.email.charAt(0) : 'U'}
           </div>
         )}
@@ -273,12 +273,12 @@ function WorkspaceSelector() {
     <div className="relative">
       <button 
         onClick={() => setShowMenu(!showMenu)}
-        className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-[#FAFAFA] border border-[#0F172A05] hover:border-[#0F172A15] transition-all group"
+        className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-[#FAFAFA] transition-colors group"
       >
-        <div className="w-5 h-5 rounded-md bg-[#111111] flex items-center justify-center text-[10px] font-bold text-white shadow-sm">
+        <div className="w-6 h-6 rounded-md bg-[#111111] flex items-center justify-center text-[10px] font-display font-black text-white">
           {activeWorkspace?.name?.charAt(0) || 'W'}
         </div>
-        <span className="text-xs font-bold text-[#111111] max-w-[120px] truncate">
+        <span className="text-xs font-display font-bold text-[#111111] max-w-[120px] truncate">
           {activeWorkspace?.name || 'Workspace Principal'}
         </span>
         <ChevronDown size={14} className={`text-[#64748B] transition-transform duration-200 ${showMenu ? 'rotate-180' : ''}`} />
@@ -462,88 +462,90 @@ export default function Topbar({ isSidebarCollapsed, toggleSidebar, setCurrentVi
       initial={{ opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, ease: 'easeOut' }}
-      className={`fixed top-0 right-0 h-16 lg:h-20 bg-white/90 backdrop-blur-xl border-b border-slate-200/70 flex items-center justify-between px-4 sm:px-6 md:px-8 z-20 transition-all duration-300 left-0 shadow-[0_1px_0_rgba(15,23,42,0.03)] ${isSidebarCollapsed ? 'lg:left-[88px]' : 'lg:left-[280px]'}`}
+      className={`fixed top-0 right-0 h-16 lg:h-20 bg-white/80 backdrop-blur-md border-b border-[#0F172A0A] flex items-center justify-between px-4 sm:px-6 md:px-10 z-20 transition-all duration-300 left-0 ${isSidebarCollapsed ? 'lg:left-[88px]' : 'lg:left-[280px]'}`}
     >
-      <div className="flex items-center gap-3 lg:gap-4 min-w-0 flex-1">
+      <div className="flex items-center gap-4 lg:gap-8 min-w-0 flex-1">
         <motion.button
           whileHover={{ scale: 1.02, y: -1 }}
           whileTap={{ scale: 0.98 }}
           onClick={toggleSidebar}
-          className="text-[#64748B] hover:text-[#111111] transition-colors duration-200 flex items-center justify-center w-10 h-10 rounded-2xl hover:bg-[#F8FAFC] border border-slate-200/70 hover:border-slate-300 flex-shrink-0 group shadow-[0_4px_10px_rgba(15,23,42,0.03)]"
+          className="text-[#64748B] hover:text-[#111111] transition-colors duration-200 flex items-center justify-center w-10 h-10 rounded-xl hover:bg-[#FAFAFA] flex-shrink-0 group"
         >
           {isSidebarCollapsed ? <PanelLeft size={18} className="group-hover:scale-110 transition-transform duration-200" /> : <PanelLeftClose size={18} className="group-hover:scale-110 transition-transform duration-200" />}
         </motion.button>
 
-        <div className="hidden md:flex min-w-0 items-center gap-3 rounded-[18px] border border-slate-200/70 bg-white/80 px-3 py-2 shadow-[0_6px_18px_rgba(15,23,42,0.03)]">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className={`h-2.5 w-2.5 rounded-full ${isOnline ? 'bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.15)]' : 'bg-amber-500 shadow-[0_0_0_4px_rgba(245,158,11,0.15)]'}`} />
-            <div className="flex flex-col min-w-0">
-              <span className="text-[10px] font-black uppercase tracking-[0.18em] text-[#64748B]">Seção atual</span>
-              <span className="text-sm font-semibold text-[#111111] truncate">{sectionLabel}</span>
-            </div>
+        <div className="hidden md:flex min-w-0 items-center gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`h-2 w-2 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+            <h2 className="text-base font-display font-black text-[#111111] truncate">{sectionLabel}</h2>
           </div>
-          <div className="hidden lg:flex items-center gap-2 text-[12px] font-medium text-[#64748B]">
+          
+          <div className="hidden lg:flex items-center gap-2 text-[12px] font-medium text-[#64748B] pl-4 border-l border-[#0F172A0A]">
             <BreadcrumbNavigator setCurrentView={setCurrentView} />
           </div>
         </div>
 
-        <div className="hidden lg:flex flex-1 max-w-[420px]">
+        <div className="hidden lg:flex flex-1 max-w-[320px] ml-auto">
           <div className="relative w-full">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#64748B] opacity-60" size={15} />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#64748B] opacity-50" size={14} />
             <input
               type="text"
-              placeholder="Buscar no sistema..."
-              className="w-full bg-[#F8FAFC] border border-slate-200/70 hover:border-slate-300 rounded-[16px] py-2.5 pl-10 pr-3 text-[13px] outline-none focus:border-slate-300 focus:bg-white transition-all duration-200 text-[#111111] font-medium placeholder:text-[#64748B]/50 shadow-[inset_0_1px_2px_rgba(15,23,42,0.03)]"
+              placeholder="Pesquisar..."
+              className="w-full bg-[#FAFAFA] hover:bg-[#F1F5F9] focus:bg-white border border-transparent focus:border-[#0F172A15] rounded-xl py-2 pl-9 pr-3 text-xs outline-none transition-all duration-200 text-[#111111] font-medium placeholder:text-[#64748B]/50"
             />
           </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-        <div className="hidden xl:flex items-center gap-3 rounded-[16px] border border-slate-200/70 bg-slate-50/80 px-3 py-2 shadow-[0_4px_12px_rgba(15,23,42,0.03)]">
+      <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+        <div className="hidden xl:flex items-center gap-6 pr-6 border-r border-[#0F172A0A]">
           <div className="flex flex-col items-end gap-0.5">
-            <span className="text-[12px] font-semibold text-[#111111] tracking-tight">
-              BES: {(activeWorkspace?.settings?.besScore || 0).toLocaleString('pt-BR')}
+            <span className="text-xs font-display font-black text-[#111111]">
+              {(activeWorkspace?.settings?.besScore || 0).toLocaleString('pt-BR')} BES
             </span>
-            <span className="text-[9px] font-black text-[#64748B] uppercase tracking-[0.18em] opacity-60">
-              Maturidade: {Math.round(activeWorkspace?.settings?.besMaturity || 0)}%
+            <span className="text-[9px] font-bold text-[#64748B] uppercase tracking-wider">
+              Score Global
             </span>
           </div>
-          <div className="h-8 w-px bg-[#0F172A08]" />
           <div className="flex flex-col items-end gap-0.5">
-            <span className="text-[12px] font-semibold text-[#111111] tracking-tight">
+            <span className="text-xs font-display font-black text-[#111111]">
               {time.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
             </span>
-            <span className="text-[9px] font-black text-[#64748B] uppercase tracking-[0.18em] opacity-60">
+            <span className="text-[9px] font-bold text-[#64748B] uppercase tracking-wider">
               {time.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()}
             </span>
           </div>
         </div>
 
-        <div className="hidden md:flex items-center rounded-[16px] border border-slate-200/70 bg-white/80 px-2 py-1.5 shadow-[0_4px_12px_rgba(15,23,42,0.03)]">
+        <div className="hidden md:flex items-center">
           <WorkspaceSelector />
         </div>
 
-        <motion.button
-          whileHover={{ scale: 1.02, y: -1 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={toggleTheme}
-          className="w-10 h-10 rounded-2xl bg-white border border-slate-200/70 flex items-center justify-center hover:bg-[#F8FAFC] hover:border-slate-300 transition-all duration-200 shadow-[0_4px_10px_rgba(15,23,42,0.03)] text-[#111111] group"
-        >
-          {isDark ? <Sun size={18} className="text-[#64748B] group-hover:text-[#111111] transition-colors duration-200" /> : <Moon size={18} className="text-[#64748B] group-hover:text-[#111111] transition-colors duration-200" />}
-        </motion.button>
-        <motion.button
-          whileHover={{ scale: 1.02, y: -1 }}
-          whileTap={{ scale: 0.98 }}
-          id="help-center-btn"
-          onClick={() => window.dispatchEvent(new Event('restart-tour'))}
-          className="w-10 h-10 rounded-2xl bg-white border border-slate-200/70 flex items-center justify-center hover:bg-[#F8FAFC] hover:border-slate-300 transition-all duration-200 shadow-[0_4px_10px_rgba(15,23,42,0.03)] text-[#64748B] hover:text-[#111111] group"
-          title="Fazer Tour"
-        >
-          <HelpCircle size={18} />
-        </motion.button>
-        <NotificationMenu />
-        <UserProfileMenu setCurrentView={setCurrentView} />
+        <div className="flex items-center gap-1.5 pl-2">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={toggleTheme}
+            className="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-[#FAFAFA] transition-colors text-[#64748B] hover:text-[#111111]"
+          >
+            {isDark ? <Sun size={16} /> : <Moon size={16} />}
+          </motion.button>
+          
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => window.dispatchEvent(new Event('restart-tour'))}
+            className="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-[#FAFAFA] transition-colors text-[#64748B] hover:text-[#111111]"
+            title="Fazer Tour"
+          >
+            <HelpCircle size={16} />
+          </motion.button>
+          
+          <NotificationMenu />
+          <div className="ml-1">
+            <UserProfileMenu setCurrentView={setCurrentView} />
+          </div>
+        </div>
       </div>
     </motion.header>
   );

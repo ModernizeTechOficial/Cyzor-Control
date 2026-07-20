@@ -1,0 +1,30 @@
+
+> cyzor-control@0.0.0 build
+> vite build && npx esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs
+
+vite v6.4.3 building for production...
+transforming...
+✓ 3467 modules transformed.
+rendering chunks...
+[plugin vite:reporter] 
+(!) /app/applet/src/lib/alerts.ts is dynamically imported by /app/applet/src/components/DocumentacaoView.tsx, /app/applet/src/components/DocumentacaoView.tsx, /app/applet/src/components/DocumentacaoView.tsx, /app/applet/src/components/DocumentacaoView.tsx, /app/applet/src/components/DocumentacaoView.tsx, /app/applet/src/components/DocumentacaoView.tsx, /app/applet/src/components/DocumentacaoView.tsx, /app/applet/src/components/DocumentacaoView.tsx, /app/applet/src/components/DocumentacaoView.tsx, /app/applet/src/components/DocumentacaoView.tsx but also statically imported by /app/applet/src/components/GlobalVoiceActivator.tsx, /app/applet/src/components/IAView.tsx, /app/applet/src/components/IdeaDetailsModal.tsx, /app/applet/src/components/NewProjectModal.tsx, /app/applet/src/components/OnboardingWizard.tsx, /app/applet/src/components/ProjectDetailsModal.tsx, /app/applet/src/components/ProjetosView.tsx, /app/applet/src/components/TaskDetailModal.tsx, /app/applet/src/components/common/VisualIdentityTab.tsx, /app/applet/src/components/home/HomeIntelligence.tsx, /app/applet/src/components/project-tabs/AbaDocumentos.tsx, /app/applet/src/components/project-tabs/AbaKanban.tsx, /app/applet/src/modules/admin/views/AdminBESView.tsx, /app/applet/src/modules/admin/views/GlobalSettingsAdminView.tsx, dynamic import will not move module into another chunk.
+
+computing gzip size...
+dist/index.html                              0.39 kB │ gzip:     0.26 kB
+dist/assets/index-DhvL31dS.css             270.32 kB │ gzip:    36.49 kB
+dist/assets/ContextBuilder-Co417ZfP.js       1.01 kB │ gzip:     0.65 kB
+dist/assets/purify.es-Csrj9YNg.js           28.14 kB │ gzip:    10.69 kB
+dist/assets/index.es-BbBF38QW.js           159.60 kB │ gzip:    53.51 kB
+dist/assets/html2canvas.esm-QH1iLAAe.js    202.38 kB │ gzip:    48.04 kB
+dist/assets/index-DtGtjeZ8.js            4,602.39 kB │ gzip: 1,019.04 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 17.64s
+
+  dist/server.cjs      326.7kb
+  dist/server.cjs.map  537.9kb
+
+⚡ Done in 41ms
