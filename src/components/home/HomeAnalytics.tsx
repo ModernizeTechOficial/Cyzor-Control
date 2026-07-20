@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { Tooltip as UiTooltip } from '../ui/Tooltip';
+import { useTooltip } from '../ui/useTooltip';
 import { ArrowUpRight, TrendingUp } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useNavigation } from '../../context/NavigationContext';
@@ -23,6 +25,8 @@ export default function HomeAnalytics({ financeEntries = [] }: { financeEntries?
   };
 
   const [viewMode, setViewMode] = useState<'mensal' | 'anual'>('anual');
+const mensalTooltip = useTooltip();
+const anualTooltip = useTooltip();
 
   // Define months and baseline revenues based on viewMode
   const months = viewMode === 'mensal'
@@ -120,18 +124,18 @@ export default function HomeAnalytics({ financeEntries = [] }: { financeEntries?
             </div>
           </div>
           <div className="flex items-center gap-1 bg-slate-100/50 p-1 rounded-2xl border border-slate-100">
-            <button 
-              onClick={() => setViewMode('mensal')}
-              className={`text-[10px] font-black px-5 py-2 rounded-xl transition-all cursor-pointer uppercase tracking-widest ${viewMode === 'mensal' ? 'text-slate-900 bg-white shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+          <UiTooltip open={mensalTooltip.open} anchorRef={mensalTooltip.anchorRef} title="Modo Mensal" description="VisÃ£o mensal">
+            <button ref={mensalTooltip.anchorRef} onClick={() => setViewMode('mensal')} className={`text-[10px] font-black px-5 py-2 rounded-xl transition-all cursor-pointer uppercase tracking-widest ${viewMode === 'mensal' ? 'text-slate-900 bg-white shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
             >
               MENSAL
             </button>
-            <button 
-              onClick={() => setViewMode('anual')}
-              className={`text-[10px] font-black px-5 py-2 rounded-xl transition-all cursor-pointer uppercase tracking-widest ${viewMode === 'anual' ? 'text-slate-900 bg-white shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+          </UiTooltip>
+          <UiTooltip open={anualTooltip.open} anchorRef={anualTooltip.anchorRef} title="Modo Anual" description="VisÃ£o anual">
+            <button ref={anualTooltip.anchorRef} onClick={() => setViewMode('anual')} className={`text-[10px] font-black px-5 py-2 rounded-xl transition-all cursor-pointer uppercase tracking-widest ${viewMode === 'anual' ? 'text-slate-900 bg-white shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
             >
               ANUAL
             </button>
+          </UiTooltip>
           </div>
         </div>
 
@@ -175,3 +179,4 @@ export default function HomeAnalytics({ financeEntries = [] }: { financeEntries?
     </div>
   );
 }
+

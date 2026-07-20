@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Edit3, Tag, Calendar, User, Building2, Save } from 'lucide-react';
 import { FormGroup, FormLabel, FormInput, FormTextarea, FormSelect } from '../../../ui/FormComponents';
 
@@ -20,16 +20,16 @@ export default function VisaoGeralTab({ product, onSave, companies = [] }: any) 
     <div className="flex flex-col gap-8 max-w-4xl animate-in fade-in slide-in-from-bottom-4 duration-500">
       
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-display font-bold text-[#111111]">Visão Geral</h2>
+        <h2 className="text-2xl font-display font-bold text-[#111111]">VisÃ£o Geral</h2>
         {!isEditing ? (
           <button onClick={() => setIsEditing(true)} className="flex items-center gap-2 text-sm font-bold text-[#111111] bg-[#FAFAFA] hover:bg-gray-100 px-4 py-2 rounded-xl transition-colors">
-            <Edit3 size={16} /> Editar Informações
+            <Edit3 size={16} /> Editar InformaÃ§Ãµes
           </button>
         ) : (
           <div className="flex items-center gap-3">
             <button onClick={() => setIsEditing(false)} className="text-sm font-bold text-[#64748B] hover:text-[#111111] transition-colors">Cancelar</button>
             <button onClick={handleSave} className="flex items-center gap-2 bg-[#111111] text-white px-4 py-2 rounded-xl font-bold text-sm shadow-md hover:bg-black transition-all">
-              <Save size={16} /> Salvar Alterações
+              <Save size={16} /> Salvar AlteraÃ§Ãµes
             </button>
           </div>
         )}
@@ -38,9 +38,9 @@ export default function VisaoGeralTab({ product, onSave, companies = [] }: any) 
       {!isEditing ? (
         <div className="flex flex-col gap-8">
           <div className="prose prose-slate max-w-none">
-            <h3 className="text-sm font-bold uppercase tracking-widest text-[#64748B] mb-3">Descrição</h3>
+            <h3 className="text-sm font-bold uppercase tracking-widest text-[#64748B] mb-3">DescriÃ§Ã£o</h3>
             <p className="text-[#111111] font-medium leading-relaxed text-base">
-              {product.desc || 'Nenhuma descrição detalhada fornecida para este produto.'}
+              {product.desc || 'Nenhuma descriÃ§Ã£o detalhada fornecida para este produto.'}
             </p>
           </div>
 
@@ -53,7 +53,7 @@ export default function VisaoGeralTab({ product, onSave, companies = [] }: any) 
                 <DetailRow label="Empresa" value={product.empresa || 'Interno'} />
                 <DetailRow label="Tipo de Produto" value={product.type || 'SaaS'} />
                 <DetailRow label="Categoria" value={product.categoria || 'Software'} />
-                <DetailRow label="Responsável" value="João Developer" />
+                <DetailRow label="ResponsÃ¡vel" value="JoÃ£o Developer" />
               </div>
             </div>
 
@@ -62,17 +62,17 @@ export default function VisaoGeralTab({ product, onSave, companies = [] }: any) 
                 <Calendar size={16} /> Ciclo de Vida & Mercado
               </h3>
               <div className="flex flex-col gap-4 mt-2">
-                <DetailRow label="Modelo de Preço" value={product.pricingModel || 'Sob consulta'} />
-                <DetailRow label="Público Alvo" value={product.targetAudience || 'Não definido'} />
+                <DetailRow label="Modelo de PreÃ§o" value={product.pricingModel || 'Sob consulta'} />
+                <DetailRow label="PÃºblico Alvo" value={product.targetAudience || 'NÃ£o definido'} />
                 <DetailRow label="Criado em" value={product.created_at || '10 Jan 2024'} />
-                <DetailRow label="Lançamento" value={product.launchDate ? new Date(product.launchDate).toLocaleDateString() : 'A definir'} />
+                <DetailRow label="LanÃ§amento" value={product.launchDate ? new Date(product.launchDate).toLocaleDateString() : 'A definir'} />
               </div>
             </div>
           </div>
 
           <div>
             <h3 className="text-sm font-bold uppercase tracking-widest text-[#64748B] mb-4 flex items-center gap-2">
-              <Tag size={16} /> Tags & Classificações
+              <Tag size={16} /> Tags & ClassificaÃ§Ãµes
             </h3>
             <div className="flex flex-wrap gap-2">
               {['B2B', 'Fintech', 'Assinatura', 'Cloud Native'].map(tag => (
@@ -95,7 +95,7 @@ export default function VisaoGeralTab({ product, onSave, companies = [] }: any) 
            </FormGroup>
            
            <FormGroup>
-              <FormLabel>Descrição</FormLabel>
+              <FormLabel>DescriÃ§Ã£o</FormLabel>
               <FormTextarea 
                 value={formData.desc || ''} 
                 onChange={e => setFormData({...formData, desc: e.target.value})} 
@@ -124,7 +124,7 @@ export default function VisaoGeralTab({ product, onSave, companies = [] }: any) 
                   <option value="Planejamento">Planejamento</option>
                   <option value="Desenvolvimento">Desenvolvimento</option>
                   <option value="Beta">Beta</option>
-                  <option value="Produção">Produção</option>
+                  <option value="ProduÃ§Ã£o">ProduÃ§Ã£o</option>
                   <option value="Arquivado">Arquivado</option>
                 </FormSelect>
               </FormGroup>
@@ -142,17 +142,17 @@ export default function VisaoGeralTab({ product, onSave, companies = [] }: any) 
                   <option value="Desktop App">Desktop App</option>
                   <option value="API / SDK">API / SDK</option>
                   <option value="Plataforma">Plataforma</option>
-                  <option value="Serviço Digital">Serviço Digital</option>
+                  <option value="ServiÃ§o Digital">ServiÃ§o Digital</option>
                 </FormSelect>
               </FormGroup>
               <FormGroup>
-                <FormLabel>Modelo de Precificação</FormLabel>
+                <FormLabel>Modelo de PrecificaÃ§Ã£o</FormLabel>
                 <FormSelect 
                   value={formData.pricingModel || 'Assinatura'} 
                   onChange={e => setFormData({...formData, pricingModel: e.target.value})}
                 >
                   <option value="Assinatura">Assinatura</option>
-                  <option value="Licença Única">Licença Única</option>
+                  <option value="LicenÃ§a Ãšnica">LicenÃ§a Ãšnica</option>
                   <option value="Freemium">Freemium</option>
                   <option value="Gratuito">Gratuito</option>
                   <option value="Consumo / Pay-per-use">Consumo / Pay-per-use</option>
@@ -161,11 +161,11 @@ export default function VisaoGeralTab({ product, onSave, companies = [] }: any) 
            </div>
 
            <FormGroup>
-              <FormLabel>Público Alvo</FormLabel>
+              <FormLabel>PÃºblico Alvo</FormLabel>
               <FormInput 
                 value={formData.targetAudience || ''} 
                 onChange={e => setFormData({...formData, targetAudience: e.target.value})} 
-                placeholder="Ex: Empresas B2B de médio porte, Desenvolvedores, etc."
+                placeholder="Ex: Empresas B2B de mÃ©dio porte, Desenvolvedores, etc."
               />
            </FormGroup>
         </div>
@@ -183,3 +183,4 @@ function DetailRow({ label, value }: { label: string, value: string }) {
     </div>
   );
 }
+

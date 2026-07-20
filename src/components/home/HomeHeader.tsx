@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { motion } from 'motion/react';
 import { Sparkles, RefreshCw, Layers, ShieldCheck, Zap, X } from 'lucide-react';
+import { Tooltip } from '../ui/Tooltip';
+import { useTooltip } from '../ui/useTooltip';
 
 export default function HomeHeader() {
   const { user, activeWorkspace } = useAuth();
@@ -28,6 +30,7 @@ export default function HomeHeader() {
 
   const currentStage = activeWorkspace?.settings?.stage || 'Ideia';
 
+  const aiTooltip = useTooltip();
   const getAiAdvice = (stage: string) => {
     switch (stage) {
       case 'Ideia':
@@ -93,29 +96,36 @@ export default function HomeHeader() {
         </div>
         
         {isAiAdviceVisible && (
-          <div className="relative group flex items-start gap-5 bg-white/60 backdrop-blur-xl border border-white/80 p-6 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_40px_rgb(79,70,229,0.08)] hover:-translate-y-0.5 transition-all duration-500 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 via-transparent to-purple-50/30 pointer-events-none" />
-            <button
-              onClick={handleDismissAiAdvice}
-              className="absolute right-5 top-5 text-slate-400 hover:text-slate-900 p-1.5 rounded-full hover:bg-white transition-all opacity-0 group-hover:opacity-100 z-10 shadow-sm"
-              aria-label="Fechar conselho da IA"
-            >
-              <X size={14} />
-            </button>
-            <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-100 to-purple-50 flex items-center justify-center text-indigo-600 flex-shrink-0 shadow-inner border border-white">
-              <Sparkles size={20} className="animate-pulse" />
-            </div>
-            <div className="relative flex flex-col">
-              <div className="flex items-center gap-2 mb-1.5">
-                <span className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.2em]">Inteligência Operacional</span>
-                <span className="w-1 h-1 bg-indigo-200 rounded-full" />
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cyzor IA</span>
+          <Tooltip
+            open={aiTooltip.open}
+            anchorRef={aiTooltip.anchorRef}
+            title="Conselho da IA"
+            description="Dicas estratégicas para o seu estágio atual"
+          >
+            <div className="relative group flex items-start gap-5 bg-white/60 backdrop-blur-xl border border-white/80 p-6 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_40px_rgb(79,70,229,0.08)] hover:-translate-y-0.5 transition-all duration-500 overflow-hidden" ref={aiTooltip.anchorRef}>
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 via-transparent to-purple-50/30 pointer-events-none" />
+              <button
+                onClick={handleDismissAiAdvice}
+                className="absolute right-5 top-5 text-slate-400 hover:text-slate-900 p-1.5 rounded-full hover:bg-white transition-all opacity-0 group-hover:opacity-100 z-10 shadow-sm"
+                aria-label="Fechar conselho da IA"
+              >
+                <X size={14} />
+              </button>
+              <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-100 to-purple-50 flex items-center justify-center text-indigo-600 flex-shrink-0 shadow-inner border border-white">
+                <Sparkles size={20} className="animate-pulse" />
               </div>
-              <p className="text-[14px] text-slate-700 font-medium leading-relaxed max-w-3xl">
-                "{getAiAdvice(currentStage)}"
-              </p>
+              <div className="relative flex flex-col">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.2em]">Inteligência Operacional</span>
+                  <span className="w-1 h-1 bg-indigo-200 rounded-full" />
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cyzor IA</span>
+                </div>
+                <p className="text-[14px] text-slate-700 font-medium leading-relaxed max-w-3xl">
+                  "{getAiAdvice(currentStage)}"
+                </p>
+              </div>
             </div>
-          </div>
+          </Tooltip>
         )}
       </div>
     </motion.header>

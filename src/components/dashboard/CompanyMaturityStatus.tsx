@@ -1,7 +1,9 @@
-import React from 'react';
+﻿import React from 'react';
 import { motion } from 'motion/react';
 import { Zap, ArrowRight, Target, CheckCircle2, Activity, ShieldCheck, Sparkles } from 'lucide-react';
 import { MaturityGauge } from './MaturityGauge';
+import { Tooltip } from '../ui/Tooltip';
+import { useTooltip } from '../ui/useTooltip';
 
 interface CompanyMaturityStatusProps {
   progress: number;
@@ -22,6 +24,8 @@ export function CompanyMaturityStatus({
   recommendations,
   onRoadmapClick
 }: CompanyMaturityStatusProps) {
+  const buttonTooltip = useTooltip();
+  const gaugeTooltip = useTooltip();
   return (
     <div className="relative group bg-white/40 backdrop-blur-xl border border-white/20 rounded-[32px] shadow-[0_8px_30px_rgba(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300 overflow-hidden">
   <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/30 via-transparent to-purple-50/10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -41,15 +45,23 @@ export function CompanyMaturityStatus({
           </div>
         </div>
 
-        <button 
-          onClick={onRoadmapClick}
-          className="relative overflow-hidden group/btn bg-gradient-to-r from-slate-900 to-slate-800 hover:from-indigo-600 hover:to-indigo-500 text-white px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all duration-500 flex items-center gap-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.08)]"
-        >
+          <Tooltip
+            open={buttonTooltip.open}
+            anchorRef={buttonTooltip.anchorRef}
+            title="VisÃ£o EstratÃ©gica"
+            description="Clique para abrir o roadmap completo da sua jornada."
+          >
+            <button
+              ref={buttonTooltip.anchorRef}
+              onClick={onRoadmapClick}
+              className="relative overflow-hidden group/btn bg-gradient-to-r from-slate-900 to-slate-800 hover:from-indigo-600 hover:to-indigo-500 text-white px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all duration-500 flex items-center gap-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.08)]"
+            >
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000 ease-out" />
           <span className="relative z-10 flex items-center gap-1">
             Ver Roadmap <ArrowRight className="w-3 h-3 transition-transform group-hover/btn:translate-x-1" />
           </span>
         </button>
+        </Tooltip>
       </div>
 
       {/* BODY */}
@@ -59,14 +71,21 @@ export function CompanyMaturityStatus({
         <div className="lg:w-5/12 p-6 lg:border-r border-slate-100 flex flex-col items-center justify-center bg-white relative">
           <div className="text-center mb-6">
             <span className="inline-block px-2.5 py-1 bg-emerald-50 text-emerald-600 border border-emerald-200/60 text-[8px] font-black uppercase tracking-widest rounded-md mb-2">
-              Estágio Ativo
+              EstÃ¡gio Ativo
             </span>
             <h3 className="text-2xl font-display font-black text-slate-900 tracking-tight leading-none mb-1">
               {currentStage.label}
             </h3>
           </div>
 
-          <MaturityGauge progress={progress} score={besScore} level={Math.floor(besScore / 100)} />
+          <Tooltip
+            open={gaugeTooltip.open}
+            anchorRef={gaugeTooltip.anchorRef}
+            title="Indicador de Maturidade"
+            description="Mostra o percentual de progresso e o nÃ­vel atual."
+          >
+            <MaturityGauge progress={progress} score={besScore} level={Math.floor(besScore / 100)} />
+          </Tooltip>
         </div>
 
         {/* Right Side: Next Goal & Actions */}
@@ -75,7 +94,7 @@ export function CompanyMaturityStatus({
             <div>
               <div className="flex items-center gap-1.5 mb-1">
                 <Target size={14} className="text-indigo-500" />
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Próximo Marco</span>
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">PrÃ³ximo Marco</span>
               </div>
               <h4 className="text-xl font-display font-black text-slate-900">
                 Desbloquear <span className="text-indigo-600 uppercase">{nextStage?.label || 'MVP'}</span>
@@ -115,8 +134,8 @@ export function CompanyMaturityStatus({
       <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-100 border-t border-slate-100 bg-white">
         {[
           { label: 'Panorama', val: 'Capacidade validada.', icon: Activity, color: 'text-indigo-500', bg: 'bg-indigo-50' },
-          { label: 'Atenção', val: 'Necessária maior tração.', icon: ShieldCheck, color: 'text-rose-500', bg: 'bg-rose-50' },
-          { label: 'Projeção', val: 'MVP alcançável.', icon: Sparkles, color: 'text-amber-500', bg: 'bg-amber-50' }
+          { label: 'AtenÃ§Ã£o', val: 'NecessÃ¡ria maior traÃ§Ã£o.', icon: ShieldCheck, color: 'text-rose-500', bg: 'bg-rose-50' },
+          { label: 'ProjeÃ§Ã£o', val: 'MVP alcanÃ§Ã¡vel.', icon: Sparkles, color: 'text-amber-500', bg: 'bg-amber-50' }
         ].map((item, i) => (
           <div key={i} className="px-5 py-3 flex items-center gap-3 hover:bg-slate-50/50 transition-colors">
             <div className={`w-6 h-6 rounded-lg ${item.bg} flex items-center justify-center shrink-0`}>
@@ -132,3 +151,4 @@ export function CompanyMaturityStatus({
     </div>
   );
 }
+

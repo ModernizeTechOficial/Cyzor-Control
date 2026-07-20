@@ -1,29 +1,31 @@
-import { View } from '../../types';
-import { calculateStrategicPriority } from '../../utils/strategicPrioritizer';
-import { Sparkles, ArrowRight, TrendingUp } from 'lucide-react';
-import { motion } from 'motion/react';
+import React from "react";
+import { motion } from "framer-motion";
+import { ArrowRight, Sparkles, TrendingUp } from "lucide-react";
+import { Tooltip } from "../ui/Tooltip";
+import { useTooltip } from "../ui/useTooltip";
+import { calculateStrategicPriority } from "../../utils/strategicPrioritizer";
 
-interface StrategicPriorityCardProps {
-  setCurrentView: (view: View) => void;
-  currentStage: string;
-  ideas: any[];
+export interface StrategicPriorityCardProps {
   projects: any[];
   products: any[];
   clients: any[];
   finance: any[];
   tasks: any[];
+  currentStage: string;
+  ideas: any[];
+  setCurrentView: (view: string) => void;
 }
 
-export default function StrategicPriorityCard({
-  setCurrentView,
-  currentStage,
-  ideas,
+const StrategicPriorityCard: React.FC<StrategicPriorityCardProps> = ({
   projects,
   products,
   clients,
   finance,
-  tasks
-}: StrategicPriorityCardProps) {
+  tasks,
+  currentStage,
+  ideas,
+  setCurrentView,
+}) => {
   
   // Calculate priority using the strategic analysis utility
   const priority = calculateStrategicPriority({
@@ -36,6 +38,9 @@ export default function StrategicPriorityCard({
     tasks
   });
 
+  const actionTooltip = useTooltip();
+  const roadmapTooltip = useTooltip();
+
   // Decide impact badge styles
   const getImpactStyles = (impact: string) => {
     switch (impact) {
@@ -43,7 +48,7 @@ export default function StrategicPriorityCard({
         return 'bg-rose-50 text-rose-700 border-rose-100';
       case 'Alto':
         return 'bg-amber-50 text-amber-700 border-amber-100';
-      case 'Médio':
+      case 'MÃ©dio':
         return 'bg-blue-50 text-blue-700 border-blue-100';
       default:
         return 'bg-slate-50 text-slate-700 border-slate-100';
@@ -71,7 +76,7 @@ export default function StrategicPriorityCard({
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[10px] font-black tracking-widest text-indigo-600 bg-indigo-50 border border-indigo-100/50 py-1 px-3 rounded-xl uppercase flex items-center gap-1.5 shadow-sm">
             <Sparkles className="w-3 h-3 text-indigo-500 animate-pulse" />
-            IA Recomendação
+            IA RecomendaÃ§Ã£o
           </span>
         </div>
 
@@ -85,7 +90,7 @@ export default function StrategicPriorityCard({
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
-          <span className="text-[9px] font-black uppercase tracking-[0.25em] text-slate-400">Impacto Estratégico:</span>
+          <span className="text-[9px] font-black uppercase tracking-[0.25em] text-slate-400">Impacto EstratÃ©gico:</span>
           <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-lg border shadow-sm ${getImpactStyles(priority.impact)}`}>
             {priority.impact}
           </span>
@@ -93,25 +98,32 @@ export default function StrategicPriorityCard({
       </div>
 
       <div className="flex flex-col gap-3 w-full mt-6 shrink-0 z-10">
-        <button
-          onClick={() => setCurrentView(priority.view)}
-          className="w-full relative overflow-hidden group/btn bg-gradient-to-r from-slate-900 to-slate-800 hover:from-indigo-600 hover:to-indigo-500 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all duration-500 flex items-center justify-center gap-2 shadow-[0_10px_40px_-10px_rgba(79,70,229,0.4)] hover:shadow-[0_10px_40px_-5px_rgba(79,70,229,0.7)]"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000 ease-out" />
-          <span className="relative z-10 flex items-center gap-2">
-            Executar Ação
-            <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
-          </span>
-        </button>
+        <Tooltip open={actionTooltip.open} anchorRef={actionTooltip.anchorRef} title="Executar AÃ§Ã£o" description="Inicia a aÃ§Ã£o estratÃ©gica selecionada">
+          <button
+            ref={actionTooltip.anchorRef}
+            onClick={() => setCurrentView(priority.view)}
+            className="w-full relative overflow-hidden group/btn bg-gradient-to-r from-slate-900 to-slate-800 hover:from-indigo-600 hover:to-indigo-500 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all duration-500 flex items-center justify-center gap-2 shadow-[0_10px_40px_-10px_rgba(79,70,229,0.4)] hover:shadow-[0_10px_40px_-5px_rgba(79,70,229,0.7)]"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000 ease-out" />
+            <span className="relative z-10 flex items-center gap-2">
+              Executar AÃ§Ã£o
+              <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
+            </span>
+          </button>
+        </Tooltip>
         
-        <button
-          onClick={() => setCurrentView('roadmap')}
-          className="w-full text-slate-400 hover:text-[#0F172A] font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 py-3 px-4 hover:bg-slate-50 rounded-2xl"
-        >
-          <TrendingUp className="w-4 h-4" />
-          Ver Roadmap Estratégico
-        </button>
+        <Tooltip open={roadmapTooltip.open} anchorRef={roadmapTooltip.anchorRef} title="Roadmap EstratÃ©gico" description="Veja o plano de aÃ§Ã£o completo">
+          <button
+            ref={roadmapTooltip.anchorRef}
+            onClick={() => setCurrentView('roadmap')}
+            className="w-full text-slate-400 hover:text-[#0F172A] font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 py-3 px-4 hover:bg-slate-50 rounded-2xl"
+          >
+            <TrendingUp className="w-4 h-4" />
+            Ver Roadmap EstratÃ©gico
+          </button>
+        </Tooltip>
       </div>
     </motion.div>
   );
 }
+export default StrategicPriorityCard;

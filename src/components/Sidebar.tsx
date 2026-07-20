@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from '../context/AuthContext.tsx';
 import { useBranding } from '../hooks/useBranding.ts';
@@ -11,6 +11,8 @@ import {
   MoreVertical, Briefcase, Search, Shield, TrendingUp
 } from 'lucide-react';
 import { View } from '../types';
+import { Tooltip } from './ui/Tooltip';
+import { useTooltip } from './ui/useTooltip';
 
 function useExpandedState(key: string, defaultValue: boolean = false) {
   const [expanded, setExpanded] = useState(() => {
@@ -193,7 +195,7 @@ export default function Sidebar({
               />
               <NavItem 
                 icon={TrendingUp} 
-                label="Estratégia" 
+                label="EstratÃ©gia" 
                 active={currentView === 'roadmap'} 
                 onClick={() => handleNavigate('roadmap')} 
               />
@@ -251,7 +253,7 @@ export default function Sidebar({
               />
               <NavItem 
                 icon={FileText} 
-                label="Documentação" 
+                label="DocumentaÃ§Ã£o" 
                 active={currentView === 'documentacao'} 
                 onClick={() => handleNavigate('documentacao')} 
               />
@@ -263,7 +265,7 @@ export default function Sidebar({
               />
               <NavItem 
                 icon={Settings} 
-                label="Configurações" 
+                label="ConfiguraÃ§Ãµes" 
                 active={currentView === 'configuracoes'} 
                 onClick={() => handleNavigate('configuracoes')} 
               />
@@ -287,7 +289,7 @@ export default function Sidebar({
                 />
                 <NavItem 
                   icon={TrendingUp} 
-                  label="Estratégia" 
+                  label="EstratÃ©gia" 
                   active={currentView === 'roadmap'} 
                   onClick={() => handleNavigate('roadmap')} 
                 />
@@ -321,7 +323,7 @@ export default function Sidebar({
                 />
                 <NavItem 
                   icon={Lightbulb} 
-                  label="Ideias & Negócios" 
+                  label="Ideias & NegÃ³cios" 
                   active={currentView === 'ideias'} 
                   onClick={() => handleNavigate('ideias')} 
                 />
@@ -366,7 +368,7 @@ export default function Sidebar({
                 />
                 <NavItem 
                   icon={FileText} 
-                  label="Documentação" 
+                  label="DocumentaÃ§Ã£o" 
                   active={currentView === 'documentacao'} 
                   onClick={() => handleNavigate('documentacao')} 
                 />
@@ -430,14 +432,14 @@ export default function Sidebar({
                 </AnimatePresence>
               </div>
 
-              {/* Section: Configurações & Geral */}
+              {/* Section: ConfiguraÃ§Ãµes & Geral */}
               <div className="flex flex-col gap-0.5">
                 <div className="px-6 py-1">
-                  <span className="text-[10px] font-black text-[#A1A1AA] uppercase tracking-[0.2em]">Preferências</span>
+                  <span className="text-[10px] font-black text-[#A1A1AA] uppercase tracking-[0.2em]">PreferÃªncias</span>
                 </div>
                 <NavItem 
                   icon={Settings} 
-                  label="Configurações" 
+                  label="ConfiguraÃ§Ãµes" 
                   active={currentView === 'configuracoes'} 
                   onClick={() => handleNavigate('configuracoes')} 
                 />
@@ -602,4 +604,5 @@ function LeafNode({ icon: Icon, label, indent = 0, onClick, active, parentIsSubN
     </div>
   );
 }
+
 

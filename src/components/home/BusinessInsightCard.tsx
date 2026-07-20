@@ -1,6 +1,8 @@
 import { Sparkles, ArrowRight } from 'lucide-react';
 import { View } from '../../types';
 import { motion } from 'motion/react';
+import { Tooltip } from "../ui/Tooltip";
+import { useTooltip } from "../ui/useTooltip";
 
 interface BusinessInsightCardProps {
   setCurrentView: (view: View) => void;
@@ -8,16 +10,17 @@ interface BusinessInsightCardProps {
 }
 
 export default function BusinessInsightCard({ setCurrentView, currentStage }: BusinessInsightCardProps) {
+  const insightTooltip = useTooltip();
   
   // Logic: Simple mapping based on current stage for now
   const getInsight = () => {
     switch (currentStage) {
       case 'Ideia':
-        return "Sua empresa está em fase inicial. O foco agora é estruturar o conceito e validar a dor através de entrevistas qualitativas.";
-      case 'Validação':
-        return "Você está validando hipóteses críticas. Otimize seu feedback loop para pivotar ou perseverar com base em dados reais.";
+        return "Sua empresa estÃ¡ em fase inicial. O foco agora Ã© estruturar o conceito e validar a dor atravÃ©s de entrevistas qualitativas.";
+      case 'ValidaÃ§Ã£o':
+        return "VocÃª estÃ¡ validando hipÃ³teses crÃ­ticas. Otimize seu feedback loop para pivotar ou perseverar com base em dados reais.";
       default:
-        return "Sua maturidade operacional está em ascensão. Continue monitorando seus indicadores de tração e eficiência financeira.";
+        return "Sua maturidade operacional estÃ¡ em ascensÃ£o. Continue monitorando seus indicadores de traÃ§Ã£o e eficiÃªncia financeira.";
     }
   };
 
@@ -40,7 +43,9 @@ export default function BusinessInsightCard({ setCurrentView, currentStage }: Bu
         <div className="w-8 h-8 rounded-full bg-white border border-slate-100 flex items-center justify-center shadow-sm">
           <Sparkles className="w-4 h-4 text-indigo-500" />
         </div>
-        <h3 className="text-[10px] font-display font-black text-slate-400 uppercase tracking-[0.2em]">IA Insight</h3>
+        <Tooltip open={insightTooltip.open} anchorRef={insightTooltip.anchorRef} title="Insight" description={getInsight()}>
+          <h3 ref={insightTooltip.anchorRef} className="text-[10px] font-display font-black text-slate-400 uppercase tracking-[0.2em]">IA Insight</h3>
+        </Tooltip>
       </div>
       
       <p className="text-xs text-slate-600 leading-relaxed font-medium flex-1 relative z-10">
@@ -60,3 +65,4 @@ export default function BusinessInsightCard({ setCurrentView, currentStage }: Bu
     </motion.div>
   );
 }
+

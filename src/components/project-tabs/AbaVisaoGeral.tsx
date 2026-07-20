@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { ProjectExtended } from '../../types/project';
 import { User, Flag, Calendar, Building2, Layers, Briefcase, Users, Activity, CheckSquare, Clock } from 'lucide-react';
 import { FormGroup, FormLabel, FormInput, FormTextarea, FormSelect } from '../ui/FormComponents';
@@ -65,7 +65,7 @@ export default function AbaVisaoGeral({ project, isEditing, onChange, companies 
             <span className="text-xs text-slate-500 font-medium">alocadas</span>
           </div>
           <div className="text-[10px] text-slate-500 font-medium mt-auto flex items-center gap-1">
-            <span className="font-bold text-[#111111]">{doneTasks}</span> concluídas • <span className="font-bold text-[#111111]">{openTasks}</span> abertas
+            <span className="font-bold text-[#111111]">{doneTasks}</span> concluÃ­das â€¢ <span className="font-bold text-[#111111]">{openTasks}</span> abertas
           </div>
         </div>
 
@@ -76,7 +76,7 @@ export default function AbaVisaoGeral({ project, isEditing, onChange, companies 
           </div>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-3xl font-display font-bold text-[#111111]">{highPriorityTasks}</span>
-            <span className="text-xs text-amber-600 font-bold">{highPriorityTasks > 0 ? 'Alta prioridade' : 'Sem risco crítico'}</span>
+            <span className="text-xs text-amber-600 font-bold">{highPriorityTasks > 0 ? 'Alta prioridade' : 'Sem risco crÃ­tico'}</span>
           </div>
           <div className="text-[10px] text-slate-500 font-medium mt-auto">
             Tarefas urgentes sob acompanhamento
@@ -119,7 +119,7 @@ export default function AbaVisaoGeral({ project, isEditing, onChange, companies 
             {isEditing ? (
               <div className="flex flex-col gap-6">
                 <FormGroup>
-                  <FormLabel>Descrição do Projeto</FormLabel>
+                  <FormLabel>DescriÃ§Ã£o do Projeto</FormLabel>
                   <FormTextarea 
                     value={formData.description || ''}
                     onChange={(e) => handleChange('description', e.target.value)}
@@ -135,7 +135,7 @@ export default function AbaVisaoGeral({ project, isEditing, onChange, companies 
                       value={formData.companyId || ''}
                       onChange={(e) => {
                         const cid = Number(e.target.value);
-                        const cname = companies.find(c => c.id === cid)?.name || 'Empresa não vinculada';
+                        const cname = companies.find(c => c.id === cid)?.name || 'Empresa nÃ£o vinculada';
                         const updated = { ...formData, companyId: cid, company: cname };
                         setFormData(updated);
                         onChange(updated);
@@ -153,9 +153,9 @@ export default function AbaVisaoGeral({ project, isEditing, onChange, companies 
                       onChange={(e) => handleChange('priority', e.target.value)}
                     >
                       <option value="Baixa">Baixa</option>
-                      <option value="Média">Média</option>
+                      <option value="MÃ©dia">MÃ©dia</option>
                       <option value="Alta">Alta</option>
-                      <option value="Crítica">Crítica</option>
+                      <option value="CrÃ­tica">CrÃ­tica</option>
                     </FormSelect>
                   </FormGroup>
 
@@ -242,7 +242,7 @@ export default function AbaVisaoGeral({ project, isEditing, onChange, companies 
         <div className="flex flex-col gap-6">
           <div className="bg-white border border-slate-200 rounded-[24px] p-8 shadow-sm flex flex-col gap-6">
             <h3 className="text-[11px] font-bold uppercase tracking-widest text-[#64748B] border-b border-slate-100 pb-3 flex justify-between items-center">
-              <span>Critérios de Sucesso</span>
+              <span>CritÃ©rios de Sucesso</span>
               <span className="text-[#111111] bg-slate-50 border border-slate-200 px-2 py-0.5 rounded text-[10px]">
                 {formData.criteria?.filter(c => c.completed).length || 0}/{formData.criteria?.length || 0}
               </span>
@@ -277,3 +277,4 @@ export default function AbaVisaoGeral({ project, isEditing, onChange, companies 
     </div>
   );
 }
+

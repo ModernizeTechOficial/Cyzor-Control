@@ -1,5 +1,7 @@
 import { motion } from 'motion/react';
 import { Target, Activity, Clock, CheckCircle2, MoreHorizontal } from 'lucide-react';
+import { Tooltip } from "../ui/Tooltip";
+import { useTooltip } from "../ui/useTooltip";
 
 interface Project {
   id: string;
@@ -10,7 +12,8 @@ interface Project {
 }
 
 export default function ProjectPulse({ projects }: { projects: Project[] }) {
-  const activeProjects = projects.filter(p => p.status !== 'Concluido' && p.status !== 'CONCLUÍDO').slice(0, 3);
+  const activeProjects = projects.filter(p => p.status !== 'Concluido' && p.status !== 'CONCLUÃDO').slice(0, 3);
+const cardTooltip = useTooltip();
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -25,12 +28,14 @@ export default function ProjectPulse({ projects }: { projects: Project[] }) {
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between mb-8">
         <div className="flex flex-col">
-          <span className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-1.5 leading-none">Visão de Entrega</span>
+          <span className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-1.5 leading-none">VisÃ£o de Entrega</span>
           <h3 className="text-xl font-display font-black text-slate-900 tracking-tight">Pulso de Projetos Ativos</h3>
         </div>
-        <button className="p-2 hover:bg-white rounded-2xl transition-all shadow-sm border border-transparent hover:border-slate-100">
-          <MoreHorizontal size={20} className="text-slate-400" />
-        </button>
+        <Tooltip open={cardTooltip.open} anchorRef={cardTooltip.anchorRef} title="AÃ§Ãµes do Projeto" description="Clique para ver opÃ§Ãµes do projeto">
+  <button ref={cardTooltip.anchorRef} className="bg-slate-900/90 backdrop-blur-xl border border-white/10 rounded-2xl text-white p-4 transition-all shadow-sm">
+    <MoreHorizontal size={20} className="text-slate-400" />
+  </button>
+</Tooltip>
       </div>
 
       <div className="flex flex-col gap-6">
@@ -46,7 +51,7 @@ export default function ProjectPulse({ projects }: { projects: Project[] }) {
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: idx * 0.1 }}
-              className="flex flex-col gap-2.5 group cursor-pointer hover:-translate-y-1 hover:bg-slate-50/50 p-2 -mx-2 rounded-xl transition-all duration-300"
+              className="w-full h-full bg-white/40 backdrop-blur-sm border border-white rounded-[32px] p-6 flex flex-col gap-4 text-slate-800 shadow-sm relative overflow-visible group hover:bg-white transition-colors duration-500"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
@@ -93,9 +98,10 @@ export default function ProjectPulse({ projects }: { projects: Project[] }) {
          </div>
          <div className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
             <CheckCircle2 size={10} />
-            <span className="text-[8px] font-black uppercase tracking-widest">Saúde: Alta</span>
+            <span className="text-[8px] font-black uppercase tracking-widest">SaÃºde: Alta</span>
          </div>
       </div>
     </div>
   );
 }
+

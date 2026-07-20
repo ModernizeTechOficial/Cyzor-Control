@@ -1,7 +1,9 @@
-import { Search, Bell, PanelLeftClose, PanelLeft, Sun, Moon, LogOut, User, AlertTriangle, Info, Clock, ShieldCheck, HelpCircle, ChevronDown, ChevronRight, Plus, X, CheckCircle2 } from 'lucide-react';
+﻿import { Search, Bell, PanelLeftClose, PanelLeft, Sun, Moon, LogOut, User, AlertTriangle, Info, Clock, ShieldCheck, HelpCircle, ChevronDown, ChevronRight, Plus, X, CheckCircle2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
+import { Tooltip } from './ui/Tooltip';
+import { useTooltip } from './ui/useTooltip';
 import { View } from '../types.ts';
 import { useNavigation } from '../context/NavigationContext';
 import { useCompanies, useProjects, useProducts } from '../hooks/useCyzorQueries';
@@ -9,7 +11,7 @@ import { useBranding } from '../hooks/useBranding.ts';
 
 import { useClickOutside } from '../hooks/useClickOutside.ts';
 
-function NotificationMenu() {
+function NotificationMenu({ notificationsTooltip }: { notificationsTooltip: any }) {
   const { fetchWithAuth, activeWorkspace } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -112,31 +114,34 @@ function NotificationMenu() {
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
-    if (diffMins < 60) return `Há ${diffMins} min`;
+    if (diffMins < 60) return `HÃ¡ ${diffMins} min`;
     const diffHrs = Math.floor(diffMins / 60);
-    if (diffHrs < 24) return `Há ${diffHrs} h`;
-    return `Há ${Math.floor(diffHrs / 24)} d`;
+    if (diffHrs < 24) return `HÃ¡ ${diffHrs} h`;
+    return `HÃ¡ ${Math.floor(diffHrs / 24)} d`;
   };
 
   return (
     <div className="relative" id="notifications-btn" ref={menuRef as any}>
-      <button 
-        onClick={handleToggleNotifications}
-        className="relative w-9 h-9 rounded-xl flex items-center justify-center hover:bg-[#FAFAFA] transition-colors text-[#64748B] hover:text-[#111111]"
-      >
-        <Bell size={16} className={unreadCount > 0 ? "text-[#111111]" : ""} />
-        {unreadCount > 0 && (
-          <div className="absolute top-1.5 right-1.5 flex min-w-[14px] h-[14px] items-center justify-center rounded-full bg-[#111111] border-2 border-[#FFFFFF] px-[3px] text-[8px] font-bold text-white">
-            {unreadCount}
-          </div>
-        )}
-      </button>
+      <Tooltip open={notificationsTooltip.open} anchorRef={notificationsTooltip.anchorRef} title="NotificaÃ§Ãµes" description="Veja suas notificaÃ§Ãµes recentes">
+        <button 
+          ref={notificationsTooltip.anchorRef}
+          onClick={handleToggleNotifications}
+          className="relative w-9 h-9 rounded-xl flex items-center justify-center hover:bg-[#FAFAFA] transition-colors text-[#64748B] hover:text-[#111111]"
+        >
+          <Bell size={16} className={unreadCount > 0 ? "text-[#111111]" : ""} />
+          {unreadCount > 0 && (
+            <div className="absolute top-1.5 right-1.5 flex min-w-[14px] h-[14px] items-center justify-center rounded-full bg-[#111111] border-2 border-[#FFFFFF] px-[3px] text-[8px] font-bold text-white">
+              {unreadCount}
+            </div>
+          )}
+        </button>
+      </Tooltip>
 
       {showNotifications && (
         <div className="absolute right-0 mt-2.5 w-[320px] sm:w-[380px] bg-white border border-[#0F172A0F] rounded-[24px] p-4 shadow-[0_10px_40px_rgba(0,0,0,0.08)] z-50 flex flex-col animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="flex items-center justify-between pb-4 border-b border-[#0F172A0F] mb-2">
               <h3 className="text-sm font-bold text-[#111111] flex items-center gap-2">
-                Notificações
+                NotificaÃ§Ãµes
                 {unreadCount > 0 && (
                   <span className="bg-[#111111] text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
                     {unreadCount} novas
@@ -196,7 +201,7 @@ function NotificationMenu() {
                   <div className="w-12 h-12 rounded-full bg-[#FAFAFA] border border-[#0F172A0F] flex items-center justify-center text-[#64748B]">
                     <Bell size={20} />
                   </div>
-                  <p className="text-xs text-[#64748B]">Nenhuma notificação no momento</p>
+                  <p className="text-xs text-[#64748B]">Nenhuma notificaÃ§Ã£o no momento</p>
                 </div>
               )}
             </div>
@@ -254,7 +259,7 @@ function UserProfileMenu({ setCurrentView }: { setCurrentView?: (view: View) => 
               }}
               className="w-full flex items-center gap-2.5 text-xs font-bold text-red-500 hover:text-red-600 hover:bg-red-50 p-2.5 rounded-xl transition-all border border-transparent hover:border-red-100"
             >
-              <LogOut size={16} /> Terminar Sessão
+              <LogOut size={16} /> Terminar SessÃ£o
             </button>
           </div>
       )}
@@ -321,7 +326,7 @@ function WorkspaceSelector() {
                   <div className="flex flex-col items-start overflow-hidden">
                     <span className="text-xs truncate w-full text-left">{workspace.name}</span>
                     <span className="text-[9px] font-medium opacity-60 uppercase tracking-tighter">
-                      {workspace.ownerId === activeWorkspace?.ownerId ? 'Proprietário' : 'Membro'}
+                      {workspace.ownerId === activeWorkspace?.ownerId ? 'ProprietÃ¡rio' : 'Membro'}
                     </span>
                   </div>
                   {activeWorkspace?.id === workspace.id && (
@@ -394,22 +399,23 @@ export default function Topbar({ isSidebarCollapsed, toggleSidebar, setCurrentVi
   const { activeWorkspace } = useAuth();
   const { appName } = useBranding();
   const [isOnline, setIsOnline] = useState(true);
+  const notificationsTooltip = useTooltip();
 
   const sectionLabelMap: Record<string, string> = {
     dashboard: 'Dashboard',
-    roadmap: 'Estratégia',
+    roadmap: 'EstratÃ©gia',
     empresas: 'Empresas',
     clientes: 'Clientes',
     produtos: 'Produtos',
     projetos: 'Projetos',
     ideias: 'Ideias',
     financeiro: 'Financeiro',
-    documentacao: 'Documentação',
+    documentacao: 'DocumentaÃ§Ã£o',
     ia: 'IA',
     agenda: 'Agenda',
     keep: 'Keep',
     'flow-builder': 'Flow Builder',
-    configuracoes: 'Configurações',
+    configuracoes: 'ConfiguraÃ§Ãµes',
     equipe: 'Equipe',
     admin: 'Admin'
   };
@@ -538,7 +544,7 @@ export default function Topbar({ isSidebarCollapsed, toggleSidebar, setCurrentVi
             <HelpCircle size={16} />
           </motion.button>
           
-          <NotificationMenu />
+          <NotificationMenu notificationsTooltip={notificationsTooltip} />
           <div className="ml-1">
             <UserProfileMenu setCurrentView={setCurrentView} />
           </div>
@@ -547,3 +553,4 @@ export default function Topbar({ isSidebarCollapsed, toggleSidebar, setCurrentVi
     </motion.header>
   );
 }
+
