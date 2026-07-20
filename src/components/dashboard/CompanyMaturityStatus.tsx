@@ -23,7 +23,8 @@ export function CompanyMaturityStatus({
   onRoadmapClick
 }: CompanyMaturityStatusProps) {
   return (
-    <div className="bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-hidden flex flex-col relative w-full">
+    <div className="relative group bg-white/40 backdrop-blur-xl border border-white/20 rounded-[32px] shadow-[0_8px_30px_rgba(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300 overflow-hidden">
+  <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/30 via-transparent to-purple-50/10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
       {/* HEADER */}
       <div className="px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 bg-slate-50/50">
         <div className="flex items-center gap-3">
@@ -36,17 +37,18 @@ export function CompanyMaturityStatus({
               <div className="w-1 h-1 rounded-full bg-indigo-500" />
               <span className="text-[9px] font-black uppercase text-indigo-600 tracking-widest leading-none">Executivo</span>
             </div>
-            <h2 className="text-lg font-display font-black text-slate-900 tracking-tight leading-none">
-              Maturidade Operacional
-            </h2>
+            <h2 className="text-2xl font-display font-black bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-slate-700 to-slate-500 tracking-tight leading-none">Maturidade Operacional</h2>
           </div>
         </div>
 
         <button 
           onClick={onRoadmapClick}
-          className="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-colors flex items-center gap-1.5 shadow-sm group"
+          className="relative overflow-hidden group/btn bg-gradient-to-r from-slate-900 to-slate-800 hover:from-indigo-600 hover:to-indigo-500 text-white px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all duration-500 flex items-center gap-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.08)]"
         >
-          Ver Roadmap <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000 ease-out" />
+          <span className="relative z-10 flex items-center gap-1">
+            Ver Roadmap <ArrowRight className="w-3 h-3 transition-transform group-hover/btn:translate-x-1" />
+          </span>
         </button>
       </div>
 

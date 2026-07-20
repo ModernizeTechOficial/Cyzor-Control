@@ -28,9 +28,13 @@ export default function BusinessInsightCard({ setCurrentView, currentStage }: Bu
       transition={{ duration: 0.4 }}
       className="w-full h-full bg-white/40 backdrop-blur-sm border border-white rounded-[32px] p-6 flex flex-col gap-4 text-slate-800 shadow-sm relative overflow-hidden group hover:bg-white transition-colors duration-500"
     >
-      <div className="absolute top-0 right-0 p-6 opacity-[0.03] text-indigo-600 pointer-events-none group-hover:scale-110 transition-transform duration-700">
-        <Sparkles size={120} />
-      </div>
+      <motion.div 
+        animate={{ y: [0, -10, 0], scale: [1, 1.05, 1] }}
+        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute -top-4 -right-4 p-6 opacity-[0.03] text-indigo-600 pointer-events-none group-hover:opacity-[0.05] transition-opacity duration-700"
+      >
+        <Sparkles size={140} />
+      </motion.div>
 
       <div className="flex items-center gap-2 relative z-10">
         <div className="w-8 h-8 rounded-full bg-white border border-slate-100 flex items-center justify-center shadow-sm">
@@ -45,10 +49,13 @@ export default function BusinessInsightCard({ setCurrentView, currentStage }: Bu
 
       <button
         onClick={() => setCurrentView('roadmap')}
-        className="w-full py-3.5 bg-[#0F172A] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all flex items-center justify-center gap-2 relative z-10 shadow-xl shadow-indigo-900/10"
+        className="w-full relative overflow-hidden group/btn bg-gradient-to-r from-slate-900 to-slate-800 hover:from-indigo-600 hover:to-indigo-500 text-white py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 flex items-center justify-center gap-2 z-10 shadow-[0_10px_40px_-10px_rgba(79,70,229,0.4)] hover:shadow-[0_10px_40px_-5px_rgba(79,70,229,0.7)]"
       >
-        Continuar Jornada
-        <ArrowRight className="w-4 h-4" />
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000 ease-out" />
+        <span className="relative z-10 flex items-center gap-2">
+          Continuar Jornada
+          <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
+        </span>
       </button>
     </motion.div>
   );

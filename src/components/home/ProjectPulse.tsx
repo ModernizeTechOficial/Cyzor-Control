@@ -46,7 +46,7 @@ export default function ProjectPulse({ projects }: { projects: Project[] }) {
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: idx * 0.1 }}
-              className="flex flex-col gap-2.5 group cursor-pointer"
+              className="flex flex-col gap-2.5 group cursor-pointer hover:-translate-y-1 hover:bg-slate-50/50 p-2 -mx-2 rounded-xl transition-all duration-300"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
@@ -67,12 +67,12 @@ export default function ProjectPulse({ projects }: { projects: Project[] }) {
                 </div>
               </div>
 
-              <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden">
+              <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden relative shadow-inner">
                 <motion.div 
                   initial={{ width: 0 }}
                   animate={{ width: `${project.progress || 0}%` }}
                   transition={{ duration: 1, ease: "easeOut", delay: 0.5 + idx * 0.1 }}
-                  className="bg-indigo-600 h-full rounded-full"
+                  className="bg-gradient-to-r from-indigo-500 to-indigo-600 h-full rounded-full shadow-[0_0_12px_rgba(79,70,229,0.8)]"
                 />
               </div>
             </motion.div>
@@ -82,14 +82,14 @@ export default function ProjectPulse({ projects }: { projects: Project[] }) {
 
       <div className="mt-auto pt-6 border-t border-slate-50 flex items-center justify-between">
          <div className="flex items-center gap-2">
-            <div className="flex -space-x-1.5">
+            <div className="flex -space-x-2">
                {[1, 2, 3].map(i => (
-                 <div key={i} className="w-6 h-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[7px] font-black text-slate-400">
+                 <div key={i} className="w-7 h-7 rounded-full border-2 border-white bg-white/80 backdrop-blur-sm shadow-[0_2px_8px_rgba(0,0,0,0.08)] flex items-center justify-center text-[8px] font-black text-slate-600 hover:z-20 hover:-translate-y-1 transition-transform cursor-pointer relative z-10">
                    {String.fromCharCode(64 + i)}
                  </div>
                ))}
             </div>
-            <span className="text-[9px] font-bold text-slate-400">Equipe ativa</span>
+            <span className="text-[9px] font-bold text-slate-400 ml-1">Equipe ativa</span>
          </div>
          <div className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
             <CheckCircle2 size={10} />

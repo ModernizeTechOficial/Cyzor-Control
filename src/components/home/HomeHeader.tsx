@@ -73,9 +73,10 @@ export default function HomeHeader() {
         </div>
         
         <div className="flex items-center gap-3">
-          <div className="px-2.5 py-1 bg-slate-50 border border-slate-100 rounded-lg flex items-center gap-1.5">
-            <Zap size={10} className="text-amber-500 fill-amber-500" />
-            <span className="text-[10px] font-black text-slate-600 uppercase tracking-wider">Plano Enterprise</span>
+          <div className="px-3 py-1.5 bg-gradient-to-r from-slate-900 to-slate-800 border border-slate-700 rounded-lg flex items-center gap-1.5 shadow-[0_4px_12px_rgba(0,0,0,0.15)] relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+            <Zap size={12} className="text-amber-400 fill-amber-400" />
+            <span className="text-[10px] font-black text-slate-100 uppercase tracking-widest">Enterprise</span>
           </div>
         </div>
       </div>
@@ -83,30 +84,34 @@ export default function HomeHeader() {
       {/* Greeting & AI Executive Advice Panel */}
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl sm:text-4xl font-display font-black text-[#0F172A] tracking-tight leading-tight">
-            {getGreeting()}, <span className="text-slate-400 font-medium">{user?.displayName || user?.email?.split('@')[0] || 'Diretor'}</span>.
+          <h1 className="text-4xl sm:text-5xl font-display font-black tracking-tight leading-tight">
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-slate-700 to-slate-500">
+              {getGreeting()},
+            </span>
+            <span className="text-slate-400 font-medium ml-2">{user?.displayName || user?.email?.split('@')[0] || 'Diretor'}</span>.
           </h1>
         </div>
         
         {isAiAdviceVisible && (
-          <div className="relative group flex items-start gap-4 bg-white border border-[#0F172A08] p-5 rounded-[24px] shadow-sm hover:shadow-md transition-all duration-300">
+          <div className="relative group flex items-start gap-5 bg-white/60 backdrop-blur-xl border border-white/80 p-6 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_40px_rgb(79,70,229,0.08)] hover:-translate-y-0.5 transition-all duration-500 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 via-transparent to-purple-50/30 pointer-events-none" />
             <button
               onClick={handleDismissAiAdvice}
-              className="absolute right-4 top-4 text-[#94A3B8] hover:text-[#111111] p-1.5 rounded-full hover:bg-slate-50 transition-colors opacity-0 group-hover:opacity-100"
+              className="absolute right-5 top-5 text-slate-400 hover:text-slate-900 p-1.5 rounded-full hover:bg-white transition-all opacity-0 group-hover:opacity-100 z-10 shadow-sm"
               aria-label="Fechar conselho da IA"
             >
               <X size={14} />
             </button>
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 flex-shrink-0">
-              <Sparkles size={18} className="animate-pulse" />
+            <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-100 to-purple-50 flex items-center justify-center text-indigo-600 flex-shrink-0 shadow-inner border border-white">
+              <Sparkles size={20} className="animate-pulse" />
             </div>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase text-indigo-600 tracking-widest">Inteligência Operacional</span>
-                <span className="w-1 h-1 bg-slate-200 rounded-full" />
+            <div className="relative flex flex-col">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.2em]">Inteligência Operacional</span>
+                <span className="w-1 h-1 bg-indigo-200 rounded-full" />
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cyzor IA</span>
               </div>
-              <p className="text-[14px] text-[#334155] font-medium mt-1.5 leading-relaxed max-w-3xl">
+              <p className="text-[14px] text-slate-700 font-medium leading-relaxed max-w-3xl">
                 "{getAiAdvice(currentStage)}"
               </p>
             </div>

@@ -112,3 +112,59 @@ export function useProducts() {
     enabled: !!activeWorkspace,
   });
 }
+
+export function useDeploys() {
+  const { fetchWithAuth, activeWorkspace } = useAuth();
+  
+  return useQuery({
+    queryKey: ['deploys', activeWorkspace?.id],
+    queryFn: async () => {
+      const res = await fetchWithAuth('/api/deploys');
+      if (!res.ok) throw new Error('Falha ao carregar deploys');
+      return res.json();
+    },
+    enabled: !!activeWorkspace,
+  });
+}
+
+export function useAgenda() {
+  const { fetchWithAuth, activeWorkspace } = useAuth();
+  
+  return useQuery({
+    queryKey: ['agenda', activeWorkspace?.id],
+    queryFn: async () => {
+      const res = await fetchWithAuth('/api/agenda');
+      if (!res.ok) throw new Error('Falha ao carregar agenda');
+      return res.json();
+    },
+    enabled: !!activeWorkspace,
+  });
+}
+
+export function useClients() {
+  const { fetchWithAuth, activeWorkspace } = useAuth();
+  
+  return useQuery({
+    queryKey: ['clients', activeWorkspace?.id],
+    queryFn: async () => {
+      const res = await fetchWithAuth('/api/clients');
+      if (!res.ok) throw new Error('Falha ao carregar clientes');
+      return res.json();
+    },
+    enabled: !!activeWorkspace,
+  });
+}
+
+export function useNotifications() {
+  const { fetchWithAuth, activeWorkspace } = useAuth();
+  
+  return useQuery({
+    queryKey: ['notifications', activeWorkspace?.id],
+    queryFn: async () => {
+      const res = await fetchWithAuth('/api/notifications');
+      if (!res.ok) throw new Error('Falha ao carregar notificações');
+      return res.json();
+    },
+    enabled: !!activeWorkspace,
+  });
+}

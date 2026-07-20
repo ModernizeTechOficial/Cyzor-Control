@@ -70,7 +70,7 @@ export default function HomeAnalytics({ financeEntries = [] }: { financeEntries?
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-slate-900 text-white p-3 rounded-xl border border-slate-800 shadow-xl flex flex-col gap-1.5 animate-in scale-in-95 duration-150">
+        <div className="bg-slate-900/90 backdrop-blur-xl text-white p-4 rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.25)] flex flex-col gap-2 animate-in scale-in-95 duration-150">
           <div className="flex items-center gap-1.5">
             {company?.logoUrl ? (
               <div className="w-4 h-4 rounded-full overflow-hidden bg-white flex items-center justify-center shrink-0">
@@ -112,7 +112,7 @@ export default function HomeAnalytics({ financeEntries = [] }: { financeEntries?
               )}
             </div>
             <div className="flex items-baseline gap-3 mt-4">
-              <span className="text-4xl font-display font-black text-slate-900 tracking-tighter leading-none">{displayTotalStr}</span>
+              <span className="text-5xl font-display font-black bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-slate-800 to-slate-600 tracking-[-0.04em] leading-none drop-shadow-sm">{displayTotalStr}</span>
               <div className={`flex items-center gap-2 px-3 py-1.5 rounded-2xl ${company ? 'bg-indigo-50 text-indigo-600' : 'bg-emerald-50 text-emerald-600'} border ${company ? 'border-indigo-100/50' : 'border-emerald-100/50'} shadow-sm`}>
                 <TrendingUp size={14} className={company ? 'text-indigo-600' : 'text-emerald-600'} /> 
                 <span className="text-[10px] font-black uppercase tracking-widest">{viewMode === 'anual' ? 'Performance Anual' : 'Performance Mensal'}</span>
@@ -140,8 +140,9 @@ export default function HomeAnalytics({ financeEntries = [] }: { financeEntries?
             <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorReceitaReal" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={strokeColor} stopOpacity={0.15}/>
-                  <stop offset="95%" stopColor={strokeColor} stopOpacity={0}/>
+                  <stop offset="0%" stopColor={strokeColor} stopOpacity={0.25}/>
+                  <stop offset="50%" stopColor={strokeColor} stopOpacity={0.05}/>
+                  <stop offset="100%" stopColor={strokeColor} stopOpacity={0}/>
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />

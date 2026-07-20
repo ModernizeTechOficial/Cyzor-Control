@@ -1,5 +1,5 @@
 import React from "react";
-import { motion } from "motion/react";
+import { motion, useMotionValue, useSpring, useTransform } from "motion/react";
 
 interface MaturityGaugeProps {
   progress: number;
@@ -22,6 +22,16 @@ export function MaturityGauge({ progress, score, level }: MaturityGaugeProps) {
   };
 
   const status = getStatus();
+
+  // Animated numeric progress value
+  const progressMotion = useMotionValue(0);
+  const animatedProgress = useSpring(progressMotion, { damping: 20, stiffness: 150 });
+  const displayProgress = useTransform(animatedProgress, (v) => Math.round(v));
+
+  // Update motion value when progress prop changes
+  React.useEffect(() => {
+    progressMotion.set(progress);
+  }, [progress, progressMotion]);
 
   return (
     <div className="flex flex-col items-center">
@@ -47,7 +57,19 @@ export function MaturityGauge({ progress, score, level }: MaturityGaugeProps) {
 
         {/* Center Text */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
-          <div className="text-3xl font-black tracking-tight text-slate-900">{progress}%</div>
+          {/* Rotating halo */}
+          <motion.div
+            className="absolute inset-0 rounded-full"
+            style={{ border: `2px solid ${status.color}` }}
+            animate={{ rotate: 360 }}
+            transition={{ repeat: Infinity, duration: 12, ease: "linear" }}
+          />
+          <motion.div
+            className="text-3xl font-black tracking-tight text-slate-900"
+            style={{ color: status.color }}
+          >
+            {Math.round(displayProgress.get())}%
+          </motion.div>
           <div className="mt-1 rounded-full px-2.5 py-0.5 text-[8px] font-black uppercase tracking-widest" style={{ background: `${status.color}15`, color: status.color }}>
             Nível {level}
           </div>

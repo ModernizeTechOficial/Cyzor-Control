@@ -59,6 +59,13 @@ export default function StrategicPriorityCard({
     >
       {/* Subtle executive background accent */}
       <div className="absolute right-0 top-0 w-32 h-full bg-gradient-to-l from-indigo-50/[0.1] to-transparent pointer-events-none group-hover:bg-indigo-50/20 transition-all duration-500" />
+      <motion.div 
+        animate={{ y: [0, -15, 0], rotate: [0, 5, -5, 0] }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute -top-10 -right-10 text-indigo-500/10 pointer-events-none group-hover:text-indigo-500/20 transition-colors duration-700"
+      >
+        <Sparkles size={160} />
+      </motion.div>
 
       <div className="flex-1 flex flex-col gap-4 min-h-0 relative z-10">
         <div className="flex flex-wrap items-center gap-2">
@@ -78,8 +85,8 @@ export default function StrategicPriorityCard({
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
-          <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Impacto Estratégico:</span>
-          <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg border shadow-sm ${getImpactStyles(priority.impact)}`}>
+          <span className="text-[9px] font-black uppercase tracking-[0.25em] text-slate-400">Impacto Estratégico:</span>
+          <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-lg border shadow-sm ${getImpactStyles(priority.impact)}`}>
             {priority.impact}
           </span>
         </div>
@@ -88,10 +95,13 @@ export default function StrategicPriorityCard({
       <div className="flex flex-col gap-3 w-full mt-6 shrink-0 z-10">
         <button
           onClick={() => setCurrentView(priority.view)}
-          className="w-full bg-[#0F172A] hover:bg-indigo-600 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 group/btn shadow-xl shadow-indigo-900/10"
+          className="w-full relative overflow-hidden group/btn bg-gradient-to-r from-slate-900 to-slate-800 hover:from-indigo-600 hover:to-indigo-500 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all duration-500 flex items-center justify-center gap-2 shadow-[0_10px_40px_-10px_rgba(79,70,229,0.4)] hover:shadow-[0_10px_40px_-5px_rgba(79,70,229,0.7)]"
         >
-          Executar Ação
-          <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000 ease-out" />
+          <span className="relative z-10 flex items-center gap-2">
+            Executar Ação
+            <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
+          </span>
         </button>
         
         <button
