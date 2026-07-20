@@ -2,6 +2,7 @@
 import { motion } from 'motion/react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
+import { useBusinessContext } from '../hooks/useBusinessContext';
 import { Tooltip } from './ui/Tooltip';
 import { useTooltip } from './ui/useTooltip';
 import { View } from '../types.ts';
@@ -114,15 +115,15 @@ function NotificationMenu({ notificationsTooltip }: { notificationsTooltip: any 
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
-    if (diffMins < 60) return `HÃ¡ ${diffMins} min`;
+    if (diffMins < 60) return `Há ${diffMins} min`;
     const diffHrs = Math.floor(diffMins / 60);
-    if (diffHrs < 24) return `HÃ¡ ${diffHrs} h`;
-    return `HÃ¡ ${Math.floor(diffHrs / 24)} d`;
+    if (diffHrs < 24) return `Há ${diffHrs} h`;
+    return `Há ${Math.floor(diffHrs / 24)} d`;
   };
 
   return (
     <div className="relative" id="notifications-btn" ref={menuRef as any}>
-      <Tooltip open={notificationsTooltip.open} anchorRef={notificationsTooltip.anchorRef} title="NotificaÃ§Ãµes" description="Veja suas notificaÃ§Ãµes recentes">
+      <Tooltip open={notificationsTooltip.open} anchorRef={notificationsTooltip.anchorRef} title="Notificações" description="Veja suas notificações recentes">
         <button 
           ref={notificationsTooltip.anchorRef}
           onClick={handleToggleNotifications}
@@ -141,7 +142,7 @@ function NotificationMenu({ notificationsTooltip }: { notificationsTooltip: any 
         <div className="absolute right-0 mt-2.5 w-[320px] sm:w-[380px] bg-white border border-[#0F172A0F] rounded-[24px] p-4 shadow-[0_10px_40px_rgba(0,0,0,0.08)] z-50 flex flex-col animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="flex items-center justify-between pb-4 border-b border-[#0F172A0F] mb-2">
               <h3 className="text-sm font-bold text-[#111111] flex items-center gap-2">
-                NotificaÃ§Ãµes
+                Notificações
                 {unreadCount > 0 && (
                   <span className="bg-[#111111] text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
                     {unreadCount} novas
@@ -201,7 +202,7 @@ function NotificationMenu({ notificationsTooltip }: { notificationsTooltip: any 
                   <div className="w-12 h-12 rounded-full bg-[#FAFAFA] border border-[#0F172A0F] flex items-center justify-center text-[#64748B]">
                     <Bell size={20} />
                   </div>
-                  <p className="text-xs text-[#64748B]">Nenhuma notificaÃ§Ã£o no momento</p>
+                  <p className="text-xs text-[#64748B]">Nenhuma notificação no momento</p>
                 </div>
               )}
             </div>
@@ -397,6 +398,7 @@ export default function Topbar({ isSidebarCollapsed, toggleSidebar, setCurrentVi
   const [isDark, setIsDark] = useState(false);
   const [time, setTime] = useState(new Date());
   const { activeWorkspace } = useAuth();
+  const business = useBusinessContext();
   const { appName } = useBranding();
   const [isOnline, setIsOnline] = useState(true);
   const notificationsTooltip = useTooltip();
@@ -504,7 +506,7 @@ export default function Topbar({ isSidebarCollapsed, toggleSidebar, setCurrentVi
         <div className="hidden xl:flex items-center gap-6 pr-6 border-r border-[#0F172A0A]">
           <div className="flex flex-col items-end gap-0.5">
             <span className="text-xs font-display font-black text-[#111111]">
-              {(activeWorkspace?.settings?.besScore || 0).toLocaleString('pt-BR')} BES
+              {((business.companySettings && business.companySettings.besScore) || business.workspace?.settings?.besScore || 0).toLocaleString('pt-BR')} BES
             </span>
             <span className="text-[9px] font-bold text-[#64748B] uppercase tracking-wider">
               Score Global

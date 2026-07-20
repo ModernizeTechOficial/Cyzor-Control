@@ -9,6 +9,8 @@ import { getUserSaaSState } from '../db/queries.ts';
 export interface TenantRequest extends AuthRequest {
   tenantId?: string;
   tenant?: typeof schema.tenants.$inferSelect;
+  companyId?: number;
+  company?: typeof schema.companies.$inferSelect;
 }
 
 /**
@@ -113,6 +115,27 @@ export const tenantMiddleware = async (
     // 4. Inject tenant and workspace details into request
     req.tenantId = tenantId;
     req.tenant = tenant;
+
+    // 4.1 Ensure a Company exists for this workspace (1:1)
+    try {
+      const [existingCompany] = await db.select().from(schema.companies).where(eq(schema.companies.workspaceId, activeWorkspaceId)).limit(1);
+      if (!existingCompany) {
+        const [newCompany] = await db.insert(schema.companies).values({
+          tenantId: tenantId,
+          workspaceId: activeWorkspaceId,
+          name: workspace?.name ? `${workspace.name} Matriz` : `Empresa Workspace ${activeWorkspaceId}`,
+          status: 'Ativo'
+        }).returning();
+        req.companyId = newCompany.id;
+        req.company = newCompany;
+        console.log(`[Tenant Middleware] Auto-created company ${newCompany.id} for workspace ${activeWorkspaceId}`);
+      } else {
+        req.companyId = existingCompany.id;
+        req.company = existingCompany;
+      }
+    } catch (err) {
+      console.warn('[Tenant Middleware] Error ensuring company exists for workspace:', err?.message || err);
+    }
 
     // 5. Initialize the AsyncLocalStorage Context Store
     const context: TenantContextType = {

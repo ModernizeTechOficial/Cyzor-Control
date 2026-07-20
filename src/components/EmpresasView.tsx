@@ -96,6 +96,17 @@ export default function EmpresasView() {
     fetchCompanies();
   }, [activeWorkspace]);
 
+  // If there's exactly one company in this workspace and no company filter active,
+  // auto-select it so the user lands on the company 360 instead of an empty list page.
+  useEffect(() => {
+    if (!globalFilters.companyId && companies.length === 1) {
+      const only = companies[0];
+      if (only && only.id) {
+        setGlobalFilters({ companyId: only.id });
+      }
+    }
+  }, [companies, globalFilters.companyId, setGlobalFilters]);
+
   // Derived state
   const activeCompaniesCount = companies.filter(c => c.status === 'Ativo' || c.status === 'ACTIVE' || !c.status).length;
   const totalProjectsCount = companies.reduce((acc, c) => acc + Number(c.projects || 0), 0);

@@ -302,6 +302,23 @@ apiRouter.post("/workspaces", async (req: AuthRequest, res) => {
       cargo: 'Proprietário'
     });
 
+    // Ensure a Company exists for this Workspace (one-to-one)
+    try {
+      const [existingCompany] = await db.select().from(companies).where(eq(companies.workspaceId, newWs.id)).limit(1);
+      if (!existingCompany) {
+        const [newCompany] = await db.insert(companies).values({
+          workspaceId: newWs.id,
+          tenantId: req.tenantId as any,
+          name: `${newWs.name} Matriz`,
+          status: 'Ativo'
+        }).returning();
+        await logAction(req, 'CREATE', 'companies', String(newCompany.id), null, newCompany);
+      }
+    } catch (err) {
+      // If uniqueness constraint or other race occurs, log and continue — workspace created successfully
+      console.warn('Warning while auto-creating company for workspace:', err?.message || err);
+    }
+
     if (segment && ['SaaS', 'Serviços', 'E-commerce'].includes(segment)) {
       try {
         const { WorkspaceTemplateService } = await import("../services/WorkspaceTemplateService.ts");
@@ -593,8 +610,16 @@ apiRouter.post("/companies", async (req: AuthRequest, res) => {
     if (!req.workspaceId) {
       return res.status(400).json({ error: "Workspace ID is missing" });
     }
+
+    // If a Company already exists for this workspace, return it (idempotent)
+    const [existing] = await db.select().from(companies).where(eq(companies.workspaceId, req.workspaceId)).limit(1);
+    if (existing) {
+      return res.json(existing);
+    }
+
     const data = await db.insert(companies).values({
       workspaceId: req.workspaceId,
+      tenantId: req.tenantId as any,
       name,
       cnpj: cnpj || null,
       industry: industry || null,

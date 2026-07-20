@@ -65,10 +65,10 @@ export function useURLSync(
 
     window.addEventListener('popstate', handlePopState);
     
-    // Initial load
-    if (window.location.pathname !== '/' && window.location.pathname !== '/workspace') {
+     // Initial load: always parse the current pathname (including '/workspace')
+     if (window.location.pathname !== '/') {
        handlePopState();
-    }
+     }
     
     return () => window.removeEventListener('popstate', handlePopState);
   }, [setCurrentView, setGlobalFilters]);

@@ -48,7 +48,7 @@ export function CompanyMaturityStatus({
           <Tooltip
             open={buttonTooltip.open}
             anchorRef={buttonTooltip.anchorRef}
-            title="VisÃ£o EstratÃ©gica"
+            title="Visão Estratégica"
             description="Clique para abrir o roadmap completo da sua jornada."
           >
             <button
@@ -70,8 +70,8 @@ export function CompanyMaturityStatus({
         {/* Left Side: Gauge */}
         <div className="lg:w-5/12 p-6 lg:border-r border-slate-100 flex flex-col items-center justify-center bg-white relative">
           <div className="text-center mb-6">
-            <span className="inline-block px-2.5 py-1 bg-emerald-50 text-emerald-600 border border-emerald-200/60 text-[8px] font-black uppercase tracking-widest rounded-md mb-2">
-              EstÃ¡gio Ativo
+              <span className="inline-block px-2.5 py-1 bg-emerald-50 text-emerald-600 border border-emerald-200/60 text-[8px] font-black uppercase tracking-widest rounded-md mb-2">
+              Estágio Ativo
             </span>
             <h3 className="text-2xl font-display font-black text-slate-900 tracking-tight leading-none mb-1">
               {currentStage.label}
@@ -82,7 +82,7 @@ export function CompanyMaturityStatus({
             open={gaugeTooltip.open}
             anchorRef={gaugeTooltip.anchorRef}
             title="Indicador de Maturidade"
-            description="Mostra o percentual de progresso e o nÃ­vel atual."
+            description="Mostra o percentual de progresso e o nível atual."
           >
             <MaturityGauge progress={progress} score={besScore} level={Math.floor(besScore / 100)} />
           </Tooltip>
@@ -94,7 +94,7 @@ export function CompanyMaturityStatus({
             <div>
               <div className="flex items-center gap-1.5 mb-1">
                 <Target size={14} className="text-indigo-500" />
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">PrÃ³ximo Marco</span>
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Próximo Marco</span>
               </div>
               <h4 className="text-xl font-display font-black text-slate-900">
                 Desbloquear <span className="text-indigo-600 uppercase">{nextStage?.label || 'MVP'}</span>
@@ -134,8 +134,8 @@ export function CompanyMaturityStatus({
       <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-100 border-t border-slate-100 bg-white">
         {[
           { label: 'Panorama', val: 'Capacidade validada.', icon: Activity, color: 'text-indigo-500', bg: 'bg-indigo-50' },
-          { label: 'AtenÃ§Ã£o', val: 'NecessÃ¡ria maior traÃ§Ã£o.', icon: ShieldCheck, color: 'text-rose-500', bg: 'bg-rose-50' },
-          { label: 'ProjeÃ§Ã£o', val: 'MVP alcanÃ§Ã¡vel.', icon: Sparkles, color: 'text-amber-500', bg: 'bg-amber-50' }
+          { label: 'Atenção', val: 'Necessária maior tração.', icon: ShieldCheck, color: 'text-rose-500', bg: 'bg-rose-50' },
+          { label: 'Projeção', val: 'MVP alcançável.', icon: Sparkles, color: 'text-amber-500', bg: 'bg-amber-50' }
         ].map((item, i) => (
           <div key={i} className="px-5 py-3 flex items-center gap-3 hover:bg-slate-50/50 transition-colors">
             <div className={`w-6 h-6 rounded-lg ${item.bg} flex items-center justify-center shrink-0`}>

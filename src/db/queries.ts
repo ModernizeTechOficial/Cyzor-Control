@@ -32,6 +32,20 @@ export async function getOrCreateUser(
         plan: 'free',
       }).returning();
 
+      // Ensure a Company exists for the newly created workspace
+      try {
+        const [existingCompany] = await db.select().from(companies).where(eq(companies.workspaceId, workspace.id)).limit(1);
+        if (!existingCompany) {
+          await db.insert(companies).values({
+            workspaceId: workspace.id,
+            tenantId: workspace.tenantId || null,
+            name: `${workspace.name} Matriz`,
+            status: 'Ativo'
+          }).returning();
+        }
+      } catch (err) {
+        console.warn('Warning while creating default company for new workspace:', err?.message || err);
+      }
       await db.insert(workspaceMembers).values({
         workspaceId: workspace.id,
         userUid: uid,

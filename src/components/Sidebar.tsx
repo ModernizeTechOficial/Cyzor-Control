@@ -1,6 +1,7 @@
 ﻿import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from '../context/AuthContext.tsx';
+import { useBusinessContext } from '../hooks/useBusinessContext';
 import { useBranding } from '../hooks/useBranding.ts';
 import { useNavigation } from '../context/NavigationContext.tsx';
 import { useCompanies, useProjects, useProducts } from '../hooks/useCyzorQueries';
@@ -48,6 +49,7 @@ export default function Sidebar({
   setCurrentView: (view: View) => void
 }) {
   const { activeWorkspace, dbUser } = useAuth();
+  const business = useBusinessContext();
   const { iconUrl, appName } = useBranding();
   const { badges, setGlobalFilters, globalFilters } = useNavigation();
   const currentPlan = dbUser?.currentPlan || 'free';
@@ -176,7 +178,7 @@ export default function Sidebar({
                   {currentPlan}
                 </span>
               </div>
-              <span className="text-[10px] text-[#71717A] font-bold uppercase tracking-[0.05em] truncate">{activeWorkspace?.name || 'Workspace'}</span>
+              <span className="text-[10px] text-[#71717A] font-bold uppercase tracking-[0.05em] truncate">{business.companyName || activeWorkspace?.name || 'Empresa'}</span>
             </div>
           )}
         </div>
@@ -195,7 +197,7 @@ export default function Sidebar({
               />
               <NavItem 
                 icon={TrendingUp} 
-                label="EstratÃ©gia" 
+                label="Estratégia" 
                 active={currentView === 'roadmap'} 
                 onClick={() => handleNavigate('roadmap')} 
               />
@@ -253,9 +255,9 @@ export default function Sidebar({
               />
               <NavItem 
                 icon={FileText} 
-                label="DocumentaÃ§Ã£o" 
+                label="Documentação" 
                 active={currentView === 'documentacao'} 
-                onClick={() => handleNavigate('documentacao')} 
+                onClick={() => handleNavigate('documentacao')}  
               />
               <NavItem 
                 icon={StickyNote} 

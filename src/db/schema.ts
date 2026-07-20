@@ -90,7 +90,7 @@ export const workspaces = pgTable('workspaces', {
 export const workspaceMembers = pgTable('workspace_members', {
   id: serial('id').primaryKey(),
   tenantId: uuid('tenant_id').defaultRandom().notNull(),
-  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }).unique(),
   userUid: text('user_uid').notNull().references(() => users.uid, { onDelete: 'cascade' }),
   role: text('role').notNull().default('MEMBER'), // OWNER, ADMIN, MANAGER, DEVELOPER, DESIGNER, FINANCE, VIEWER, MEMBER
   cargo: text('cargo').default('Colaborador'), // Job title / function (e.g. Desenvolvedor, QA, PM)
