@@ -25,6 +25,9 @@ export default function CompanyModal({
     industry: '',
     cnpj: '',
     website: '',
+    linkedin: '',
+    instagram: '',
+    facebook: '',
     status: 'Ativo',
     logoUrl: '',
     coverUrl: ''
@@ -39,13 +42,16 @@ export default function CompanyModal({
         industry: company.industry || '',
         cnpj: company.cnpj || '',
         website: company.website || '',
+        linkedin: company.linkedin || '',
+        instagram: company.instagram || '',
+        facebook: company.facebook || '',
         status: company.status || 'Ativo',
         logoUrl: company.logoUrl || '',
         coverUrl: company.coverUrl || ''
       });
       setActiveModalTab('cadastro');
     } else {
-      setFormData({ name: '', industry: '', cnpj: '', website: '', status: 'Ativo', logoUrl: '', coverUrl: '' });
+      setFormData({ name: '', industry: '', cnpj: '', website: '', linkedin: '', instagram: '', facebook: '', status: 'Ativo', logoUrl: '', coverUrl: '' });
       setActiveModalTab('cadastro');
     }
   }, [company, isOpen]);
@@ -271,6 +277,33 @@ export default function CompanyModal({
                 onChange={(e) => setFormData({...formData, website: e.target.value})}
               />
             </FormGroup>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <FormGroup>
+                <FormLabel>LinkedIn</FormLabel>
+                <FormInput 
+                  placeholder="https://linkedin.com/..." 
+                  value={formData.linkedin}
+                  onChange={(e) => setFormData({...formData, linkedin: e.target.value})}
+                />
+              </FormGroup>
+              <FormGroup>
+                <FormLabel>Instagram</FormLabel>
+                <FormInput 
+                  placeholder="https://instagram.com/..." 
+                  value={formData.instagram}
+                  onChange={(e) => setFormData({...formData, instagram: e.target.value})}
+                />
+              </FormGroup>
+              <FormGroup>
+                <FormLabel>Facebook</FormLabel>
+                <FormInput 
+                  placeholder="https://facebook.com/..." 
+                  value={formData.facebook}
+                  onChange={(e) => setFormData({...formData, facebook: e.target.value})}
+                />
+              </FormGroup>
+            </div>
 
             {/* Action buttons */}
             <div className="flex items-center justify-between pt-4 border-t border-[#0F172A05]">

@@ -586,7 +586,7 @@ apiRouter.get("/companies", async (req: AuthRequest, res) => {
 apiRouter.post("/companies", async (req: AuthRequest, res) => {
   try {
     console.log("POST /companies called", { workspaceId: req.workspaceId, body: req.body });
-    const { name, cnpj, industry, size, website, status } = req.body;
+    const { name, cnpj, industry, size, website, linkedin, instagram, facebook, status } = req.body;
     if (!name) {
       return res.status(400).json({ error: "Company name is required" });
     }
@@ -600,6 +600,9 @@ apiRouter.post("/companies", async (req: AuthRequest, res) => {
       industry: industry || null,
       size: size || null,
       website: website || null,
+      linkedin: linkedin || null,
+      instagram: instagram || null,
+      facebook: facebook || null,
       status: status || 'Ativo'
     }).returning();
 
@@ -2767,10 +2770,26 @@ apiRouter.delete("/agenda/:id", async (req: AuthRequest, res) => {
 apiRouter.put("/companies/:id", async (req: AuthRequest, res) => {
   try {
     const compId = Number(req.params.id);
-    const data = await db.update(companies).set({
-      ...req.body,
-      updatedAt: new Date()
-    }).where(and(eq(companies.id, compId), eq(companies.workspaceId, req.workspaceId!))).returning();
+    const { name, cnpj, industry, size, website, linkedin, instagram, facebook, status, logoUrl, coverUrl } = req.body;
+    
+    const updateValues: any = { updatedAt: new Date() };
+    if (name !== undefined) updateValues.name = name;
+    if (cnpj !== undefined) updateValues.cnpj = cnpj;
+    if (industry !== undefined) updateValues.industry = industry;
+    if (size !== undefined) updateValues.size = size;
+    if (website !== undefined) updateValues.website = website;
+    if (linkedin !== undefined) updateValues.linkedin = linkedin;
+    if (instagram !== undefined) updateValues.instagram = instagram;
+    if (facebook !== undefined) updateValues.facebook = facebook;
+    if (status !== undefined) updateValues.status = status;
+    if (logoUrl !== undefined) updateValues.logoUrl = logoUrl;
+    if (coverUrl !== undefined) updateValues.coverUrl = coverUrl;
+
+    const data = await db.update(companies)
+      .set(updateValues)
+      .where(and(eq(companies.id, compId), eq(companies.workspaceId, req.workspaceId!)))
+      .returning();
+      
     res.json(data[0]);
   } catch (error) {
     console.error("Error updating company:", error);
@@ -2843,7 +2862,7 @@ apiRouter.post("/workspace/members", async (req: AuthRequest, res) => {
       const [newUsr] = await db.insert(users).values({
         uid: generatedUid,
         email: email,
-        displayName: displayName || email.split('@')[0],
+        displayName: displayName || email?.split('@')[0],
         role: cargo || "Colaborador",
       }).returning();
       usr = newUsr;
@@ -2886,7 +2905,7 @@ apiRouter.post("/workspace/members", async (req: AuthRequest, res) => {
       const currentTeam = assignedProject.team || [];
       const isAlreadyInTeam = currentTeam.some((m: any) => m.email === email);
       if (!isAlreadyInTeam) {
-        const initials = (displayName || usr.displayName || email.split('@')[0])
+        const initials = (displayName || usr.displayName || email?.split('@')[0])
           .split(' ')
           .map((n: string) => n[0])
           .join('')
@@ -2894,7 +2913,7 @@ apiRouter.post("/workspace/members", async (req: AuthRequest, res) => {
           .toUpperCase();
         
         const newMember = {
-          name: displayName || usr.displayName || email.split('@')[0],
+          name: displayName || usr.displayName || email?.split('@')[0],
           role: cargo || "Colaborador",
           email: email,
           avatar: initials,
@@ -2918,7 +2937,7 @@ apiRouter.post("/workspace/members", async (req: AuthRequest, res) => {
       // Send professional notification e-mail
       await sendProjectNotificationEmail({
         to: email,
-        userName: displayName || usr.displayName || email.split('@')[0],
+        userName: displayName || usr.displayName || email?.split('@')[0],
         projectName: assignedProject.name,
         role: cargo || "Colaborador",
         workspaceName,
@@ -2934,7 +2953,7 @@ apiRouter.post("/workspace/members", async (req: AuthRequest, res) => {
         status: "Em Andamento",
         priority: "Média",
         team: [{
-          name: displayName || usr.displayName || email.split('@')[0],
+          name: displayName || usr.displayName || email?.split('@')[0],
           role: cargo || "Colaborador",
           email: email,
           avatar: (displayName || email).charAt(0).toUpperCase(),
@@ -2944,7 +2963,7 @@ apiRouter.post("/workspace/members", async (req: AuthRequest, res) => {
 
       await sendProjectNotificationEmail({
         to: email,
-        userName: displayName || usr.displayName || email.split('@')[0],
+        userName: displayName || usr.displayName || email?.split('@')[0],
         projectName: newProj.name,
         role: cargo || "Colaborador",
         workspaceName,

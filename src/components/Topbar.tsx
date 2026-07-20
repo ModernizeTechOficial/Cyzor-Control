@@ -485,7 +485,7 @@ export default function Topbar({ isSidebarCollapsed, toggleSidebar, setCurrentVi
           </div>
         </div>
 
-        <div className="hidden lg:flex flex-1 max-w-[320px] ml-auto">
+        <div className="hidden lg:flex flex-1 max-w-[320px] ml-auto mr-6">
           <div className="relative w-full">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#64748B] opacity-50" size={14} />
             <input

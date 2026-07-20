@@ -55,7 +55,7 @@ export function convertGCalEventToAgendaEvent(gEvent: any): AgendaEvent {
     endTime: endTimeStr,
     owner: gEvent.creator?.email || 'Membro Externo',
     participants: gEvent.attendees ? gEvent.attendees.map((attendee: any) => ({
-      name: attendee.displayName || attendee.email.split('@')[0],
+      name: attendee.displayName || attendee.email?.split('@')[0] || 'Convidado',
       role: 'Convidado Google',
       avatar: '',
       email: attendee.email

@@ -1,4 +1,4 @@
-import { Building2, MoreHorizontal, Edit3, ArrowRight, Activity, Clock } from 'lucide-react';
+import { Building2, MoreHorizontal, Edit3, ArrowRight, Activity, Clock, Globe, Linkedin, Instagram, Facebook } from 'lucide-react';
 
 interface CompanyTableProps {
   companies: any[];
@@ -15,12 +15,15 @@ export default function CompanyTable({
 }: CompanyTableProps) {
 
   const getInitials = (name: string) => {
-    if (!name) return '?';
+    if (!name || typeof name !== 'string') return '?';
     const parts = name.trim().split(/\s+/);
-    if (parts.length > 1) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
+    if (parts.length > 0 && parts[0] !== '') {
+      if (parts.length > 1) {
+        return (parts[0][0] + parts[1][0]).toUpperCase();
+      }
+      return parts[0][0].toUpperCase();
     }
-    return parts[0][0].toUpperCase();
+    return '?';
   };
 
   const getRevenue = (companyId: string) => {
@@ -65,17 +68,27 @@ export default function CompanyTable({
           <div 
             key={c.id} 
             onClick={() => onSelect(c)}
-            className="bg-white border border-[#0F172A08] rounded-[28px] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.01)] hover:shadow-[0_20px_40px_rgb(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300 cursor-pointer group flex flex-col"
+            className="bg-white border border-[#0F172A08] rounded-[28px] shadow-[0_8px_30px_rgb(0,0,0,0.01)] hover:shadow-[0_20px_40px_rgb(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-300 cursor-pointer group flex flex-col overflow-hidden"
           >
-            <div className="flex justify-between items-start mb-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl border border-[#0F172A08] flex items-center justify-center shadow-sm shrink-0 overflow-hidden bg-white">
+            {/* Cover Image Area */}
+            <div className="h-24 w-full bg-slate-100 relative overflow-hidden">
+              {c.coverUrl ? (
+                <img src={c.coverUrl} alt="Cover" className="w-full h-full object-cover absolute inset-0" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-slate-200 to-slate-300 absolute inset-0" />
+              )}
+            </div>
+
+            {/* Profile Info Area */}
+            <div className="px-6 pb-6 pt-0">
+              <div className="flex justify-between items-start">
+                <div className="-mt-8 w-16 h-16 rounded-2xl border-4 border-white shadow-lg overflow-hidden bg-white shrink-0 relative z-10">
                   {c.logoUrl ? (
                     <img 
                       src={c.logoUrl} 
                       alt={c.name} 
                       referrerPolicy="no-referrer"
-                      className="w-full h-full object-contain p-1" 
+                      className="w-full h-full object-cover" 
                     />
                   ) : (
                     <div className="w-full h-full bg-[#111111] text-white flex items-center justify-center font-bold text-sm">
@@ -83,50 +96,47 @@ export default function CompanyTable({
                     </div>
                   )}
                 </div>
-                <div>
-                  <h4 className="font-bold text-[#111111] text-base">{c.name}</h4>
-                  <span className="text-xs font-medium text-[#64748B]">{c.industry || 'Tecnologia'}</span>
+                
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onEdit(c, e); }}
+                  className="mt-4 px-4 py-1.5 rounded-full bg-[#111111] text-white text-xs font-bold hover:bg-black transition-all"
+                >
+                  Editar
+                </button>
+              </div>
+
+              <div className="mt-3">
+                <h4 className="font-bold text-[#111111] text-lg leading-tight">{c.name}</h4>
+                <div className="flex items-center justify-between mt-0.5">
+                  <p className="text-sm text-[#64748B]">{c.industry || 'Empresa parceira'}</p>
+                  {/* Social Links */}
+                  <div className="flex gap-2 text-[#64748B]">
+                    {c.website && <a href={c.website.startsWith('http') ? c.website : `https://${c.website}`} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}><Globe size={14} className="hover:text-blue-600 transition" /></a>}
+                    {c.linkedin && <a href={c.linkedin} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}><Linkedin size={14} className="hover:text-blue-700 transition" /></a>}
+                    {c.instagram && <a href={c.instagram} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}><Instagram size={14} className="hover:text-pink-600 transition" /></a>}
+                    {c.facebook && <a href={c.facebook} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}><Facebook size={14} className="hover:text-blue-800 transition" /></a>}
+                  </div>
                 </div>
               </div>
-              <button className="p-2 text-[#64748B] hover:bg-[#FAFAFA] rounded-xl transition-colors" onClick={(e) => { e.stopPropagation(); /* Menu */ }}>
-                <MoreHorizontal size={18} />
-              </button>
-            </div>
 
-            <div className="flex items-center gap-2 mb-6">
-               <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${getStatusStyle(c.status)}`}>
-                 {formatStatus(c.status)}
-               </span>
-               <span className="px-2.5 py-1 rounded-md bg-[#FAFAFA] text-[#64748B] text-[10px] font-bold uppercase tracking-wider border border-[#0F172A08]">
-                 Enterprise
-               </span>
-            </div>
+              <div className="flex items-center gap-2 mt-4">
+                 <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${getStatusStyle(c.status)}`}>
+                   {formatStatus(c.status)}
+                 </span>
+              </div>
 
-            <div className="grid grid-cols-2 gap-4 mb-6 mt-auto">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#64748B] mb-1">Receita</p>
-                <p className="text-sm font-bold text-[#111111]">
-                  R$ {getRevenue(c.id).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
+              <div className="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-[#0F172A08]">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#64748B] mb-1">Receita</p>
+                  <p className="text-sm font-bold text-[#111111]">
+                    R$ {getRevenue(c.id).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#64748B] mb-1">Projetos</p>
+                  <p className="text-sm font-bold text-[#111111]">{c.projects || 0}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#64748B] mb-1">Projetos</p>
-                <p className="text-sm font-bold text-[#111111]">{c.projects || 0}</p>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-[#0F172A08] flex justify-between items-center text-[#64748B] text-xs font-medium">
-              <div className="flex items-center gap-1.5">
-                <Clock size={14} />
-                <span>Atualizado há 2h</span>
-              </div>
-              <button 
-                onClick={(e) => onEdit(c, e)}
-                className="flex items-center gap-1.5 hover:text-[#111111] transition-colors"
-              >
-                <Edit3 size={14} />
-                <span>Editar</span>
-              </button>
             </div>
           </div>
         ))}

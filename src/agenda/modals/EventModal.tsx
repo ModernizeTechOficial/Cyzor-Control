@@ -101,7 +101,7 @@ export default function EventModal({ isOpen, onClose, onSave, eventToEdit, initi
       
       // Auto-set endTime to 1 hour later
       if (initialHour) {
-        const h = parseInt(initialHour.split(':')[0]);
+        const h = parseInt(initialHour?.split(':')[0] || '0');
         setEndTime(`${(h + 1).toString().padStart(2, '0')}:00`);
       } else {
         setEndTime('10:00');
@@ -492,7 +492,7 @@ export default function EventModal({ isOpen, onClose, onSave, eventToEdit, initi
             <span className="text-[10px] font-bold uppercase tracking-wider text-[#64748B] mb-3 block">Convidar Profissionais / Colegas</span>
             <div className="flex flex-col gap-2 max-h-[160px] overflow-y-auto custom-scrollbar pr-1">
               {(dbMembers.length > 0 ? dbMembers.map(m => ({
-                name: m.displayName || m.email.split('@')[0],
+                name: m.displayName || m.email?.split('@')[0] || 'Membro',
                 role: m.role || 'Colaborador',
                 avatar: m.photoUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(m.displayName || m.email)}`,
                 area: 'Workspace',

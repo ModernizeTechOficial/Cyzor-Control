@@ -131,6 +131,9 @@ export const companies = pgTable('companies', {
   industry: text('industry'),
   size: text('size'),
   website: text('website'),
+  linkedin: text('linkedin'),
+  instagram: text('instagram'),
+  facebook: text('facebook'),
   status: text('status').default('Ativo'), // Ativo, Inativo
   logoUrl: text('logo_url'),
   coverUrl: text('cover_url'),

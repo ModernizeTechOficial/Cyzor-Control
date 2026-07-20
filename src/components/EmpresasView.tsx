@@ -29,7 +29,17 @@ export default function EmpresasView() {
   const { data: projectsData } = useProjects();
 
   const [companies, setCompanies] = useState<any[]>([]);
-  useEffect(() => { if (companiesData) setCompanies(companiesData); }, [companiesData]);
+  useEffect(() => { 
+    if (companiesData && projectsData) {
+      const companiesWithProjects = companiesData.map((c: any) => ({
+        ...c,
+        projects: projectsData.filter((p: any) => p.companyId === c.id).length
+      }));
+      setCompanies(companiesWithProjects);
+    } else if (companiesData) {
+      setCompanies(companiesData);
+    }
+  }, [companiesData, projectsData]);
   const [clients, setClients] = useState<any[]>([]);
   const [finance, setFinance] = useState<any[]>([]);
   const [totalRevenue, setTotalRevenue] = useState(0);
@@ -45,15 +55,25 @@ export default function EmpresasView() {
   const fetchCompanies = async () => {
     if (!activeWorkspace) return;
     try {
-      const [compRes, finRes, cliRes] = await Promise.all([
+      const [compRes, finRes, cliRes, projRes] = await Promise.all([
         fetchWithAuth('/api/companies'),
         fetchWithAuth('/api/finance'),
         fetchWithAuth('/api/clients'),
+        fetchWithAuth('/api/projects')
       ]);
       
+      let projectsData = [];
+      if (projRes.ok) {
+        projectsData = await projRes.json();
+      }
+
       if (compRes.ok) {
         const data = await compRes.json();
-        setCompanies(data);
+        const companiesWithProjects = data.map((c: any) => ({
+          ...c,
+          projects: projectsData.filter((p: any) => p.companyId === c.id).length
+        }));
+        setCompanies(companiesWithProjects);
       }
       if (finRes.ok) {
         const finData = await finRes.json();
