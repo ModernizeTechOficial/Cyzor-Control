@@ -127,8 +127,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         if (userRes.ok) {
           const udata = await userRes.json();
-          setTourCompleted(udata.tourCompleted || false);
-          if (udata.tourCompleted) {
+          const isCompleted = udata.tourCompleted || localStorage.getItem('tourCompleted') === 'true';
+          setTourCompleted(isCompleted);
+          if (isCompleted) {
             localStorage.setItem('tourCompleted', 'true');
           }
         } else {
