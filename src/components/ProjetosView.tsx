@@ -653,11 +653,15 @@ export default function ProjetosView() {
           ━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <AnimatePresence>
         {isCommandOpen && (
-          <div className="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div 
+            onClick={() => setIsCommandOpen(false)}
+            className="fixed inset-0 bg-neutral-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
             <motion.div 
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
               className="bg-white border border-neutral-200 shadow-2xl rounded-2xl w-full max-w-lg overflow-hidden text-left"
             >
               <div className="p-4 border-b border-neutral-100 flex items-center justify-between bg-neutral-50/50">

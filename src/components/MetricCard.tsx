@@ -59,49 +59,29 @@ export default function MetricCard({
 
   return (
     <motion.div
-      whileHover={{ y: -3, scale: 1.005 }}
+      whileHover={{ y: -2, scale: 1.01 }}
       onClick={onClick}
-      className={`bg-white border border-[#0F172A08] rounded-[20px] p-4 flex flex-col gap-3.5 shadow-[0_4px_20px_rgb(0,0,0,0.01)] transition-all hover:shadow-[0_12px_30px_rgb(0,0,0,0.025)] group relative overflow-hidden text-left h-full ${
+      className={`group relative flex flex-col justify-between p-4 rounded-[28px] bg-white/60 backdrop-blur-md border border-white shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden h-full ${
         onClick ? 'cursor-pointer' : 'cursor-default'
       }`}
     >
-      {/* Premium subtle light effect at top of card on hover */}
-      <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-blue-500/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      {/* Decorative ambient background accent */}
+      <div className="absolute -right-6 -top-6 w-20 h-20 bg-indigo-50/30 rounded-full opacity-40 group-hover:bg-indigo-50/50 transition-colors duration-500" />
       
-      {/* Background radial soft gradient */}
-      <div className="absolute -right-6 -top-6 w-24 h-24 bg-gradient-to-bl from-slate-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-full pointer-events-none" />
-
       {/* Header: Icon & Sparkline */}
-      <div className="flex justify-between items-center relative z-10">
-        <div className={`w-8.5 h-8.5 rounded-xl bg-[#F8FAFC] border border-[#0F172A08] flex items-center justify-center group-hover:scale-105 group-hover:bg-white group-hover:shadow-sm transition-all duration-500`}>
-          <Icon size={14} className={color || 'text-[#111111]'} strokeWidth={1.5} />
+      <div className="flex justify-between items-center relative z-10 mb-1.5">
+        <div className={`p-1.5 rounded-lg ${color || 'text-indigo-600 bg-indigo-50'} shadow-sm group-hover:scale-105 transition-transform duration-300`}>
+          <Icon size={12} strokeWidth={2.5} />
         </div>
 
-        {/* Dynamic Sparkline rendering: recharts or custom SVG */}
-        {sparkData && sparkData.length > 0 && (
-          <div className="h-6 w-16 opacity-30 group-hover:opacity-100 transition-all duration-700">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={sparkData}>
-                <Line
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#111111"
-                  strokeWidth={1.5}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
         {!sparkData && sparklinePath && (
-          <div className="w-14 h-6 flex items-center justify-center overflow-hidden opacity-30 group-hover:opacity-100 transition-opacity duration-500">
-            <svg className="w-full h-full text-slate-300 group-hover:text-[#111111] transition-colors" viewBox="0 0 80 20" fill="none">
+          <div className="w-12 h-5 flex items-center justify-center overflow-hidden opacity-30 group-hover:opacity-100 transition-opacity duration-300">
+            <svg className="w-full h-full text-slate-300 group-hover:text-indigo-600 transition-colors" viewBox="0 0 80 20" fill="none">
               <path
                 d={sparklinePath}
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="1.5"
+                strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
@@ -110,48 +90,44 @@ export default function MetricCard({
         )}
       </div>
 
-      {/* Main Content: Title, Value and Trend */}
-      <div className="flex flex-col gap-1 relative z-10">
-        <span className="text-[9px] font-black text-[#64748B] uppercase tracking-[0.15em] leading-none">
+      {/* Trend indicator (Floating) */}
+      {trendObj && (
+        <div className="mb-1.5 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, x: -2 }}
+            animate={{ opacity: 1, x: 0 }}
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[8px] font-black tracking-widest shrink-0 uppercase ${
+              trendObj.type === 'up'
+                ? 'text-emerald-600 bg-emerald-50 border border-emerald-100'
+                : trendObj.type === 'down'
+                ? 'text-rose-600 bg-rose-50 border border-rose-100'
+                : 'text-slate-500 bg-slate-50 border border-slate-100'
+            }`}
+          >
+            {trendObj.type === 'up' && <TrendingUp size={9} strokeWidth={3} />}
+            {trendObj.type === 'down' && <TrendingDown size={9} strokeWidth={3} />}
+            {trendObj.type === 'neutral' && <Minus size={9} strokeWidth={3} />}
+            {trendObj.value}
+          </motion.div>
+        </div>
+      )}
+
+      {/* Main Content: Title, Value */}
+      <div className="flex flex-col gap-0.5 relative z-10">
+        <span className="text-[9px] font-black text-[#64748B] uppercase tracking-[0.15em] leading-none mb-1 opacity-70">
           {displayTitle}
         </span>
-        <div className="flex items-center gap-2 mt-0.5">
-          <span className="text-2xl font-display font-bold text-[#111111] tracking-tighter leading-none">
+        <div className="flex items-baseline gap-1">
+          <span className="text-lg font-display font-black text-[#0F172A] tracking-tight leading-none">
             {value}
           </span>
-
-          {trendObj && (
-            <motion.div
-              initial={{ opacity: 0, x: -3 }}
-              animate={{ opacity: 1, x: 0 }}
-              className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[8px] font-black tracking-tighter shrink-0 ${
-                trendObj.type === 'up'
-                  ? 'text-green-600 bg-green-50/50'
-                  : trendObj.type === 'down'
-                  ? 'text-red-600 bg-red-50/50'
-                  : 'text-[#64748B] bg-[#F8FAFC]'
-              }`}
-            >
-              {trendObj.type === 'up' && <TrendingUp size={8} strokeWidth={3} />}
-              {trendObj.type === 'down' && <TrendingDown size={8} strokeWidth={3} />}
-              {trendObj.type === 'neutral' && <Minus size={8} strokeWidth={3} />}
-              {trendObj.value}
-            </motion.div>
+          {displaySub && (
+            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest truncate max-w-[70px]">
+              {displaySub.split(' ')[0]}
+            </span>
           )}
         </div>
       </div>
-
-      {/* Footer / Context Text */}
-      {displaySub && (
-        <div className="flex flex-col gap-1 pt-2 border-t border-[#0F172A05] relative z-10 mt-auto">
-          <span className="text-[10px] font-bold text-[#64748B] tracking-tight leading-normal opacity-85 group-hover:opacity-100 transition-opacity truncate">
-            {trendObj?.label && trendObj.label !== trendObj.value && (
-              <span className="text-[#111111] font-extrabold">{trendObj.label} </span>
-            )}
-            {displaySub}
-          </span>
-        </div>
-      )}
     </motion.div>
   );
 }

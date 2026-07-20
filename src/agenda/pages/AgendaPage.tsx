@@ -45,6 +45,8 @@ import {
   Link2
 } from 'lucide-react';
 
+import { useClickOutside } from '../../hooks/useClickOutside.ts';
+
 export default function AgendaPage() {
   const [events, setEvents] = useState<AgendaEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,6 +63,7 @@ export default function AgendaPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('todos');
   const [showFiltersDropdown, setShowFiltersDropdown] = useState(false);
+  const filterRef = useClickOutside(() => setShowFiltersDropdown(false));
 
   // Modals / Drawers State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -551,7 +554,7 @@ export default function AgendaPage() {
                 </div>
 
                 {/* Category Filter */}
-                <div className="relative">
+                <div className="relative" ref={filterRef as any}>
                   <button 
                     onClick={() => setShowFiltersDropdown(!showFiltersDropdown)}
                     className={`p-2.5 border rounded-2xl hover:bg-[#FAFAFA] text-[#64748B] hover:text-[#111111] transition-all flex items-center gap-2 ${

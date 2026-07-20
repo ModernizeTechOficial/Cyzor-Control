@@ -90,13 +90,21 @@ export default function HomeKPIs({ metrics, setCurrentView }: KPIProps) {
   ];
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Visão Executiva do Ecossistema</h3>
-        <span className="text-[11px] text-[#64748B] font-medium">Dados atualizados em tempo real</span>
+    <div className="flex flex-col gap-5">
+      <div className="flex items-center justify-between px-1">
+        <div className="flex flex-col">
+          <span className="text-[9px] font-black text-[#64748B] uppercase tracking-[0.2em]">Cyzor Intelligence</span>
+          <h2 className="text-sm font-display font-black text-[#0F172A]">Centro de Métricas Globais</h2>
+        </div>
+        <div className="flex items-center gap-3">
+           <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-100 shadow-sm">
+              <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+              <span className="text-[9px] font-black text-slate-900 uppercase tracking-widest">Tempo Real</span>
+           </div>
+        </div>
       </div>
       
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-5">
         {cards.map((card, i) => (
           <MetricCard
             key={i}

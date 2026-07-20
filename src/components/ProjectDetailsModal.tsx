@@ -474,8 +474,14 @@ export default function ProjectDetailsModal({ project, isOpen, onClose, onSave }
 
   return (
     <>
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111111]/30 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative bg-[#FFFFFF] w-full h-full sm:h-[95vh] max-w-[100vw] sm:max-w-7xl sm:rounded-[30px] border border-[#0F172A0F] shadow-[0_30px_80px_rgba(0,0,0,0.15)] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#111111]/30 backdrop-blur-md animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div 
+        className="relative bg-[#FFFFFF] w-full h-full sm:h-[95vh] max-w-[100vw] sm:max-w-7xl sm:rounded-[30px] border border-[#0F172A0F] shadow-[0_30px_80px_rgba(0,0,0,0.15)] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* Compact Header - Float-fixed at the top of the modal, only visible when collapsed */}
         <div className={`absolute top-0 left-0 right-0 z-50 h-14 bg-[#111111] border-b border-white/10 flex items-center justify-between px-8 transition-all duration-300 ease-in-out ${
@@ -832,8 +838,14 @@ export default function ProjectDetailsModal({ project, isOpen, onClose, onSave }
 
     {/* Conversion Dialog Overlay */}
     {isConvertProductDialogOpen && (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#111111]/60 backdrop-blur-sm animate-in fade-in duration-200">
-        <div className="bg-white w-full max-w-xl rounded-[24px] border border-[#0F172A0F] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+      <div 
+        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#111111]/60 backdrop-blur-sm animate-in fade-in duration-200"
+        onClick={() => setIsConvertProductDialogOpen(false)}
+      >
+        <div 
+          className="bg-white w-full max-w-xl rounded-[24px] border border-[#0F172A0F] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+          onClick={(e) => e.stopPropagation()}
+        >
           {/* Header */}
           <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
             <div className="flex items-center gap-2">

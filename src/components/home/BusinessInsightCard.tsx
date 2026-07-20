@@ -13,11 +13,11 @@ export default function BusinessInsightCard({ setCurrentView, currentStage }: Bu
   const getInsight = () => {
     switch (currentStage) {
       case 'Ideia':
-        return "Sua empresa está em fase inicial. O foco agora é estruturar o conceito e validar a dor.";
+        return "Sua empresa está em fase inicial. O foco agora é estruturar o conceito e validar a dor através de entrevistas qualitativas.";
       case 'Validação':
-        return "Você está validando hipóteses. Certifique-se de ouvir seus potenciais clientes com atenção.";
+        return "Você está validando hipóteses críticas. Otimize seu feedback loop para pivotar ou perseverar com base em dados reais.";
       default:
-        return "Sua empresa está evoluindo bem. Continue monitorando seus indicadores e focando nos próximos marcos.";
+        return "Sua maturidade operacional está em ascensão. Continue monitorando seus indicadores de tração e eficiência financeira.";
     }
   };
 
@@ -26,23 +26,29 @@ export default function BusinessInsightCard({ setCurrentView, currentStage }: Bu
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="w-full h-full bg-slate-900 border border-slate-800 rounded-[24px] p-4 flex flex-col gap-3 text-white shadow-xl"
+      className="w-full h-full bg-white/40 backdrop-blur-sm border border-white rounded-[32px] p-6 flex flex-col gap-4 text-slate-800 shadow-sm relative overflow-hidden group hover:bg-white transition-colors duration-500"
     >
-      <div className="flex items-center gap-2">
-        <Sparkles className="w-3 h-3 text-blue-400" />
-        <h3 className="text-xs font-bold text-white uppercase tracking-wider">Business Insight</h3>
+      <div className="absolute top-0 right-0 p-6 opacity-[0.03] text-indigo-600 pointer-events-none group-hover:scale-110 transition-transform duration-700">
+        <Sparkles size={120} />
+      </div>
+
+      <div className="flex items-center gap-2 relative z-10">
+        <div className="w-8 h-8 rounded-full bg-white border border-slate-100 flex items-center justify-center shadow-sm">
+          <Sparkles className="w-4 h-4 text-indigo-500" />
+        </div>
+        <h3 className="text-[10px] font-display font-black text-slate-400 uppercase tracking-[0.2em]">IA Insight</h3>
       </div>
       
-      <p className="text-[10px] text-slate-300 leading-relaxed flex-1">
-        {getInsight()}
+      <p className="text-xs text-slate-600 leading-relaxed font-medium flex-1 relative z-10">
+        "{getInsight()}"
       </p>
 
       <button
         onClick={() => setCurrentView('roadmap')}
-        className="self-start text-[10px] font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1.5 transition-colors mt-2"
+        className="w-full py-3.5 bg-[#0F172A] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all flex items-center justify-center gap-2 relative z-10 shadow-xl shadow-indigo-900/10"
       >
         Continuar Jornada
-        <ArrowRight className="w-3 h-3" />
+        <ArrowRight className="w-4 h-4" />
       </button>
     </motion.div>
   );

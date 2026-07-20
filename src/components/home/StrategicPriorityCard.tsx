@@ -55,51 +55,51 @@ export default function StrategicPriorityCard({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="w-full h-full bg-white border border-[#0F172A08] rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.015)] p-4 flex flex-col justify-between overflow-hidden relative"
+      className="w-full h-full bg-white/40 backdrop-blur-sm border border-white rounded-[32px] p-6 flex flex-col justify-between overflow-hidden relative group shadow-sm hover:bg-white transition-colors duration-500"
     >
       {/* Subtle executive background accent */}
-      <div className="absolute right-0 top-0 w-32 h-full bg-gradient-to-l from-slate-50/40 to-transparent pointer-events-none" />
+      <div className="absolute right-0 top-0 w-32 h-full bg-gradient-to-l from-indigo-50/[0.1] to-transparent pointer-events-none group-hover:bg-indigo-50/20 transition-all duration-500" />
 
-      <div className="flex-1 flex flex-col gap-3 min-h-0">
+      <div className="flex-1 flex flex-col gap-4 min-h-0 relative z-10">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[9px] font-bold tracking-wider text-blue-600 bg-blue-50 border border-blue-100/30 py-0.5 px-2 rounded-full uppercase flex items-center gap-1">
-            <Sparkles className="w-2.5 h-2.5 text-blue-500 animate-pulse" />
-            RECOMENDAÇÃO DA IA
+          <span className="text-[10px] font-black tracking-widest text-indigo-600 bg-indigo-50 border border-indigo-100/50 py-1 px-3 rounded-xl uppercase flex items-center gap-1.5 shadow-sm">
+            <Sparkles className="w-3 h-3 text-indigo-500 animate-pulse" />
+            IA Recomendação
           </span>
         </div>
 
-        <div className="flex flex-col gap-1 min-h-0">
-          <h2 className="text-sm font-bold text-[#111111] tracking-tight line-clamp-1">
+        <div className="flex flex-col gap-2 min-h-0">
+          <h2 className="text-base font-display font-black text-[#0F172A] tracking-tight leading-tight">
             {priority.title}
           </h2>
-          <p className="text-[10px] text-[#64748B] leading-tight font-medium line-clamp-2 overflow-y-auto">
+          <p className="text-xs text-slate-500 leading-relaxed font-medium">
             {priority.description}
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
-          <span className="text-[10px] font-semibold text-[#64748B]">Impacto:</span>
-          <span className={`text-[9px] font-bold px-1.5 py-0.25 rounded border ${getImpactStyles(priority.impact)}`}>
+        <div className="flex items-center gap-3 shrink-0">
+          <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Impacto Estratégico:</span>
+          <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg border shadow-sm ${getImpactStyles(priority.impact)}`}>
             {priority.impact}
           </span>
         </div>
       </div>
 
-      <div className="flex flex-col gap-2 w-full mt-3 shrink-0 z-10">
+      <div className="flex flex-col gap-3 w-full mt-6 shrink-0 z-10">
         <button
           onClick={() => setCurrentView(priority.view)}
-          className="w-full bg-[#111111] hover:bg-blue-600 text-white px-4 py-2.5 rounded-xl font-bold text-[10px] transition-all flex items-center justify-center gap-1.5 group shadow-sm"
+          className="w-full bg-[#0F172A] hover:bg-indigo-600 text-white px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 group/btn shadow-xl shadow-indigo-900/10"
         >
           Executar Ação
-          <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" />
+          <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
         </button>
         
         <button
           onClick={() => setCurrentView('roadmap')}
-          className="w-full text-[#64748B] hover:text-[#111111] font-bold text-[10px] transition-all flex items-center justify-center gap-1.5 py-1.5 px-3 hover:bg-slate-50 rounded-xl border border-transparent hover:border-slate-100/50"
+          className="w-full text-slate-400 hover:text-[#0F172A] font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 py-3 px-4 hover:bg-slate-50 rounded-2xl"
         >
-          <TrendingUp className="w-3 h-3 text-[#94A3B8]" />
-          Planejamento
+          <TrendingUp className="w-4 h-4" />
+          Ver Roadmap Estratégico
         </button>
       </div>
     </motion.div>

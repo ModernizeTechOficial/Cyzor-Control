@@ -62,62 +62,51 @@ export default function HomeHeader() {
       className="flex flex-col gap-5 pt-2"
     >
       {/* Executive Meta Ribbons */}
-      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-[#0F172A05]">
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-2">
         <div className="flex items-center gap-2.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-xs font-bold text-[#111111]">Cyzor Control</span>
+          <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+          <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">Workspace Ativo</span>
           <span className="text-[#E2E8F0] text-sm">/</span>
-          <span className="text-xs text-[#64748B] font-medium flex items-center gap-1">
-            <Layers size={12} className="text-[#94A3B8]" /> Workspace Principal
-          </span>
-          <span className="text-[#E2E8F0] text-sm">/</span>
-          <span className="text-xs text-[#64748B] font-medium flex items-center gap-1">
-            <Zap size={12} className="text-[#94A3B8]" /> Plano Enterprise
+          <span className="text-[11px] text-[#111111] font-bold flex items-center gap-1.5">
+            {activeWorkspace?.name || 'Workspace Principal'}
           </span>
         </div>
         
-        <div className="flex items-center gap-4 text-[11px] text-[#94A3B8] font-mono uppercase tracking-wider">
-          <span className="flex items-center gap-1">
-            <ShieldCheck size={12} className="text-[#10B981]" /> Prod-Env
-          </span>
-          <span className="w-1 h-1 bg-slate-200 rounded-full" />
-          <span className="flex items-center gap-1">
-            <RefreshCw size={11} className="animate-spin-slow text-slate-400" /> Sinc: Hoje, agora mesmo
-          </span>
+        <div className="flex items-center gap-3">
+          <div className="px-2.5 py-1 bg-slate-50 border border-slate-100 rounded-lg flex items-center gap-1.5">
+            <Zap size={10} className="text-amber-500 fill-amber-500" />
+            <span className="text-[10px] font-black text-slate-600 uppercase tracking-wider">Plano Enterprise</span>
+          </div>
         </div>
       </div>
 
       {/* Greeting & AI Executive Advice Panel */}
-      <div className="flex flex-col gap-2.5">
-        <div className="flex items-center gap-3">
-          <h1 className="text-3xl sm:text-4xl font-display font-black text-[#111111] tracking-tight leading-none">
-            {getGreeting()}, {user?.displayName || user?.email?.split('@')[0] || 'Diretor'}.
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl sm:text-4xl font-display font-black text-[#0F172A] tracking-tight leading-tight">
+            {getGreeting()}, <span className="text-slate-400 font-medium">{user?.displayName || user?.email?.split('@')[0] || 'Diretor'}</span>.
           </h1>
-          {activeWorkspace && (
-            <div className="px-2.5 py-1 bg-[#F1F5F9] border border-[#0F172A05] rounded-lg flex items-center gap-1.5 shrink-0">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#111111]/20 animate-pulse" />
-              <span className="text-[10px] font-bold text-[#475569] uppercase tracking-wider">
-                {activeWorkspace.name}
-              </span>
-            </div>
-          )}
         </div>
         
         {isAiAdviceVisible && (
-          <div className="relative flex items-start gap-3 bg-gradient-to-r from-slate-50 to-white border border-[#0F172A03] p-4 rounded-[20px]">
+          <div className="relative group flex items-start gap-4 bg-white border border-[#0F172A08] p-5 rounded-[24px] shadow-sm hover:shadow-md transition-all duration-300">
             <button
               onClick={handleDismissAiAdvice}
-              className="absolute right-3 top-3 text-[#94A3B8] hover:text-[#111111] p-1 rounded-full hover:bg-white transition-colors"
+              className="absolute right-4 top-4 text-[#94A3B8] hover:text-[#111111] p-1.5 rounded-full hover:bg-slate-50 transition-colors opacity-0 group-hover:opacity-100"
               aria-label="Fechar conselho da IA"
             >
               <X size={14} />
             </button>
-            <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 flex-shrink-0 mt-0.5">
-              <Sparkles size={14} className="animate-pulse" />
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 flex-shrink-0">
+              <Sparkles size={18} className="animate-pulse" />
             </div>
-            <div className="flex flex-col pr-7">
-              <span className="text-[10px] font-black uppercase text-blue-600 tracking-wider">Cyzor IA • Consultor de Operações</span>
-              <p className="text-[13px] text-[#334155] font-medium mt-1 leading-relaxed">
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase text-indigo-600 tracking-widest">Inteligência Operacional</span>
+                <span className="w-1 h-1 bg-slate-200 rounded-full" />
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cyzor IA</span>
+              </div>
+              <p className="text-[14px] text-[#334155] font-medium mt-1.5 leading-relaxed max-w-3xl">
                 "{getAiAdvice(currentStage)}"
               </p>
             </div>

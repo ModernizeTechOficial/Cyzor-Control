@@ -99,42 +99,43 @@ export default function HomeAnalytics({ financeEntries = [] }: { financeEntries?
   const activeDotFill = company ? '#7c3aed' : '#1d4ed8';
 
   return (
-    <div className={`bg-white border ${company ? 'border-indigo-500/10 shadow-[0_4px_30px_rgba(139,92,246,0.03)]' : 'border-[#0F172A08]'} rounded-[24px] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.01)] flex flex-col justify-between h-full min-h-[380px] transition-all duration-300`}>
+    <div className="w-full h-full flex flex-col justify-between transition-all duration-300">
       <div>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-6">
           <div className="flex flex-col">
             <div className="flex items-center gap-2 flex-wrap">
-              <h4 className="text-xs font-bold text-[#64748B] uppercase tracking-wider">Performance Financeira</h4>
+              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded-md">Performance Financeira</span>
               {company && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 animate-in fade-in duration-300">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-900 text-white border border-slate-800 animate-in fade-in duration-300">
                   {company.name}
                 </span>
               )}
             </div>
-            <div className="flex items-baseline gap-2.5 mt-1.5">
-              <span className="text-2xl font-bold text-[#111111] tracking-tight">{displayTotalStr}</span>
-              <span className={`text-xs font-bold ${company ? 'text-indigo-600' : 'text-emerald-600'} flex items-center gap-0.5`}>
-                <TrendingUp size={12} /> {viewMode === 'anual' ? '+14.2% este ano' : '+12.4% este mês'}
-              </span>
+            <div className="flex items-baseline gap-3 mt-4">
+              <span className="text-4xl font-display font-black text-slate-900 tracking-tighter leading-none">{displayTotalStr}</span>
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-2xl ${company ? 'bg-indigo-50 text-indigo-600' : 'bg-emerald-50 text-emerald-600'} border ${company ? 'border-indigo-100/50' : 'border-emerald-100/50'} shadow-sm`}>
+                <TrendingUp size={14} className={company ? 'text-indigo-600' : 'text-emerald-600'} /> 
+                <span className="text-[10px] font-black uppercase tracking-widest">{viewMode === 'anual' ? 'Performance Anual' : 'Performance Mensal'}</span>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 bg-slate-50 border border-[#0F172A03] p-1.5 rounded-xl">
+          <div className="flex items-center gap-1 bg-slate-100/50 p-1 rounded-2xl border border-slate-100">
             <button 
               onClick={() => setViewMode('mensal')}
-              className={`text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all cursor-pointer ${viewMode === 'mensal' ? 'text-[#111111] bg-white shadow-sm' : 'text-[#64748B] hover:text-[#111111]'}`}
+              className={`text-[10px] font-black px-5 py-2 rounded-xl transition-all cursor-pointer uppercase tracking-widest ${viewMode === 'mensal' ? 'text-slate-900 bg-white shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
             >
-              Mensal
+              MENSAL
             </button>
             <button 
               onClick={() => setViewMode('anual')}
-              className={`text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all cursor-pointer ${viewMode === 'anual' ? 'text-[#111111] bg-white shadow-sm' : 'text-[#64748B] hover:text-[#111111]'}`}
+              className={`text-[10px] font-black px-5 py-2 rounded-xl transition-all cursor-pointer uppercase tracking-widest ${viewMode === 'anual' ? 'text-slate-900 bg-white shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
             >
-              Anual
+              ANUAL
             </button>
           </div>
         </div>
 
-        <div className="h-[240px] w-full mt-4">
+        <div className="h-[320px] w-full mt-8">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>

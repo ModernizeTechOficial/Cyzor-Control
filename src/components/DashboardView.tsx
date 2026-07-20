@@ -12,7 +12,10 @@ import HomeAnalytics from './home/HomeAnalytics';
 import OnboardingWizard from './OnboardingWizard';
 import StrategicPriorityCard from './home/StrategicPriorityCard';
 import BusinessInsightCard from './home/BusinessInsightCard';
-import { Sparkles, ArrowRight, Activity, ShieldAlert, AlertTriangle, CheckCircle2, Clock, Zap, Target, TrendingUp } from 'lucide-react';
+import ProjectPulse from './home/ProjectPulse';
+import { OperationalAlertCard } from './dashboard/OperationalAlertCard';
+import { CompanyMaturityStatus } from './dashboard/CompanyMaturityStatus';
+import { Sparkles, ArrowRight, Activity, ShieldAlert, AlertTriangle, CheckCircle2, Clock, Zap, Target, TrendingUp, ShieldCheck } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 import { getMaturityInfo, generateAIDiagnostics } from '../utils/besCalculator';
@@ -286,199 +289,159 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
   const isGrowthScale = ['Produto', 'Clientes', 'Financeiro', 'Crescimento', 'Gestão', 'Operação', 'Escala'].includes(stage);
 
   return (
-    <div id="main-dashboard" className="w-full mx-auto pb-12 flex flex-col gap-8 animate-in fade-in duration-500 relative px-4 sm:px-6 lg:px-10">
-      {/* Header (Full Width) */}
+    <div id="main-dashboard" className="w-full mx-auto pb-12 flex flex-col gap-10 animate-in fade-in duration-500 relative px-4 sm:px-6 lg:px-8">
+      {/* Ambient background decorations for premium feel */}
+      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-blue-500/5 rounded-full blur-[100px] pointer-events-none -z-10" />
+      
+      {/* Header Section */}
       <HomeHeader />
 
       {/* COMMAND CENTER EXECUTIVE PANEL */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
-        {/* BES Maturity Meter Card */}
-        <div className="lg:col-span-2 bg-white border border-[#0F172A0F] rounded-[32px] p-6 sm:p-8 shadow-sm flex flex-col relative overflow-hidden">
-          
-          <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
-            <Sparkles className="w-48 h-48" />
-          </div>
-
-          <div className="flex justify-between items-start mb-6 relative z-10">
-            <span className="text-[10px] font-black uppercase text-[#64748B] tracking-wider font-display flex items-center gap-2">
-              <Zap className="w-3.5 h-3.5" />
-              Maturidade Operacional (BES)
-            </span>
-            <button 
-              onClick={() => setCurrentView('roadmap')}
-              className="hidden md:inline-flex bg-blue-50 text-blue-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-blue-100 transition-colors gap-1.5 items-center font-display"
-            >
-              Planejamento Estratégico <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <div className="flex flex-col md:flex-row gap-8 relative z-10 w-full mb-8">
-            <div className="flex-1 flex flex-col justify-center border-r border-[#0F172A05] pr-8">
-               <h4 className="text-xl font-display font-black text-[#111111] mb-1">{currentStage.label}</h4>
-               <p className="text-xs font-bold text-[#64748B] mb-6">{currentStage.role}</p>
-
-               <div className="flex items-baseline gap-2 mb-2 font-display">
-                 <span className="text-5xl font-black text-blue-600 tracking-tight">{progress}%</span>
-               </div>
-               
-               <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mb-2">
-                 <div 
-                   className="bg-blue-600 h-full rounded-full transition-all duration-1000" 
-                   style={{ width: `${progress}%` }} 
-                 />
-               </div>
-               
-               <p className="text-[10px] font-bold text-slate-400 mt-1">
-                 Score atual: <strong className="text-slate-600">{besScore.toLocaleString()} pontos</strong>
-               </p>
-            </div>
-
-            <div className="flex-1 flex flex-col justify-center">
-               <h4 className="text-xs font-display font-black text-slate-800 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                 <Target className="w-3.5 h-3.5 text-slate-500" /> Próximo Objetivo
-               </h4>
-               {nextStage ? (
-                 <>
-                   <p className="text-sm font-bold text-[#111111] mb-2">Chegar ao estágio de {nextStage.label}.</p>
-                   <p className="text-xs font-medium text-slate-600 mb-4 leading-relaxed">
-                     Para atingir este marco e desbloquear novas análises da IA, você precisa acumular mais <strong>{pointsToNext.toLocaleString()} pontos BES</strong> através de execução operacional.
-                   </p>
-                   
-                   <div className="space-y-2">
-                     {recommendations.slice(0, 2).map((rec: any, idx: number) => (
-                       <div key={idx} className="flex items-start gap-2 bg-slate-50 border border-slate-100 rounded-xl p-2.5">
-                         <CheckCircle2 className="w-3.5 h-3.5 text-blue-500 mt-0.5 shrink-0" />
-                         <div className="flex-1 min-w-0">
-                           <p className="text-[11px] font-bold text-slate-700 truncate">{rec.title}</p>
-                           <p className="text-[9px] font-black text-blue-600 tracking-wider uppercase mt-0.5">{rec.impact}</p>
-                         </div>
-                       </div>
-                     ))}
-                   </div>
-                 </>
-               ) : (
-                 <div className="bg-emerald-50 text-emerald-800 p-4 rounded-2xl border border-emerald-100 h-full flex flex-col justify-center">
-                   <p className="text-sm font-bold mb-1">Maturidade Máxima</p>
-                   <p className="text-xs">Sua empresa atingiu o nível mais alto de maturidade no ecossistema.</p>
-                 </div>
-               )}
-            </div>
-          </div>
-          
-          <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-4 flex gap-4 items-start relative z-10">
-             <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
-               <Sparkles className="w-4 h-4 text-blue-600" />
-             </div>
-             <div>
-               <p className="text-xs font-medium text-slate-700 leading-relaxed">
-                 <strong className="font-display font-black text-blue-900 mr-1">Diagnóstico:</strong>
-                 {diagnostics}
-               </p>
-             </div>
-          </div>
+      <div className="grid grid-cols-12 gap-6">
+        {/* BES Maturity Meter Card (8 columns) */}
+        <div className="col-span-12 lg:col-span-8">
+          <CompanyMaturityStatus 
+            progress={progress}
+            besScore={besScore}
+            currentStage={currentStage}
+            nextStage={nextStage}
+            pointsToNext={pointsToNext}
+            recommendations={recommendations}
+            onRoadmapClick={() => setCurrentView('roadmap')}
+          />
         </div>
 
-        {/* Actionable Risk and Overdue Alerts Card */}
-        <div className="lg:col-span-1 bg-white border border-[#0F172A0F] rounded-[32px] p-6 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
-                <ShieldAlert size={18} />
+        {/* Actionable Risk and Overdue Alerts Card (4 columns) */}
+        <div className="col-span-12 lg:col-span-4 bg-[#F8FAFC]/40 backdrop-blur-md border border-white rounded-[40px] p-8 shadow-[0_20px_60px_rgba(0,0,0,0.05)] flex flex-col justify-between group overflow-hidden relative">
+          {/* Subtle background texture for premium feel */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-rose-50/10 rounded-full blur-3xl pointer-events-none group-hover:bg-rose-50/20 transition-colors duration-700" />
+          
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-white border border-slate-100 text-slate-900 flex items-center justify-center shadow-sm group-hover:border-rose-100 transition-colors">
+                  <ShieldAlert size={20} />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-1 leading-none">Risk Center</span>
+                  <h4 className="text-sm font-display font-black text-slate-800 tracking-tight leading-none">Alertas Operacionais</h4>
+                </div>
               </div>
-              <h4 className="text-sm font-display font-black text-[#111111]">Alertas & Diagnóstico IA</h4>
+              <div className="flex items-center gap-1.5 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-100">
+                <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest">Ativo</span>
+              </div>
             </div>
 
-            <div className="flex flex-col gap-3 overflow-y-auto max-h-[140px] pr-2">
+            <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[280px] pr-2 custom-scrollbar">
               {activeAlerts.map((alert: any, idx: number) => (
-                <div key={idx} className={`p-3.5 rounded-2xl border flex items-start gap-3 transition-colors ${
-                  alert.type === 'danger' 
-                    ? 'bg-rose-50/50 border-rose-100 text-rose-950' 
-                    : alert.type === 'warning'
-                    ? 'bg-amber-50/50 border-amber-100 text-amber-950'
-                    : 'bg-emerald-50/50 border-emerald-100 text-emerald-950'
-                }`}>
-                  <div className="flex-shrink-0 mt-0.5">
-                    {alert.type === 'danger' ? (
-                      <AlertTriangle size={16} className="text-rose-500" />
-                    ) : alert.type === 'warning' ? (
-                      <AlertTriangle size={16} className="text-amber-500" />
-                    ) : (
-                      <CheckCircle2 size={16} className="text-emerald-500" />
-                    )}
-                  </div>
-                  <div className="flex-1 flex flex-col gap-1">
-                    <span className="text-xs font-display font-black">{alert.title}</span>
-                    <span className="text-[11px] text-[#64748B] leading-relaxed">{alert.desc}</span>
-                  </div>
-                  <button 
-                    onClick={alert.action}
-                    className="text-[10px] font-black underline flex-shrink-0 hover:text-black transition-colors uppercase tracking-wider cursor-pointer"
-                  >
-                    {alert.actionLabel}
-                  </button>
-                </div>
+                <OperationalAlertCard key={idx} alert={alert} idx={idx} />
               ))}
             </div>
           </div>
 
-          <div className="mt-4 pt-4 border-t border-[#0F172A05] flex items-center justify-between">
-            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">Diagnóstico Operacional</span>
-            <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full uppercase">100% Protegido</span>
+          <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between relative z-10">
+            <div className="flex flex-col">
+              <span className="text-[8px] font-black text-[#64748B] uppercase tracking-[0.2em] mb-0.5">Diagnóstico</span>
+              <div className="flex items-center gap-2">
+                <div className="w-1 h-1 rounded-full bg-emerald-500" />
+                <span className="text-[10px] font-black text-slate-900">SISTEMA RESILIENTE</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-100">
+               <ShieldCheck size={10} className="text-indigo-600" />
+               <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">CYZOR SECURE</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Dynamic Widget Grid */}
+      {/* Analytics and Metrics Grid */}
       <div className="grid grid-cols-12 gap-6 w-full">
-        {/* KPI Row (Full Width) */}
+        {/* KPI Grid (Full Width) */}
         <div className="col-span-12">
             <HomeKPIs metrics={filteredMetrics} setCurrentView={setCurrentView} />
         </div>
 
-        {/* Main Content Area (8 columns) */}
-        <div className="col-span-12 md:col-span-8">
-            {isGrowthScale ? (
-              <div className="flex flex-col gap-4 h-full">
-                <div className="flex items-center justify-between border-b border-[#0F172A05] pb-2">
-                  <h3 className="text-xs font-display font-black text-[#64748B] uppercase tracking-wider">Desempenho Comercial & Tração</h3>
-                  <span className="text-[11px] text-[#64748B] font-medium font-display">Estágio Ativo: {stage}</span>
-                </div>
+        {/* Main Chart Area (8 columns) */}
+        <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
+            <div className="bg-[#F8FAFC]/40 backdrop-blur-md border border-white rounded-[40px] p-8 shadow-[0_20px_60px_rgba(0,0,0,0.05)] flex flex-col h-full min-h-[400px]">
+              <div className="flex-1 w-full">
                 <HomeAnalytics financeEntries={filteredFinance} />
               </div>
-            ) : (
-              <HomeAnalytics financeEntries={filteredFinance} />
-            )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-[#F8FAFC]/40 backdrop-blur-md border border-white rounded-[40px] p-8 shadow-[0_20px_60px_rgba(0,0,0,0.05)]">
+                <ProjectPulse projects={filteredProjects} />
+              </div>
+              <div className="bg-[#F8FAFC]/40 backdrop-blur-md border border-white rounded-[40px] p-8 shadow-[0_20px_60px_rgba(0,0,0,0.05)] flex flex-col group relative overflow-hidden">
+                <div className="absolute -right-4 -bottom-4 opacity-[0.03] text-indigo-600 group-hover:scale-110 transition-transform duration-700">
+                  <ShieldCheck size={160} />
+                </div>
+                <div className="flex flex-col h-full relative z-10">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-full bg-white border border-slate-100 flex items-center justify-center text-indigo-600 shadow-sm">
+                      <ShieldCheck size={20} />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] leading-none mb-1">Segurança</span>
+                      <h3 className="text-sm font-display font-black text-slate-800 leading-none">Garantia Cyzor IA</h3>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500 leading-relaxed font-medium mb-6">
+                    Monitoramento contínuo por algoritmos de proteção avançada. Seus dados estão criptografados e protegidos.
+                  </p>
+                  <div className="mt-auto flex items-center gap-3">
+                    <div className="flex items-center gap-2 bg-emerald-50 px-4 py-2 rounded-2xl border border-emerald-100/50 shadow-sm">
+                      <ShieldCheck size={14} className="text-emerald-600" />
+                      <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Protocolo Ativo</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
         </div>
 
-        {/* Sidebar Content Area (4 columns) */}
-        <div className="col-span-12 md:col-span-4 flex flex-col gap-4 h-full">
-            {/* Real-time Event-driven operations feed */}
-            <div className="bg-white border border-[#0F172A0F] rounded-[32px] p-6 shadow-sm flex flex-col gap-4 max-h-[350px]">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                    <Clock size={14} className="animate-pulse" />
+        {/* Secondary Widgets Sidebar (4 columns) */}
+        <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
+            {/* Real-time Operational Feed */}
+            <div className="bg-[#0F172A] border border-white/5 rounded-[40px] p-8 shadow-2xl flex flex-col h-full group relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none" />
+              
+              <div className="flex items-center justify-between mb-8 relative z-10">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-white/5 text-indigo-400 flex items-center justify-center border border-white/10 shadow-lg">
+                    <Clock size={20} className="animate-pulse" />
                   </div>
-                  <h4 className="text-xs font-display font-black text-[#111111] uppercase tracking-wider">Feed Operacional (Eventos)</h4>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black uppercase text-indigo-400 tracking-[0.2em] mb-1 leading-none">Fluxo</span>
+                    <h4 className="text-sm font-display font-black text-white leading-none">Eventos Operação</h4>
+                  </div>
                 </div>
-                <span className="text-[10px] font-bold text-[#64748B]">Real-time</span>
+                <div className="flex items-center gap-2 bg-white/5 px-3 py-1 rounded-full border border-white/10">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]" />
+                  <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">Live</span>
+                </div>
               </div>
 
-              <div className="flex-1 flex flex-col gap-3 overflow-y-auto pr-1">
+              <div className="flex-1 flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar-dark relative z-10">
                 {notifications.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <p className="text-xs font-medium text-[#94A3B8]">Nenhum evento registrado ainda.</p>
+                  <div className="flex flex-col items-center justify-center py-20 text-center">
+                    <Activity className="w-10 h-10 text-white/5 mb-4" />
+                    <p className="text-xs font-medium text-white/20">Aguardando novos eventos...</p>
                   </div>
                 ) : (
-                  notifications.slice(0, 4).map((notif: any) => (
-                    <div key={notif.id} className="flex gap-3 items-start border-b border-[#0F172A03] pb-2.5 last:border-0 last:pb-0">
-                      <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
-                        notif.type === 'error' ? 'bg-rose-500 animate-ping' : notif.type === 'success' ? 'bg-emerald-500' : 'bg-blue-500'
+                  notifications.slice(0, 5).map((notif: any) => (
+                    <div key={notif.id} className="flex gap-4 items-start group/item transition-all hover:translate-x-1">
+                      <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 shadow-[0_0_10px] ${
+                        notif.type === 'error' ? 'bg-rose-500 shadow-rose-500/50' : notif.type === 'success' ? 'bg-emerald-500 shadow-emerald-500/50' : 'bg-indigo-500 shadow-indigo-500/50'
                       }`} />
-                      <div className="flex-1 flex flex-col">
-                        <span className="text-xs font-bold text-[#111111]">{notif.title}</span>
-                        <span className="text-[10px] text-[#64748B] leading-relaxed">{notif.description}</span>
-                        <span className="text-[9px] text-[#94A3B8] font-mono mt-0.5">
+                      <div className="flex-1 flex flex-col gap-1">
+                        <span className="text-sm font-black text-white/90 group-hover/item:text-indigo-400 transition-colors">{notif.title}</span>
+                        <span className="text-xs text-white/40 leading-relaxed font-medium">{notif.description}</span>
+                        <span className="text-[10px] text-white/20 font-mono tracking-widest uppercase mt-1">
                           {new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
@@ -486,58 +449,31 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
                   ))
                 )}
               </div>
-            </div>
-
-            <div className="flex-1">
-              <StrategicPriorityCard 
-                setCurrentView={setCurrentView} 
-                currentStage={stage}
-                ideas={ideas}
-                projects={filteredProjects}
-                products={productsList}
-                clients={clients}
-                finance={filteredFinance}
-                tasks={filteredTasks}
-              />
-            </div>
-            
-            <div className="flex-1">
-              <BusinessInsightCard setCurrentView={setCurrentView} currentStage={stage} />
-            </div>
-
-            {/* Global AI Intelligence Access Widget */}
-            <div className="flex-1">
-               <motion.div 
-                whileHover={{ y: -2 }}
+              
+              <button 
                 onClick={() => setCurrentView('ia')}
-                className="bg-white border border-[#0F172A0F] rounded-[24px] p-5 shadow-sm hover:shadow-md transition-all cursor-pointer group h-full flex flex-col justify-between"
+                className="mt-8 w-full py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black text-white uppercase tracking-[0.2em] hover:bg-white/10 transition-all flex items-center justify-center gap-2 group-hover:border-indigo-500/50 relative z-10"
               >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
-                      <Sparkles size={20} className="animate-pulse" />
-                    </div>
-                    <div className="flex flex-col">
-                      <h3 className="text-sm font-display font-black text-[#111111]">Olimpo AI</h3>
-                      <span className="text-[10px] font-display font-bold text-blue-600 uppercase tracking-widest">Operação por IA</span>
-                    </div>
-                  </div>
-                  <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-[#111111] transition-colors">
-                    <ArrowRight size={16} />
-                  </div>
-                </div>
-                <p className="text-[11px] text-[#64748B] leading-relaxed mb-4">
-                  Sua inteligência artificial está ativa e monitorando todos os dados do seu workspace em tempo real. Peça para a IA cadastrar registros ou atualizar status de projetos.
-                </p>
-                <div className="flex items-center gap-2">
-                   <div className="flex -space-x-2">
-                      <div className="w-6 h-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[8px] font-bold">DB</div>
-                      <div className="w-6 h-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[8px] font-bold">AI</div>
-                      <div className="w-6 h-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[8px] font-bold">360</div>
-                   </div>
-                   <span className="text-[10px] font-display font-black text-[#111111]">Operação Autônoma Ativa</span>
-                </div>
-               </motion.div>
+                Acessar Histórico <ArrowRight size={12} />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-6">
+              <div className="bg-[#F8FAFC]/40 backdrop-blur-md border border-white rounded-[40px] p-8 shadow-[0_20px_60px_rgba(0,0,0,0.05)]">
+                <StrategicPriorityCard 
+                  setCurrentView={setCurrentView} 
+                  currentStage={stage}
+                  ideas={ideas}
+                  projects={filteredProjects}
+                  products={productsList}
+                  clients={clients}
+                  finance={filteredFinance}
+                  tasks={filteredTasks}
+                />
+              </div>
+              <div className="bg-[#F8FAFC]/40 backdrop-blur-md border border-white rounded-[40px] p-8 shadow-[0_20px_60px_rgba(0,0,0,0.05)]">
+                <BusinessInsightCard setCurrentView={setCurrentView} currentStage={stage} />
+              </div>
             </div>
         </div>
       </div>

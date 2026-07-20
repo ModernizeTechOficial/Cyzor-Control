@@ -1376,8 +1376,15 @@ export default function DocumentacaoView() {
       {/* Premium Professional Creator Preset Selector Modal */}
       {/* Premium Professional Creator Preset Selector Modal */}
       {isCustomCreatorOpen && (
-        <div className="fixed inset-0 bg-[#0F172A]/70 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200 text-left overflow-y-auto">
-          <div className="bg-white rounded-[28px] border border-slate-200 p-8 max-w-2xl w-full shadow-[0_30px_90px_rgba(0,0,0,0.15)] flex flex-col gap-6 animate-in zoom-in-95 duration-150">
+        <div 
+          onClick={() => {
+            setIsCustomCreatorOpen(false);
+            setCustomCreatorName('');
+            (window as any)._activeTemplateContent = '';
+          }}
+          className="fixed inset-0 bg-[#0F172A)/70 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200 text-left overflow-y-auto"
+        >
+          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-[28px] border border-slate-200 p-8 max-w-2xl w-full shadow-[0_30px_90px_rgba(0,0,0,0.15)] flex flex-col gap-6 animate-in zoom-in-95 duration-150">
             <div>
               <h3 className="text-xl font-body font-bold text-slate-900 tracking-tight flex items-center gap-2">
                 <Sparkles className="text-amber-500 animate-pulse animate-duration-1000" size={20} />
@@ -1502,8 +1509,14 @@ export default function DocumentacaoView() {
 
       {/* Photoshop .psd blocker Warning Modal */}
       {psdErrorModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200 text-left">
-          <div className="bg-white rounded-[28px] border border-slate-200 p-8 max-w-md w-full shadow-[0_30px_90px_rgba(0,0,0,0.15)] flex flex-col gap-5 animate-in zoom-in-95 duration-150">
+        <div 
+          onClick={() => {
+            setPsdErrorModalOpen(false);
+            setAttemptedPsdName('');
+          }}
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200 text-left"
+        >
+          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-[28px] border border-slate-200 p-8 max-w-md w-full shadow-[0_30px_90px_rgba(0,0,0,0.15)] flex flex-col gap-5 animate-in zoom-in-95 duration-150">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0">
                 <AlertCircle size={22} />
@@ -1540,8 +1553,14 @@ export default function DocumentacaoView() {
 
       {/* New Google Doc popup modal */}
       {showNewDocModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 z-50 animate-in fade-in dynamic-duration">
-          <div className="bg-white rounded-t-[24px] sm:rounded-[24px] border border-[#DEE2E6] p-6 max-w-md w-full shadow-xl flex flex-col gap-5 animate-in slide-in-from-bottom sm:zoom-in-95 duration-150 pb-10 sm:pb-6 text-left">
+        <div 
+          onClick={() => {
+            setShowNewDocModal(false);
+            setNewDocName('');
+          }}
+          className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 z-50 animate-in fade-in dynamic-duration"
+        >
+          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-t-[24px] sm:rounded-[24px] border border-[#DEE2E6] p-6 max-w-md w-full shadow-xl flex flex-col gap-5 animate-in slide-in-from-bottom sm:zoom-in-95 duration-150 pb-10 sm:pb-6 text-left">
             <div>
               <h3 className="text-lg font-bold text-[#111111]">Criar Documento em Nuvem</h3>
               <p className="text-xs text-[#64748B] mt-1 font-medium">Isso criará uma página oficial editável diretamente na sua conta do Google.</p>
@@ -1623,8 +1642,11 @@ export default function DocumentacaoView() {
 
       {/* Delete Confirmation Modal */}
       {fileDeletingId && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 z-50 animate-in fade-in dynamic-duration">
-          <div className="bg-white rounded-t-[24px] sm:rounded-[24px] border border-[#DEE2E6] p-6 max-w-sm w-full shadow-xl flex flex-col gap-4 animate-in slide-in-from-bottom sm:zoom-in-95 duration-150 pb-10 sm:pb-6 text-left">
+        <div 
+          onClick={() => setFileDeletingId(null)}
+          className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 z-50 animate-in fade-in dynamic-duration"
+        >
+          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-t-[24px] sm:rounded-[24px] border border-[#DEE2E6] p-6 max-w-sm w-full shadow-xl flex flex-col gap-4 animate-in slide-in-from-bottom sm:zoom-in-95 duration-150 pb-10 sm:pb-6 text-left">
             <div>
               <h3 className="text-lg font-bold text-[#111111] flex items-center gap-2 text-rose-600">
                 <Trash2 size={18} />

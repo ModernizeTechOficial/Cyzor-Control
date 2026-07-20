@@ -7,11 +7,15 @@ import { useNavigation } from '../context/NavigationContext';
 import { useCompanies, useProjects, useProducts } from '../hooks/useCyzorQueries';
 import { useBranding } from '../hooks/useBranding.ts';
 
+import { useClickOutside } from '../hooks/useClickOutside.ts';
+
 function NotificationMenu() {
   const { fetchWithAuth, activeWorkspace } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const menuRef = useClickOutside(() => setShowNotifications(false));
 
   const fetchNotifications = async (retries = 3) => {
     if (!activeWorkspace || !activeWorkspace.id) {
@@ -115,7 +119,7 @@ function NotificationMenu() {
   };
 
   return (
-    <div className="relative" id="notifications-btn">
+    <div className="relative" id="notifications-btn" ref={menuRef as any}>
       <button 
         onClick={handleToggleNotifications}
         className="relative w-9 h-9 rounded-xl flex items-center justify-center hover:bg-[#FAFAFA] transition-colors text-[#64748B] hover:text-[#111111]"
@@ -129,9 +133,7 @@ function NotificationMenu() {
       </button>
 
       {showNotifications && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
-          <div className="absolute right-0 mt-2.5 w-[320px] sm:w-[380px] bg-white border border-[#0F172A0F] rounded-[24px] p-4 shadow-[0_10px_40px_rgba(0,0,0,0.08)] z-50 flex flex-col animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute right-0 mt-2.5 w-[320px] sm:w-[380px] bg-white border border-[#0F172A0F] rounded-[24px] p-4 shadow-[0_10px_40px_rgba(0,0,0,0.08)] z-50 flex flex-col animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="flex items-center justify-between pb-4 border-b border-[#0F172A0F] mb-2">
               <h3 className="text-sm font-bold text-[#111111] flex items-center gap-2">
                 Notificações
@@ -199,7 +201,6 @@ function NotificationMenu() {
               )}
             </div>
           </div>
-        </>
       )}
     </div>
   );
@@ -208,11 +209,12 @@ function NotificationMenu() {
 function UserProfileMenu({ setCurrentView }: { setCurrentView?: (view: View) => void }) {
   const { user, dbUser, logout } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useClickOutside(() => setShowMenu(false));
 
   if (!user) return null;
 
   return (
-    <div className="relative" id="user-profile-btn">
+    <div className="relative" id="user-profile-btn" ref={menuRef as any}>
       <button 
         onClick={() => setShowMenu(!showMenu)}
         className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center hover:opacity-90 transition-opacity border border-[#0F172A0A]"
@@ -227,9 +229,7 @@ function UserProfileMenu({ setCurrentView }: { setCurrentView?: (view: View) => 
       </button>
 
       {showMenu && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
-          <div className="absolute right-0 mt-2.5 w-60 bg-white border border-[#0F172A0F] rounded-[20px] p-4 shadow-[0_10px_30px_rgba(0,0,0,0.08)] z-50 flex flex-col gap-3.5 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute right-0 mt-2.5 w-60 bg-white border border-[#0F172A0F] rounded-[20px] p-4 shadow-[0_10px_30px_rgba(0,0,0,0.08)] z-50 flex flex-col gap-3.5 animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="flex flex-col gap-1 px-1.5 pt-1 border-b border-[#0F172A0F] pb-3">
               <span className="text-xs font-bold text-[#111111] truncate">{user.displayName || 'Membro Cyzor'}</span>
               <span className="text-[10px] text-[#64748B] font-medium truncate">{user.email}</span>
@@ -257,7 +257,6 @@ function UserProfileMenu({ setCurrentView }: { setCurrentView?: (view: View) => 
               <LogOut size={16} /> Terminar Sessão
             </button>
           </div>
-        </>
       )}
     </div>
   );
@@ -266,11 +265,12 @@ function UserProfileMenu({ setCurrentView }: { setCurrentView?: (view: View) => 
 function WorkspaceSelector() {
   const { workspaces, activeWorkspace, updateSaaSBackend, setIsCreateWorkspaceModalOpen } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useClickOutside(() => setShowMenu(false));
 
   if (workspaces.length <= 1 && !activeWorkspace) return null;
 
   return (
-    <div className="relative">
+    <div className="relative" ref={menuRef as any}>
       <button 
         onClick={() => setShowMenu(!showMenu)}
         className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-[#FAFAFA] transition-colors group"
@@ -285,9 +285,7 @@ function WorkspaceSelector() {
       </button>
 
       {showMenu && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
-          <div className="absolute left-0 mt-2 w-64 bg-white border border-[#0F172A0F] rounded-[20px] p-2 shadow-[0_10px_30px_rgba(0,0,0,0.08)] z-50 flex flex-col gap-1 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute left-0 mt-2 w-64 bg-white border border-[#0F172A0F] rounded-[20px] p-2 shadow-[0_10px_30px_rgba(0,0,0,0.08)] z-50 flex flex-col gap-1 animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="px-3 py-2 border-b border-[#0F172A05] mb-1 flex items-center justify-between">
               <span className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-widest">Meus Workspaces</span>
               <button 
@@ -348,7 +346,6 @@ function WorkspaceSelector() {
               </button>
             </div>
           </div>
-        </>
       )}
     </div>
   );

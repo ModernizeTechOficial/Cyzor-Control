@@ -327,8 +327,14 @@ export default function MembrosTab() {
 
       {/* Invite Modal */}
       {showInviteModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[32px] w-full max-w-md overflow-hidden shadow-[0_20px_70px_rgba(0,0,0,0.15)] animate-in zoom-in duration-200">
+        <div 
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+          onClick={() => setShowInviteModal(false)}
+        >
+          <div 
+            className="bg-white rounded-[32px] w-full max-w-md overflow-hidden shadow-[0_20px_70px_rgba(0,0,0,0.15)] animate-in zoom-in duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="p-8 pb-0 flex items-center justify-between">
               <div className="w-12 h-12 rounded-2xl bg-black flex items-center justify-center text-white shadow-lg">
                 <UserPlus size={24} />
