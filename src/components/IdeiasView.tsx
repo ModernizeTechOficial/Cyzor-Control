@@ -314,35 +314,32 @@ export default function IdeiasView() {
 
   return (
     <div className="w-full mx-auto pb-12 flex flex-col gap-10 animate-in fade-in duration-500 relative px-4 sm:px-6 lg:px-10">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
-        <StandardHeader 
-          title="Banco de Ideias"
-          subtitle="Capture, valide e transforme ideias em produtos do ecossistema Cyzor."
-          actions={[
-            {
-              label: 'Importar',
-              icon: Upload,
-              onClick: () => {},
-              variant: 'secondary'
-            },
-            {
-              label: 'Exportar',
-              icon: Download,
-              onClick: () => {},
-              variant: 'secondary'
-            },
-            {
-              label: 'Nova Ideia',
-              icon: Plus,
-              onClick: () => setIsNewModalOpen(true),
-              variant: 'primary'
-            }
-          ]}
-        />
-        <div className="flex-shrink-0">
-          <AIActionDropdown entityId="ideas" actions={['evaluateIdea']} />
-        </div>
-      </div>
+      <StandardHeader 
+        title="Banco de Ideias"
+        subtitle="Capture, valide e transforme ideias em produtos do ecossistema Cyzor."
+        actions={[
+          {
+            label: 'Importar',
+            icon: Upload,
+            onClick: () => {},
+            variant: 'secondary'
+          },
+          {
+            label: 'Exportar',
+            icon: Download,
+            onClick: () => {},
+            variant: 'secondary'
+          },
+          {
+            label: 'Nova Ideia',
+            icon: Plus,
+            onClick: () => setIsNewModalOpen(true),
+            variant: 'primary'
+          }
+        ]}
+      >
+        <AIActionDropdown entityId="ideas" actions={['evaluateIdea']} />
+      </StandardHeader>
       
       <IdeaStats 
         totalIdeas={ideas.length}

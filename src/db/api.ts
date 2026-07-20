@@ -846,56 +846,67 @@ apiRouter.post("/projects", async (req: AuthRequest, res) => {
     res.status(500).json({ error: "Failed to create project" });
   }
 });
+// --- PROJECTS ---
 apiRouter.put("/projects/:id", async (req: AuthRequest, res) => {
-  const { name, description, status, priority, dueDate, team, history, comments, criteria, velocity, progress, budget, companyId, productId, owner, logoUrl, coverUrl } = req.body;
-  const updateValues: any = {};
-  if (name !== undefined) updateValues.name = name;
-  if (description !== undefined) updateValues.description = description;
-  if (status !== undefined) updateValues.status = status;
-  if (priority !== undefined) updateValues.priority = priority;
-  if (dueDate !== undefined) updateValues.dueDate = dueDate ? new Date(dueDate) : null;
-  if (team !== undefined) updateValues.team = team;
-  if (history !== undefined) updateValues.history = history;
-  if (comments !== undefined) updateValues.comments = comments;
-  if (criteria !== undefined) updateValues.criteria = criteria;
-  if (velocity !== undefined) updateValues.velocity = velocity;
-  if (progress !== undefined) updateValues.progress = progress !== null ? Number(progress) : 0;
-  if (budget !== undefined) updateValues.budget = budget;
-  if (companyId !== undefined) updateValues.companyId = companyId ? Number(companyId) : null;
-  if (productId !== undefined) updateValues.productId = productId ? Number(productId) : null;
-  if (owner !== undefined) updateValues.owner = owner;
-  if (logoUrl !== undefined) updateValues.logoUrl = logoUrl;
-  if (coverUrl !== undefined) updateValues.coverUrl = coverUrl;
-
-  const data = await db.update(projects).set(updateValues).where(and(eq(projects.id, Number(req.params.id)), eq(projects.workspaceId, req.workspaceId!))).returning();
-  
   try {
-    if (status !== undefined) {
-      await db.insert(notifications).values({
-        tenantId: req.tenantId as any,
-        workspaceId: req.workspaceId!,
-        title: "Status do Projeto Atualizado",
-        description: `O projeto "${data[0].name}" agora está em "${status}".`,
-        type: "success"
-      });
+    const { name, description, status, priority, dueDate, team, history, comments, criteria, velocity, progress, budget, companyId, productId, owner, logoUrl, coverUrl } = req.body;
+    const updateValues: any = {};
+    if (name !== undefined) updateValues.name = name;
+    if (description !== undefined) updateValues.description = description;
+    if (status !== undefined) updateValues.status = status;
+    if (priority !== undefined) updateValues.priority = priority;
+    if (dueDate !== undefined) updateValues.dueDate = dueDate ? new Date(dueDate) : null;
+    if (team !== undefined) updateValues.team = team;
+    if (history !== undefined) updateValues.history = history;
+    if (comments !== undefined) updateValues.comments = comments;
+    if (criteria !== undefined) updateValues.criteria = criteria;
+    if (velocity !== undefined) updateValues.velocity = velocity;
+    if (progress !== undefined) updateValues.progress = progress !== null ? Number(progress) : 0;
+    if (budget !== undefined) updateValues.budget = budget;
+    if (companyId !== undefined) updateValues.companyId = companyId ? Number(companyId) : null;
+    if (productId !== undefined) updateValues.productId = productId ? Number(productId) : null;
+    if (owner !== undefined) updateValues.owner = owner;
+    if (logoUrl !== undefined) updateValues.logoUrl = logoUrl;
+    if (coverUrl !== undefined) updateValues.coverUrl = coverUrl;
 
-      const sLower = status.toLowerCase();
-      if (sLower === 'concluido' || sLower === 'concluído' || sLower === 'completed') {
-        const { EventCascadeService } = await import("../services/EventCascadeService.ts");
-        await EventCascadeService.handleProjectCompleted(req.workspaceId!, data[0].id, data[0].name, req.tenantId as any);
+    const data = await db.update(projects).set(updateValues).where(and(eq(projects.id, Number(req.params.id)), eq(projects.workspaceId, req.workspaceId!))).returning();
+    
+    try {
+      if (status !== undefined) {
+        await db.insert(notifications).values({
+          tenantId: req.tenantId as any,
+          workspaceId: req.workspaceId!,
+          title: "Status do Projeto Atualizado",
+          description: `O projeto "${data[0].name}" agora está em "${status}".`,
+          type: "success"
+        });
+
+        const sLower = status.toLowerCase();
+        if (sLower === 'concluido' || sLower === 'concluído' || sLower === 'completed') {
+          const { EventCascadeService } = await import("../services/EventCascadeService.ts");
+          await EventCascadeService.handleProjectCompleted(req.workspaceId!, data[0].id, data[0].name, req.tenantId as any);
+        }
       }
+    } catch (e) {
+      console.error("Error creating project update notification / running cascade:", e);
     }
-  } catch (e) {
-    console.error("Error creating project update notification / running cascade:", e);
-  }
 
-  res.json(data[0]);
+    res.json(data[0]);
+  } catch (error) {
+    console.error("Error updating project:", error);
+    res.status(500).json({ error: "Failed to update project" });
+  }
 });
 
 // --- IDEAS ---
 apiRouter.get("/ideas", async (req: AuthRequest, res) => {
-  const data = await db.select().from(ideas).where(eq(ideas.workspaceId, req.workspaceId!));
-  res.json(data);
+  try {
+    const data = await db.select().from(ideas).where(eq(ideas.workspaceId, req.workspaceId!));
+    res.json(data);
+  } catch (error) {
+    console.error("Error fetching ideas:", error);
+    res.status(500).json({ error: "Failed to fetch ideas" });
+  }
 });
 apiRouter.post("/ideas", async (req: AuthRequest, res) => {
   const data = await db.insert(ideas).values({ ...req.body, workspaceId: req.workspaceId!, authorUid: req.user!.uid }).returning();
@@ -1148,15 +1159,20 @@ apiRouter.get("/products/:id/kpis", async (req: AuthRequest, res) => {
 
 // --- SPRINTS ---
 apiRouter.get("/sprints", async (req: AuthRequest, res) => {
-  const { projectId } = req.query;
-  
-  const conditions = [eq(sprints.workspaceId, req.workspaceId!)];
-  if (projectId) {
-    conditions.push(eq(sprints.projectId, Number(projectId)));
+  try {
+    const { projectId } = req.query;
+    
+    const conditions = [eq(sprints.workspaceId, req.workspaceId!)];
+    if (projectId) {
+      conditions.push(eq(sprints.projectId, Number(projectId)));
+    }
+    
+    const data = await db.select().from(sprints).where(and(...conditions));
+    res.json(data);
+  } catch (error) {
+    console.error("Error fetching sprints:", error);
+    res.status(500).json({ error: "Failed to fetch sprints" });
   }
-  
-  const data = await db.select().from(sprints).where(and(...conditions));
-  res.json(data);
 });
 
 apiRouter.post("/sprints", async (req: AuthRequest, res) => {
@@ -1233,11 +1249,16 @@ apiRouter.delete("/sprints/:id", async (req: AuthRequest, res) => {
 
 // --- TASKS ---
 apiRouter.get("/tasks", async (req: AuthRequest, res) => {
-  const data = await db
-    .select()
-    .from(tasks)
-    .where(eq(tasks.workspaceId, req.workspaceId!));
-  res.json(data);
+  try {
+    const data = await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.workspaceId, req.workspaceId!));
+    res.json(data);
+  } catch (error) {
+    console.error("Error fetching tasks:", error);
+    res.status(500).json({ error: "Failed to fetch tasks" });
+  }
 });
 
 apiRouter.post("/tasks", async (req: AuthRequest, res) => {
@@ -1824,8 +1845,13 @@ apiRouter.post("/activities", async (req: AuthRequest, res) => {
 
 // --- FINANCE ---
 apiRouter.get("/finance", async (req: AuthRequest, res) => {
-  const data = await db.select().from(financeEntries).where(eq(financeEntries.workspaceId, req.workspaceId!));
-  res.json(data);
+  try {
+    const data = await db.select().from(financeEntries).where(eq(financeEntries.workspaceId, req.workspaceId!));
+    res.json(data);
+  } catch (error) {
+    console.error("Error fetching finance entries:", error);
+    res.status(500).json({ error: "Failed to fetch finance entries" });
+  }
 });
 apiRouter.post("/finance", async (req: AuthRequest, res) => {
   try {
@@ -1913,14 +1939,19 @@ apiRouter.put("/finance/:id", async (req: AuthRequest, res) => {
 
 // --- MILESTONES ---
 apiRouter.get("/milestones", async (req: AuthRequest, res) => {
-  const { projectId } = req.query;
-  const conditions = [eq(milestones.workspaceId, req.workspaceId!)];
-  if (projectId) {
-    conditions.push(eq(milestones.projectId, Number(projectId)));
+  try {
+    const { projectId } = req.query;
+    const conditions = [eq(milestones.workspaceId, req.workspaceId!)];
+    if (projectId) {
+      conditions.push(eq(milestones.projectId, Number(projectId)));
+    }
+    
+    const data = await db.select().from(milestones).where(and(...conditions));
+    res.json(data);
+  } catch (error) {
+    console.error("Error fetching milestones:", error);
+    res.status(500).json({ error: "Failed to fetch milestones" });
   }
-  
-  const data = await db.select().from(milestones).where(and(...conditions));
-  res.json(data);
 });
 
 apiRouter.post("/milestones", async (req: AuthRequest, res) => {
@@ -2105,15 +2136,20 @@ apiRouter.post("/deploys", async (req: AuthRequest, res) => {
 
 // --- DOCUMENTS ---
 apiRouter.get("/documents", async (req: AuthRequest, res) => {
-  const { projectId } = req.query;
-  
-  const conditions = [eq(documents.workspaceId, req.workspaceId!)];
-  if (projectId) {
-    conditions.push(eq(documents.projectId, Number(projectId)));
+  try {
+    const { projectId } = req.query;
+    
+    const conditions = [eq(documents.workspaceId, req.workspaceId!)];
+    if (projectId) {
+      conditions.push(eq(documents.projectId, Number(projectId)));
+    }
+    
+    const data = await db.select().from(documents).where(and(...conditions));
+    res.json(data);
+  } catch (error) {
+    console.error("Error fetching documents:", error);
+    res.status(500).json({ error: "Failed to fetch documents" });
   }
-  
-  const data = await db.select().from(documents).where(and(...conditions));
-  res.json(data);
 });
 
 apiRouter.post("/documents", async (req: AuthRequest, res) => {

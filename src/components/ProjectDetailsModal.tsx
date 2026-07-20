@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { 
   X, GitBranch, Calendar, User, Flag, MessageSquare, Plus, Pencil, FileText, 
   LayoutGrid, Zap, Milestone, Users, FolderOpen, History, Sparkles, Layers 
@@ -42,8 +42,30 @@ interface ProjectDetailsModalProps {
 export default function ProjectDetailsModal({ project, isOpen, onClose, onSave }: ProjectDetailsModalProps) {
   const { fetchWithAuth } = useAuth();
   const { setGlobalFilters } = useNavigation();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const handleScroll = () => {
+    if (scrollContainerRef.current) {
+      const scrollTop = scrollContainerRef.current.scrollTop;
+      setIsCollapsed(scrollTop > 100);
+      const progress = Math.min(1, Math.max(0, scrollTop / 100));
+      setScrollProgress(progress);
+    }
+  };
 
   const [activeTab, setActiveTab] = useState('visao_360');
+
+  // Reset scroll and progress when switching tabs
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+      setScrollProgress(0);
+      setIsCollapsed(false);
+    }
+  }, [activeTab]);
+
   const [isEditing, setIsEditing] = useState(false);
   const [editedProject, setEditedProject] = useState<ProjectExtended | null>(null);
   const [prevProjectId, setPrevProjectId] = useState<number | null>(null);
@@ -453,176 +475,239 @@ export default function ProjectDetailsModal({ project, isOpen, onClose, onSave }
   return (
     <>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111111]/30 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-[#FFFFFF] w-full h-full sm:h-[95vh] max-w-[100vw] sm:max-w-7xl sm:rounded-[30px] border border-[#0F172A0F] shadow-[0_30px_80px_rgba(0,0,0,0.15)] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="relative bg-[#FFFFFF] w-full h-full sm:h-[95vh] max-w-[100vw] sm:max-w-7xl sm:rounded-[30px] border border-[#0F172A0F] shadow-[0_30px_80px_rgba(0,0,0,0.15)] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
         
-        {/* Header / Tabs Selection */}
-        <div className="flex flex-col flex-shrink-0">
-          <EntityHero
-            entityType="project"
-            name={editedProject.name}
-            description={editedProject.description || 'Sem descrição institucional do projeto cadastrada.'}
-            logoUrl={editedProject.logoUrl}
-            coverUrl={editedProject.coverUrl}
-            breadcrumbs={['Perspectiva Executiva', '360°', editedProject.company || 'Cyzor']}
-            badges={[
-              { label: editedProject.company || 'Empresa', variant: 'neutral' },
-              { label: editedProject.column || 'Planejamento', variant: 'secondary' },
-              { label: `Prioridade: ${editedProject.priority || 'Alta'}`, variant: 'accent' }
-            ]}
-            isEditing={isEditing}
-            onNameChange={(name) => handleUpdateProject({ ...editedProject, name })}
-            onSaveName={handleGlobalHeaderSave}
-            onStartEdit={() => setIsEditing(true)}
-            actions={
-              <div className="flex items-center gap-2">
-                <AIActionDropdown entityId={editedProject.id?.toString()} actions={['analyzeProject', 'generateRoadmap']} />
-                {!isEditing && (
-                  editedProject.productId ? (
-                    <button
-                      onClick={handleGoToProduct}
-                      className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-white/20 text-white flex items-center gap-1.5 transition-all cursor-pointer font-bold text-xs"
-                      title="Ver Produto Vinculado"
-                    >
-                      <Layers size={14} className="animate-pulse text-indigo-400" />
-                      <span>Ver Produto Vinculado</span>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => setIsConvertProductDialogOpen(true)}
-                      className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1.5 transition-all cursor-pointer font-bold text-xs shadow-md"
-                      title="Evoluir para Produto"
-                    >
-                      <Layers size={14} />
-                      <span>Evoluir para Produto</span>
-                    </button>
-                  )
-                )}
-                
-                <button 
-                  onClick={onClose} 
-                  className="w-10 h-10 rounded-2xl bg-white/10 text-white/80 hover:bg-white/20 hover:text-white flex items-center justify-center transition-colors cursor-pointer shadow-sm"
-                  title="Fechar"
-                >
-                  <X size={20} strokeWidth={2.5} />
-                </button>
-              </div>
-            }
-          />
+        {/* Compact Header - Float-fixed at the top of the modal, only visible when collapsed */}
+        <div className={`absolute top-0 left-0 right-0 z-50 h-14 bg-[#111111] border-b border-white/10 flex items-center justify-between px-8 transition-all duration-300 ease-in-out ${
+          isCollapsed ? 'translate-y-0 opacity-100 pointer-events-auto shadow-md' : '-translate-y-full opacity-0 pointer-events-none'
+        }`}>
+          <div className="flex items-center gap-3">
+            {/* Mini Logo */}
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#1A1A1A] to-[#0A0A0A] border border-white/10 flex items-center justify-center font-display font-bold text-xs text-white overflow-hidden shrink-0">
+              {editedProject.logoUrl ? (
+                <img src={editedProject.logoUrl} alt={editedProject.name} referrerPolicy="no-referrer" className="w-full h-full object-contain p-1 bg-white" />
+              ) : (
+                editedProject.name.slice(0, 2).toUpperCase()
+              )}
+            </div>
+            {/* Mini Title */}
+            <h1 className="text-sm font-display font-bold text-white truncate max-w-[200px] sm:max-w-md">
+              {editedProject.name}
+            </h1>
+          </div>
 
-          {/* Navigation Horizontal Tab Bar */}
-          <div className="flex px-8 gap-5 overflow-x-auto bg-[#111111] border-t border-white/5 scrollbar-none">
-            {tabs.map((tab) => {
-              const TabIcon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
+          {/* Compact Actions */}
+          <div className="flex items-center gap-2">
+            <AIActionDropdown entityId={editedProject.id?.toString()} actions={['analyzeProject', 'generateRoadmap']} variant="compact" />
+            {!isEditing && (
+              editedProject.productId ? (
                 <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 py-4 px-1 border-b-2 transition-all font-bold text-xs uppercase tracking-wider whitespace-nowrap cursor-pointer ${
-                    isActive 
-                      ? 'border-white text-white' 
-                      : 'border-transparent text-white/50 hover:text-white hover:border-white/20'
-                  }`}
+                  onClick={handleGoToProduct}
+                  className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-white/20 text-white flex items-center gap-1.5 transition-all cursor-pointer font-bold text-[10px]"
+                  title="Ver Produto Vinculado"
                 >
-                  <TabIcon size={14} />
-                  {tab.label}
+                  <Layers size={11} className="text-indigo-400" />
+                  <span>Ver Produto</span>
                 </button>
-              );
-            })}
+              ) : (
+                <button
+                  onClick={() => setIsConvertProductDialogOpen(true)}
+                  className="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1.5 transition-all cursor-pointer font-bold text-[10px] shadow-sm"
+                  title="Evoluir para Produto"
+                >
+                  <Layers size={11} />
+                  <span>Evoluir</span>
+                </button>
+              )
+            )}
+            <button 
+              onClick={onClose} 
+              className="w-8 h-8 rounded-xl bg-white/10 text-white/80 hover:bg-white/20 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+              title="Fechar"
+            >
+              <X size={16} strokeWidth={2.5} />
+            </button>
           </div>
         </div>
 
-        {/* Content Area */}
-        <div className="flex-grow overflow-y-auto bg-[#FFFFFF]">
-          {activeTab === 'visao_360' && (
-            <Vision360 
-              entityType="project" 
-              entityId={editedProject.id} 
-              entityName={editedProject.name} 
-              entityData={editedProject} 
+        {/* Scrollable Container */}
+        <div className="flex-grow overflow-y-auto bg-[#FFFFFF] scrollbar-none" ref={scrollContainerRef} onScroll={handleScroll}>
+          
+          {/* Main Hero Header - scrolls naturally, 100% stable, no layout jumps */}
+          <div className="bg-[#111111]">
+            <EntityHero
+              entityType="project"
+              name={editedProject.name}
+              description={editedProject.description || 'Sem descrição institucional do projeto cadastrada.'}
+              logoUrl={editedProject.logoUrl}
+              coverUrl={editedProject.coverUrl}
+              breadcrumbs={['Perspectiva Executiva', '360°', editedProject.company || 'Cyzor']}
+              badges={[
+                { label: editedProject.company || 'Empresa', variant: 'neutral' },
+                { label: editedProject.column || 'Planejamento', variant: 'secondary' },
+                { label: `Prioridade: ${editedProject.priority || 'Alta'}`, variant: 'accent' }
+              ]}
+              isEditing={isEditing}
+              onNameChange={(name) => handleUpdateProject({ ...editedProject, name })}
+              onSaveName={handleGlobalHeaderSave}
+              onStartEdit={() => setIsEditing(true)}
+              scrollProgress={0}
+              actions={
+                <div className="flex items-center gap-2">
+                  <AIActionDropdown entityId={editedProject.id?.toString()} actions={['analyzeProject', 'generateRoadmap']} variant="slate" />
+                  {!isEditing && (
+                    editedProject.productId ? (
+                      <button
+                        onClick={handleGoToProduct}
+                        className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-white/20 text-white flex items-center gap-1.5 transition-all cursor-pointer font-bold text-xs"
+                        title="Ver Produto Vinculado"
+                      >
+                        <Layers size={14} className="animate-pulse text-indigo-400" />
+                        <span>Ver Produto Vinculado</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setIsConvertProductDialogOpen(true)}
+                        className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1.5 transition-all cursor-pointer font-bold text-xs shadow-md"
+                        title="Evoluir para Produto"
+                      >
+                        <Layers size={14} />
+                        <span>Evoluir para Produto</span>
+                      </button>
+                    )
+                  )}
+                  
+                  <button 
+                    onClick={onClose} 
+                    className="w-10 h-10 rounded-2xl bg-white/10 text-white/80 hover:bg-white/20 hover:text-white flex items-center justify-center transition-colors cursor-pointer shadow-sm"
+                    title="Fechar"
+                  >
+                    <X size={20} strokeWidth={2.5} />
+                  </button>
+                </div>
+              }
             />
-          )}
+          </div>
 
-          {activeTab === 'visao_geral' && (
-            <AbaVisaoGeral 
-              project={editedProject} 
-              isEditing={isEditing} 
-              onChange={handleUpdateProject} 
-              companies={companies}
-            />
-          )}
-
-          {activeTab === 'identidade_visual' && (
-            <div className="p-4">
-              <VisualIdentityTab 
-                entityName={editedProject.name}
-                logoUrl={editedProject.logoUrl || ''}
-                coverUrl={editedProject.coverUrl || ''}
-                onChangeLogo={(url) => {
-                  handleUpdateProject({ ...editedProject, logoUrl: url });
-                }}
-                onChangeCover={(url) => {
-                  handleUpdateProject({ ...editedProject, coverUrl: url });
-                }}
-              />
+          {/* Sticky Navigation Horizontal Tab Bar - shifts offset to top-14 when compact header is visible */}
+          <div className={`sticky z-40 bg-[#111111] border-b border-white/10 transition-all duration-300 shadow-md ${
+            isCollapsed ? 'top-14' : 'top-0'
+          }`}>
+            <div className="flex px-8 gap-5 overflow-x-auto scrollbar-none">
+              {tabs.map((tab) => {
+                const TabIcon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-2 py-4 px-1 border-b-2 transition-all font-bold text-xs uppercase tracking-wider whitespace-nowrap cursor-pointer ${
+                      isActive 
+                        ? 'border-white text-white' 
+                        : 'border-transparent text-white/50 hover:text-white hover:border-white/20'
+                    }`}
+                  >
+                    <TabIcon size={14} />
+                    {tab.label}
+                  </button>
+                );
+              })}
             </div>
-          )}
+          </div>
 
-          {activeTab === 'kanban' && (
-            <AbaKanban 
-              project={editedProject} 
-              onUpdateProject={handleUpdateProject} 
-            />
-          )}
-
-          {activeTab === 'sprints' && (
-            <AbaSprints 
-              project={editedProject} 
-              onUpdateProject={handleUpdateProject} 
-            />
-          )}
-
-          {activeTab === 'timeline' && (
-            <AbaTimeline 
-              project={editedProject} 
-              onUpdateProject={handleUpdateProject} 
-            />
-          )}
-
-          {activeTab === 'equipe' && (
-            <AbaEquipe 
-              project={editedProject} 
-              onUpdateProject={handleUpdateProject} 
-            />
-          )}
-
-          {activeTab === 'marcos' && (
-            <AbaMarcos 
-              project={editedProject} 
-              onUpdateProject={handleUpdateProject} 
-            />
-          )}
-
-          {activeTab === 'documentos' && editedProject && (
-            <AbaDocumentos 
-              project={editedProject} 
-              onUpdateProject={handleUpdateProject} 
-              onOpenDoc={handleOpenDoc}
-            />
-          )}
-
-          {activeTab === 'comentarios' && (
-            <AbaComentarios 
-              project={editedProject} 
-              onUpdateProject={handleUpdateProject} 
-            />
-          )}
-
-          {activeTab === 'historico' && (
-            <AbaHistorico 
-              project={editedProject} 
-            />
-          )}
+          {/* Content Area */}
+          <div className="p-8">
+            {activeTab === 'visao_360' && (
+              <Vision360 
+                entityType="project" 
+                entityId={editedProject.id} 
+                entityName={editedProject.name} 
+                entityData={editedProject} 
+              />
+            )}
+            
+            {activeTab === 'visao_geral' && (
+              <AbaVisaoGeral 
+                project={editedProject} 
+                isEditing={isEditing} 
+                onChange={handleUpdateProject} 
+                companies={companies}
+              />
+            )}
+            
+            {/* ... other tabs ... */}
+            {activeTab === 'identidade_visual' && (
+              <div className="p-4">
+                <VisualIdentityTab 
+                  entityName={editedProject.name}
+                  logoUrl={editedProject.logoUrl || ''}
+                  coverUrl={editedProject.coverUrl || ''}
+                  onChangeLogo={(url) => {
+                    handleUpdateProject({ ...editedProject, logoUrl: url });
+                  }}
+                  onChangeCover={(url) => {
+                    handleUpdateProject({ ...editedProject, coverUrl: url });
+                  }}
+                />
+              </div>
+            )}
+            
+            {activeTab === 'kanban' && (
+              <AbaKanban 
+                project={editedProject} 
+                onUpdateProject={handleUpdateProject} 
+              />
+            )}
+            
+            {activeTab === 'sprints' && (
+              <AbaSprints 
+                project={editedProject} 
+                onUpdateProject={handleUpdateProject} 
+              />
+            )}
+            
+            {activeTab === 'timeline' && (
+              <AbaTimeline 
+                project={editedProject} 
+                onUpdateProject={handleUpdateProject} 
+              />
+            )}
+            
+            {activeTab === 'equipe' && (
+              <AbaEquipe 
+                project={editedProject} 
+                onUpdateProject={handleUpdateProject} 
+              />
+            )}
+            
+            {activeTab === 'marcos' && (
+              <AbaMarcos 
+                project={editedProject} 
+                onUpdateProject={handleUpdateProject} 
+              />
+            )}
+            
+            {activeTab === 'documentos' && editedProject && (
+              <AbaDocumentos 
+                project={editedProject} 
+                onUpdateProject={handleUpdateProject} 
+                onOpenDoc={handleOpenDoc}
+              />
+            )}
+            
+            {activeTab === 'comentarios' && (
+              <AbaComentarios 
+                project={editedProject} 
+                onUpdateProject={handleUpdateProject} 
+              />
+            )}
+            
+            {activeTab === 'historico' && (
+              <AbaHistorico 
+                project={editedProject} 
+              />
+            )}
+          </div>
         </div>
 
       </div>

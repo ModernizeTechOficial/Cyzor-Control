@@ -379,7 +379,7 @@ export default function AbaKanban({ project, onUpdateProject }: AbaKanbanProps) 
   const columns: Array<'todo' | 'in_progress' | 'review' | 'done'> = ['todo', 'in_progress', 'review', 'done'];
 
   return (
-    <div className="p-6 md:p-8 flex flex-col gap-6 h-full min-h-[550px] animate-in fade-in duration-200">
+    <div className="p-6 md:p-8 flex flex-col gap-6 animate-in fade-in duration-200">
       
       {/* Filters Hub Row */}
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between border-b border-[#0F172A0F] pb-6">

@@ -21,6 +21,7 @@ import ConvitesTab from './equipe/ConvitesTab';
 import FuncoesTab from './equipe/FuncoesTab';
 import WorkspaceSettingsTab from './equipe/WorkspaceSettingsTab';
 import AuditoriaTab from './equipe/AuditoriaTab';
+import StandardHeader from './layout/StandardHeader';
 
 type EquipeTab = 'dashboard' | 'membros' | 'convites' | 'funcoes' | 'configuracoes' | 'auditoria';
 
@@ -37,17 +38,14 @@ export default function EquipeView() {
   ];
 
   return (
-    <div className="flex flex-col h-full bg-[#FAFAFA]">
+    <div className="w-full mx-auto pb-12 flex flex-col gap-10 animate-in fade-in duration-500 relative px-4 sm:px-6 lg:px-10">
       {/* Header */}
-      <div className="p-4 sm:p-8 pb-0">
-        <div className="flex flex-col gap-1 mb-6 sm:mb-8">
-          <div className="flex items-center gap-2 text-[#64748B] text-xs font-bold uppercase tracking-widest mb-1">
-            <Users size={12} />
-            <span>Gestão de Equipe</span>
-          </div>
-          <h1 className="text-3xl font-display font-bold text-[#111111] tracking-tight">Time & Workspace</h1>
-        </div>
+      <StandardHeader 
+        title="Time & Workspace"
+        subtitle="Gerencie membros, convites, funções, permissões e auditoria do workspace em tempo real."
+      />
 
+      <div className="flex flex-col gap-6">
         {/* Tab Navigation */}
         <div className="flex items-center gap-1 border-b border-[#0F172A0A] overflow-x-auto no-scrollbar">
           {tabs.map((tab) => (
@@ -71,27 +69,26 @@ export default function EquipeView() {
             </button>
           ))}
         </div>
-      </div>
 
-      {/* Content Area */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-8 custom-scrollbar">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className="h-full"
-          >
-            {activeTab === 'dashboard' && <EquipeDashboard />}
-            {activeTab === 'membros' && <MembrosTab />}
-            {activeTab === 'convites' && <ConvitesTab />}
-            {activeTab === 'funcoes' && <FuncoesTab />}
-            {activeTab === 'auditoria' && <AuditoriaTab />}
-            {activeTab === 'configuracoes' && <WorkspaceSettingsTab />}
-          </motion.div>
-        </AnimatePresence>
+        {/* Content Area */}
+        <div className="w-full">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+            >
+              {activeTab === 'dashboard' && <EquipeDashboard />}
+              {activeTab === 'membros' && <MembrosTab />}
+              {activeTab === 'convites' && <ConvitesTab />}
+              {activeTab === 'funcoes' && <FuncoesTab />}
+              {activeTab === 'auditoria' && <AuditoriaTab />}
+              {activeTab === 'configuracoes' && <WorkspaceSettingsTab />}
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   );

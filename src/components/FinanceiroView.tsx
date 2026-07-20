@@ -449,28 +449,25 @@ export default function FinanceiroView() {
 
     return (
       <div className="w-full mx-auto pb-12 flex flex-col gap-10 animate-in fade-in duration-500 relative text-left px-4 sm:px-6 lg:px-10">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
-          <StandardHeader 
-            title="Financeiro"
-            subtitle="Saúde financeira, receitas e custos de infraestrutura do ecossistema."
-            actions={[
-              {
-                label: 'Exportar',
-                onClick: handleExportPDF,
-                variant: 'secondary'
-              },
-              {
-                label: 'Novo Lançamento',
-                icon: Plus,
-                onClick: () => setIsModalOpen(true),
-                variant: 'primary'
-              }
-            ]}
-          />
-          <div className="flex-shrink-0">
-             <AIActionDropdown entityId="finance" actions={['createFinancialPlan']} />
-          </div>
-        </div>
+        <StandardHeader 
+          title="Financeiro"
+          subtitle="Saúde financeira, receitas e custos de infraestrutura do ecossistema."
+          actions={[
+            {
+              label: 'Exportar',
+              onClick: handleExportPDF,
+              variant: 'secondary'
+            },
+            {
+              label: 'Novo Lançamento',
+              icon: Plus,
+              onClick: () => setIsModalOpen(true),
+              variant: 'primary'
+            }
+          ]}
+        >
+          <AIActionDropdown entityId="finance" actions={['createFinancialPlan']} />
+        </StandardHeader>
       
       {/* Metric Cards */}
       <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">

@@ -3,6 +3,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { BarChart, RotateCw, Save, AlertTriangle } from 'lucide-react';
 import { showSuccess, showError } from '../../../lib/alerts';
 import { BES_THRESHOLDS, ACTIONS } from '../../../utils/besCalculator';
+import StandardHeader from '../../../components/layout/StandardHeader';
 
 export default function AdminBESView() {
   const { fetchWithAuth } = useAuth();
@@ -89,28 +90,32 @@ export default function AdminBESView() {
   };
 
   return (
-    <div className="space-y-10">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-zinc-900 tracking-tight">Gerenciamento Global BES</h2>
-          <p className="text-sm text-zinc-500">Ajuste manual e monitoramento do Business Evolution Score dos clientes.</p>
-        </div>
-        <button onClick={fetchWorkspaces} className="p-2 bg-white border rounded-xl hover:bg-zinc-50">
-          <RotateCw className="w-4 h-4" />
-        </button>
-      </div>
+    <div id="admin-bes-module" className="w-full mx-auto pb-12 flex flex-col gap-10 animate-in fade-in duration-500 relative px-4 sm:px-6 lg:px-10">
+      
+      <StandardHeader 
+        title="Gerenciamento Global BES"
+        subtitle="Ajuste manual e monitoramento do Business Evolution Score dos clientes."
+        actions={[
+          {
+            label: 'Recarregar',
+            icon: RotateCw,
+            onClick: fetchWorkspaces,
+            variant: 'secondary'
+          }
+        ]}
+      />
       
       {/* Configuration Section */}
       {besConfig && (
-        <div className="bg-white border rounded-2xl shadow-sm p-6 space-y-8">
-          <h3 className="font-bold text-sm text-zinc-900">Configuração Global BES</h3>
+        <div className="bg-white border rounded-[24px] shadow-sm p-6 space-y-8">
+          <h3 className="font-display font-black text-sm text-zinc-900">Configuração Global BES</h3>
           
           <div className="space-y-4">
-            <h4 className="text-xs font-bold text-zinc-500 uppercase">Limiares de Maturidade</h4>
+            <h4 className="text-xs font-display font-black text-zinc-500 uppercase">Limiares de Maturidade</h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {Object.entries(besConfig.thresholds).map(([key, value]) => (
                     <div key={key} className="space-y-1">
-                        <label className="text-[10px] font-bold text-zinc-500 uppercase">{key}</label>
+                        <label className="text-[10px] font-display font-bold text-zinc-500 uppercase">{key}</label>
                         <input 
                           type="number" 
                           value={value as number}
@@ -123,11 +128,11 @@ export default function AdminBESView() {
           </div>
 
           <div className="space-y-4">
-            <h4 className="text-xs font-bold text-zinc-500 uppercase">Pontuação por Ação</h4>
+            <h4 className="text-xs font-display font-black text-zinc-500 uppercase">Pontuação por Ação</h4>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                 {Object.entries(besConfig.actions).map(([key, value]) => (
                     <div key={key} className="space-y-1">
-                        <label className="text-[10px] font-bold text-zinc-500 uppercase">{key}</label>
+                        <label className="text-[10px] font-display font-bold text-zinc-500 uppercase">{key}</label>
                         <input 
                           type="number" 
                           value={value as number}
@@ -142,7 +147,7 @@ export default function AdminBESView() {
           <button 
             onClick={saveConfig}
             disabled={saving === 'config'}
-            className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl hover:bg-indigo-600 transition text-xs font-bold shadow-sm"
+            className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-zinc-800 text-white rounded-xl transition text-xs font-display font-bold shadow-sm cursor-pointer"
           >
             {saving === 'config' ? <RotateCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
             Salvar Configurações
@@ -151,20 +156,20 @@ export default function AdminBESView() {
       )}
 
       {/* Workspaces List */}
-      <div className="bg-white border rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-white border rounded-[24px] shadow-sm overflow-hidden p-2">
         <table className="w-full text-xs">
           <thead className="bg-zinc-50 border-b">
             <tr>
-              <th className="text-left px-6 py-4 font-bold text-zinc-500 uppercase">Workspace</th>
-              <th className="text-right px-6 py-4 font-bold text-zinc-500 uppercase">BES Atual</th>
-              <th className="text-right px-6 py-4 font-bold text-zinc-500 uppercase">Ajuste Manual</th>
-              <th className="text-right px-6 py-4 font-bold text-zinc-500 uppercase">Ações</th>
+              <th className="text-left px-6 py-4 font-display font-black text-zinc-500 uppercase">Workspace</th>
+              <th className="text-right px-6 py-4 font-display font-black text-zinc-500 uppercase">BES Atual</th>
+              <th className="text-right px-6 py-4 font-display font-black text-zinc-500 uppercase">Ajuste Manual</th>
+              <th className="text-right px-6 py-4 font-display font-black text-zinc-500 uppercase">Ações</th>
             </tr>
           </thead>
           <tbody>
             {workspaces.map((ws) => (
               <tr key={ws.id} className="border-b hover:bg-zinc-50/50">
-                <td className="px-6 py-4 font-bold">{ws.name}</td>
+                <td className="px-6 py-4 font-display font-bold">{ws.name}</td>
                 <td className="px-6 py-4 text-right font-mono font-bold">{(ws.settings?.besScore || 0).toLocaleString()}</td>
                 <td className="px-6 py-4 text-right">
                   <input
@@ -181,7 +186,7 @@ export default function AdminBESView() {
                         updateWorkspaceBES(ws.id, parseInt(input.value));
                     }}
                     disabled={saving === ws.id}
-                    className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl hover:bg-indigo-600 transition text-xs font-bold shadow-sm"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-zinc-800 text-white rounded-xl transition text-xs font-display font-bold shadow-sm cursor-pointer"
                   >
                     {saving === ws.id ? <RotateCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                     Salvar

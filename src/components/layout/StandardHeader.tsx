@@ -15,9 +15,10 @@ interface StandardHeaderProps {
   subtitle: string;
   breadcrumb?: { label: string; onClick?: () => void }[];
   actions?: ActionButton[];
+  children?: React.ReactNode;
 }
 
-export default function StandardHeader({ title, subtitle, breadcrumb, actions }: StandardHeaderProps) {
+export default function StandardHeader({ title, subtitle, breadcrumb, actions, children }: StandardHeaderProps) {
   const { activeWorkspace } = useAuth();
 
   return (
@@ -91,6 +92,7 @@ export default function StandardHeader({ title, subtitle, breadcrumb, actions }:
             </button>
           );
         })}
+        {children}
       </div>
     </div>
   );

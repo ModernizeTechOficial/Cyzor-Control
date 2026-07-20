@@ -89,9 +89,19 @@ export default function HomeHeader() {
 
       {/* Greeting & AI Executive Advice Panel */}
       <div className="flex flex-col gap-2.5">
-        <h1 className="text-3xl font-black text-[#111111] tracking-tight leading-none">
-          {getGreeting()}, {user?.displayName || user?.email?.split('@')[0] || 'Diretor'}.
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl sm:text-4xl font-display font-black text-[#111111] tracking-tight leading-none">
+            {getGreeting()}, {user?.displayName || user?.email?.split('@')[0] || 'Diretor'}.
+          </h1>
+          {activeWorkspace && (
+            <div className="px-2.5 py-1 bg-[#F1F5F9] border border-[#0F172A05] rounded-lg flex items-center gap-1.5 shrink-0">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#111111]/20 animate-pulse" />
+              <span className="text-[10px] font-bold text-[#475569] uppercase tracking-wider">
+                {activeWorkspace.name}
+              </span>
+            </div>
+          )}
+        </div>
         
         {isAiAdviceVisible && (
           <div className="relative flex items-start gap-3 bg-gradient-to-r from-slate-50 to-white border border-[#0F172A03] p-4 rounded-[20px]">

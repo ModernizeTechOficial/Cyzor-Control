@@ -363,7 +363,7 @@ export default function AgendaPage() {
   }, [selectedDate, currentCalendarView]);
 
   return (
-    <div id="agenda-module" className="flex flex-col gap-10 animate-in fade-in duration-500 px-4 sm:px-6 lg:px-10 pb-12">
+    <div id="agenda-module" className="w-full mx-auto pb-12 flex flex-col gap-10 animate-in fade-in duration-500 relative px-4 sm:px-6 lg:px-10">
       
       {/* 1. Header Area */}
       <StandardHeader 

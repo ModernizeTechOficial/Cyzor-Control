@@ -19,6 +19,7 @@ export interface EntityHeroProps {
   onSaveName?: () => void;
   onStartEdit?: () => void;
   actions?: React.ReactNode;
+  scrollProgress?: number;
 }
 
 export const EntityHero: React.FC<EntityHeroProps> = ({
@@ -33,7 +34,8 @@ export const EntityHero: React.FC<EntityHeroProps> = ({
   onNameChange,
   onSaveName,
   onStartEdit,
-  actions
+  actions,
+  scrollProgress = 0
 }) => {
   const getInitials = (val: string) => {
     if (!val) return '?';
@@ -59,26 +61,29 @@ export const EntityHero: React.FC<EntityHeroProps> = ({
   };
 
   return (
-    <div className="bg-[#111111] text-white pt-12 pb-16 px-8 relative overflow-hidden shrink-0">
+    <div className="bg-[#111111] text-white pt-12 pb-14 px-8 relative shrink-0 border-b border-white/5">
       
-      {/* Cover Image Background */}
-      {coverUrl ? (
-        <div className="absolute inset-0 z-0 overflow-hidden">
-          <img 
-            src={coverUrl} 
-            alt="Capa da Entidade" 
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover opacity-25 filter blur-[1px]" 
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#111111] via-[#111111]/70 to-[#111111]/30" />
-        </div>
-      ) : (
-        /* Decorative Gradients */
-        <>
-          <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-bl from-blue-500/20 via-purple-500/10 to-transparent rounded-full blur-[100px] opacity-60 pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-gradient-to-tr from-emerald-500/10 to-transparent rounded-full blur-[80px] pointer-events-none" />
-        </>
-      )}
+      {/* Background with overflow-hidden isolated */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Cover Image Background */}
+        {coverUrl ? (
+          <div className="absolute inset-0 z-0 overflow-hidden">
+            <img 
+              src={coverUrl} 
+              alt="Capa da Entidade" 
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-cover opacity-25 filter blur-[1px]" 
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#111111] via-[#111111]/70 to-[#111111]/30" />
+          </div>
+        ) : (
+          /* Decorative Gradients */
+          <>
+            <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-bl from-blue-500/20 via-purple-500/10 to-transparent rounded-full blur-[100px] opacity-60 pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-gradient-to-tr from-emerald-500/10 to-transparent rounded-full blur-[80px] pointer-events-none" />
+          </>
+        )}
+      </div>
 
       <div className="relative z-10 max-w-[1600px] mx-auto w-full flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
         
@@ -94,7 +99,7 @@ export const EntityHero: React.FC<EntityHeroProps> = ({
                 className="w-full h-full object-contain p-2 bg-white" 
               />
             ) : (
-              <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-[#111111] flex items-center justify-center text-white text-3xl font-bold">
+              <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-[#111111] flex items-center justify-center text-white font-bold">
                 {getInitials(name)}
               </div>
             )}
@@ -104,16 +109,18 @@ export const EntityHero: React.FC<EntityHeroProps> = ({
           <div className="flex flex-col gap-3 text-left">
             
             {/* Breadcrumbs & Perspective */}
-            {breadcrumbs.length > 0 && (
-              <div className="flex items-center gap-1.5 text-[10px] font-bold tracking-widest text-slate-400 uppercase">
-                {breadcrumbs.map((bc, idx) => (
-                  <React.Fragment key={idx}>
-                    <span>{bc}</span>
-                    {idx < breadcrumbs.length - 1 && <span className="opacity-50">/</span>}
-                  </React.Fragment>
-                ))}
-              </div>
-            )}
+            <div>
+              {breadcrumbs.length > 0 && (
+                <div className="flex items-center gap-1.5 text-[10px] font-bold tracking-widest text-slate-400 uppercase">
+                  {breadcrumbs.map((bc, idx) => (
+                    <React.Fragment key={idx}>
+                      <span>{bc}</span>
+                      {idx < breadcrumbs.length - 1 && <span className="opacity-50">/</span>}
+                    </React.Fragment>
+                  ))}
+                </div>
+              )}
+            </div>
             
             <div className="flex items-center gap-4 flex-wrap">
               {isEditing && onNameChange ? (
@@ -135,7 +142,9 @@ export const EntityHero: React.FC<EntityHeroProps> = ({
                 </div>
               ) : (
                 <div className="flex items-center gap-3">
-                  <h1 className="text-3xl md:text-5xl font-display font-bold text-white tracking-tight">{name}</h1>
+                  <h1 className="text-3xl md:text-5xl font-display font-bold text-white tracking-tight leading-tight">
+                    {name}
+                  </h1>
                   {onStartEdit && (
                     <button 
                       onClick={onStartEdit}
@@ -148,43 +157,49 @@ export const EntityHero: React.FC<EntityHeroProps> = ({
                 </div>
               )}
               
-              {!isEditing && (
-                <span 
-                  className="text-white/40 text-xs font-medium flex items-center gap-1 cursor-pointer hover:text-white/80 transition-colors mt-1"
-                  onClick={copySlug}
-                  title="Copiar Slug"
-                >
-                  /{name.toLowerCase().replace(/\s+/g, '-')}
-                  <Copy size={11} />
-                </span>
-              )}
+              <div>
+                {!isEditing && (
+                  <span 
+                    className="text-white/40 text-xs font-medium flex items-center gap-1 cursor-pointer hover:text-white/80 transition-colors mt-1"
+                    onClick={copySlug}
+                    title="Copiar Slug"
+                  >
+                    /{name.toLowerCase().replace(/\s+/g, '-')}
+                    <Copy size={11} />
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Description */}
-            {description && (
-              <p className="text-xs text-white/70 max-w-2xl font-medium leading-relaxed mb-1">
-                {description}
-              </p>
-            )}
+            <div>
+              {description && (
+                <p className="text-xs text-white/70 max-w-2xl font-medium leading-relaxed mb-1">
+                  {description}
+                </p>
+              )}
+            </div>
 
             {/* Badges */}
-            {badges.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2">
-                {badges.map((badge, idx) => (
-                  <span 
-                    key={idx}
-                    className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border ${
-                      badge.variant === 'primary' ? 'bg-indigo-500/20 border-indigo-500/20 text-indigo-400' :
-                      badge.variant === 'secondary' ? 'bg-emerald-500/20 border-emerald-500/20 text-emerald-400' :
-                      badge.variant === 'accent' ? 'bg-blue-500/20 border-blue-500/20 text-blue-400' :
-                      'bg-white/10 border-white/5 text-white/80'
-                    }`}
-                  >
-                    {badge.label}
-                  </span>
-                ))}
-              </div>
-            )}
+            <div>
+              {badges.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2">
+                  {badges.map((badge, idx) => (
+                    <span 
+                      key={idx}
+                      className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border ${
+                        badge.variant === 'primary' ? 'bg-indigo-500/20 border-indigo-500/20 text-indigo-400' :
+                        badge.variant === 'secondary' ? 'bg-emerald-500/20 border-emerald-500/20 text-emerald-400' :
+                        badge.variant === 'accent' ? 'bg-blue-500/20 border-blue-500/20 text-blue-400' :
+                        'bg-white/10 border-white/5 text-white/80'
+                      }`}
+                    >
+                      {badge.label}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

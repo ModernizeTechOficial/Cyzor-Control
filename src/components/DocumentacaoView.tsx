@@ -704,7 +704,7 @@ export default function DocumentacaoView() {
   );
 
   return (
-    <div className="flex flex-col gap-10 h-full animate-in fade-in duration-500 px-4 sm:px-6 lg:px-10">
+    <div className="w-full mx-auto pb-12 flex flex-col gap-10 animate-in fade-in duration-500 relative px-4 sm:px-6 lg:px-10">
       {/* Header, Switcher Tabs and Primary Actions */}
       <div className="flex flex-col gap-8">
         <StandardHeader 
