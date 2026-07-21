@@ -72,3 +72,23 @@ export interface ProfessionalProfileOverview {
   achievements: Array<{ key: string; name: string; awardedAt: string }>;
   recentEvents: Array<{ id: number; eventType: string; xpDelta: number; description: string; createdAt: string }>;
 }
+
+export interface ProfessionalGoal {
+  id: number;
+  title: string;
+  description?: string;
+  status: 'OPEN' | 'IN_PROGRESS' | 'COMPLETE';
+  targetDate?: string;
+  progress: number;
+}
+
+export interface ProfessionalCertification {
+  id: number;
+  name: string;
+  issuer?: string;
+  obtainedAt?: string;
+  expiresAt?: string;
+  credentialUrl?: string;
+  notes?: string;
+}
+

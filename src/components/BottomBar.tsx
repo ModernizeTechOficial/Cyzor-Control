@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { 
   LayoutDashboard, GitBranch, DollarSign, BotMessageSquare, 
   Menu, X, Building2, Users, Package, Lightbulb, FileText, 
-  Calendar, StickyNote, Settings, TrendingUp 
+  Calendar, StickyNote, Settings, TrendingUp, Star 
 } from 'lucide-react';
 import { View } from '../types';
 
@@ -32,6 +32,7 @@ export default function BottomBar({
     { id: 'ideias', label: 'Ideias', icon: Lightbulb },
     { id: 'documentacao', label: 'Documentação', icon: FileText },
     { id: 'agenda', label: 'Agenda Google', icon: Calendar },
+    { id: 'career-hub', label: 'Carreira', icon: Star },
     { id: 'keep', label: 'Google Keep', icon: StickyNote },
     { id: 'configuracoes', label: 'Configurações', icon: Settings },
   ] as const;

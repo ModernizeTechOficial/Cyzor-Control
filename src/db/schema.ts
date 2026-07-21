@@ -950,6 +950,40 @@ export const professionalEvolutionRules = pgTable('professional_evolution_rules'
   ruleIdx: index('professional_evolution_rules_ws_idx').on(t.workspaceId),
 }));
 
+export const professionalGoals = pgTable('professional_goals', {
+  id: serial('id').primaryKey(),
+  tenantId: uuid('tenant_id').notNull(),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  userUid: text('user_uid').notNull().references(() => users.uid, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  description: text('description'),
+  status: text('status').default('OPEN'),
+  targetDate: timestamp('target_date'),
+  progress: integer('progress').default(0),
+  metadata: jsonb('metadata').default('{}'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (t) => ({
+  goalIdx: index('professional_goals_user_ws_idx').on(t.userUid, t.workspaceId),
+}));
+
+export const professionalCertifications = pgTable('professional_certifications', {
+  id: serial('id').primaryKey(),
+  tenantId: uuid('tenant_id').notNull(),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  userUid: text('user_uid').notNull().references(() => users.uid, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  issuer: text('issuer'),
+  obtainedAt: timestamp('obtained_at'),
+  expiresAt: timestamp('expires_at'),
+  credentialUrl: text('credential_url'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (t) => ({
+  certIdx: index('professional_certifications_user_ws_idx').on(t.userUid, t.workspaceId),
+}));
+
 // PLATFORM SETTINGS
 export const platformSettings = pgTable('platform_settings', {
   id: serial('id').primaryKey(),

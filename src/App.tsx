@@ -10,6 +10,7 @@ import ProjetosView from './components/ProjetosView';
 import IdeiasView from './components/IdeiasView';
 import FinanceiroView from './components/FinanceiroView';
 import DocumentacaoView from './components/DocumentacaoView';
+import CareerHubView from './components/CareerHubView';
 import IAView from './components/IAView';
 import ConfiguracoesView from './components/ConfiguracoesView';
 import LoginView from './components/LoginView';
@@ -171,6 +172,7 @@ export default function App() {
             {currentView === 'ideias' && <IdeiasView />}
             {currentView === 'financeiro' && <FinanceiroView />}
             {currentView === 'documentacao' && <DocumentacaoView />}
+            {currentView === 'career-hub' && <CareerHubView />}
             {currentView === 'ia' && <IAView setCurrentView={setCurrentView} />}
             {currentView === 'agenda' && <AgendaPage />}
             {currentView === 'keep' && <GoogleKeepView />}

@@ -8,7 +8,7 @@ import { BusinessEventTranslator } from "../services/BusinessEventTranslator.ts"
 import { TechnicalEvent } from "../types/domainEvents.ts";
 import { MissionService } from "../services/MissionService.ts";
 import { db } from "./index.ts";
-import { companies, clients, products, projects, tasks, ideas, documents, financeEntries, sprints, milestones, aiMemories, notifications, agendaEvents, users, workspaceMembers, workspaces, flows, notes, deploys, productLicenses, workspaceInvitations, auditLogs, entityComments, entityApprovals, roadmaps, entityTemplates, timelineActivities, platformSettings } from "./schema.ts";
+import { companies, clients, products, projects, tasks, ideas, documents, financeEntries, sprints, milestones, aiMemories, notifications, agendaEvents, users, workspaceMembers, workspaces, flows, notes, deploys, productLicenses, workspaceInvitations, auditLogs, entityComments, entityApprovals, roadmaps, entityTemplates, timelineActivities, professionalProfiles, professionalEvolutionEvents, professionalGoals, professionalCertifications, platformSettings } from "./schema.ts";
 import { eq, and, desc, sql, or, inArray, gte, lte, not } from "drizzle-orm";
 import { getUserSaaSState } from "./queries.ts";
 
@@ -3339,6 +3339,140 @@ apiRouter.get("/evolution/insights", requireAuth, async (req: AuthRequest, res) 
     });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch BES insights" });
+  }
+});
+
+apiRouter.get("/career/profile", requireAuth, tenantMiddleware as any, async (req: TenantRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const userUid = req.user!.uid;
+    const [profile] = await db.select().from(professionalProfiles).where(and(eq(professionalProfiles.workspaceId, workspaceId), eq(professionalProfiles.userUid, userUid))).limit(1);
+
+    if (!profile) {
+      return res.status(404).json({ error: 'Professional profile not found for current user' });
+    }
+
+    const recentEvents = await db.select({
+      id: professionalEvolutionEvents.id,
+      eventType: professionalEvolutionEvents.eventType,
+      xpDelta: professionalEvolutionEvents.xpDelta,
+      achievementKeys: professionalEvolutionEvents.achievementKeys,
+      createdAt: professionalEvolutionEvents.createdAt,
+      payload: professionalEvolutionEvents.payload
+    })
+    .from(professionalEvolutionEvents)
+    .where(and(eq(professionalEvolutionEvents.workspaceId, workspaceId), eq(professionalEvolutionEvents.userUid, userUid)))
+    .orderBy(desc(professionalEvolutionEvents.createdAt))
+    .limit(10);
+
+    res.json({
+      profile,
+      recentEvents
+    });
+  } catch (err) {
+    console.error('Error fetching career profile:', err);
+    res.status(500).json({ error: 'Failed to fetch career profile' });
+  }
+});
+
+apiRouter.get("/career/leaderboard", requireAuth, tenantMiddleware as any, async (req: TenantRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+
+    const leaderboard = await db.select({
+      userUid: professionalProfiles.userUid,
+      level: professionalProfiles.level,
+      xpTotal: professionalProfiles.xpTotal,
+      title: professionalProfiles.title,
+      competencies: professionalProfiles.competencies
+    })
+    .from(professionalProfiles)
+    .where(eq(professionalProfiles.workspaceId, workspaceId))
+    .orderBy(desc(professionalProfiles.xpTotal))
+    .limit(10);
+
+    res.json({ leaderboard });
+  } catch (err) {
+    console.error('Error fetching career leaderboard:', err);
+    res.status(500).json({ error: 'Failed to fetch career leaderboard' });
+  }
+});
+
+apiRouter.get("/career/goals", requireAuth, tenantMiddleware as any, async (req: TenantRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const userUid = req.user!.uid;
+    const goals = await db.select().from(professionalGoals).where(and(eq(professionalGoals.workspaceId, workspaceId), eq(professionalGoals.userUid, userUid))).orderBy(desc(professionalGoals.updatedAt));
+    res.json({ goals });
+  } catch (err) {
+    console.error('Error fetching career goals:', err);
+    res.status(500).json({ error: 'Failed to fetch career goals' });
+  }
+});
+
+apiRouter.post("/career/goals", requireAuth, tenantMiddleware as any, async (req: TenantRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const tenantId = req.tenantId!;
+    const userUid = req.user!.uid;
+    const { title, description, targetDate, status, progress } = req.body;
+    if (!title) return res.status(400).json({ error: 'Goal title is required' });
+
+    const [goal] = await db.insert(professionalGoals).values({
+      tenantId,
+      workspaceId,
+      userUid,
+      title,
+      description: description || null,
+      targetDate: targetDate ? new Date(targetDate) : null,
+      status: status || 'OPEN',
+      progress: progress ?? 0,
+      metadata: {}
+    }).returning();
+
+    res.json({ goal });
+  } catch (err) {
+    console.error('Error creating career goal:', err);
+    res.status(500).json({ error: 'Failed to create career goal' });
+  }
+});
+
+apiRouter.get("/career/certifications", requireAuth, tenantMiddleware as any, async (req: TenantRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const userUid = req.user!.uid;
+    const certifications = await db.select().from(professionalCertifications).where(and(eq(professionalCertifications.workspaceId, workspaceId), eq(professionalCertifications.userUid, userUid))).orderBy(desc(professionalCertifications.obtainedAt));
+    res.json({ certifications });
+  } catch (err) {
+    console.error('Error fetching certifications:', err);
+    res.status(500).json({ error: 'Failed to fetch certifications' });
+  }
+});
+
+apiRouter.post("/career/certifications", requireAuth, tenantMiddleware as any, async (req: TenantRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const tenantId = req.tenantId!;
+    const userUid = req.user!.uid;
+    const { name, issuer, obtainedAt, expiresAt, credentialUrl, notes } = req.body;
+    if (!name) return res.status(400).json({ error: 'Certification name is required' });
+
+    const [certification] = await db.insert(professionalCertifications).values({
+      tenantId,
+      workspaceId,
+      userUid,
+      name,
+      issuer: issuer || null,
+      obtainedAt: obtainedAt ? new Date(obtainedAt) : null,
+      expiresAt: expiresAt ? new Date(expiresAt) : null,
+      credentialUrl: credentialUrl || null,
+      notes: notes || null
+    }).returning();
+
+    res.json({ certification });
+  } catch (err) {
+    console.error('Error creating certification:', err);
+    res.status(500).json({ error: 'Failed to create certification' });
   }
 });
 

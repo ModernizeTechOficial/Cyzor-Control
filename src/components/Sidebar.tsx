@@ -202,6 +202,12 @@ export default function Sidebar({
                 onClick={() => handleNavigate('roadmap')} 
               />
               <NavItem 
+                icon={Star} 
+                label="Carreira" 
+                active={currentView === 'career-hub'} 
+                onClick={() => handleNavigate('career-hub')} 
+              />
+              <NavItem 
                 icon={Calendar} 
                 label="Agenda" 
                 active={currentView === 'agenda'} 

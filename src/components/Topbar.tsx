@@ -416,8 +416,7 @@ export default function Topbar({ isSidebarCollapsed, toggleSidebar, setCurrentVi
     ia: 'IA',
     agenda: 'Agenda',
     keep: 'Keep',
-    'flow-builder': 'Flow Builder',
-    configuracoes: 'ConfiguraÃ§Ãµes',
+    'flow-builder': 'Flow Builder',    'career-hub': 'Carreira',    configuracoes: 'ConfiguraÃ§Ãµes',
     equipe: 'Equipe',
     admin: 'Admin'
   };
