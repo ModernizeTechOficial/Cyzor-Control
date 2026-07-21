@@ -331,7 +331,7 @@ export default function Sidebar({
                 />
                 <NavItem 
                   icon={Lightbulb} 
-                  label="Ideias & NegÃ³cios" 
+                  label="Ideias & Negócios" 
                   active={currentView === 'ideias'} 
                   onClick={() => handleNavigate('ideias')} 
                 />
