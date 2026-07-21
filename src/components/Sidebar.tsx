@@ -273,7 +273,7 @@ export default function Sidebar({
               />
               <NavItem 
                 icon={Settings} 
-                label="ConfiguraÃ§Ãµes" 
+                label="Configurações" 
                 active={currentView === 'configuracoes'} 
                 onClick={() => handleNavigate('configuracoes')} 
               />
@@ -297,7 +297,7 @@ export default function Sidebar({
                 />
                 <NavItem 
                   icon={TrendingUp} 
-                  label="EstratÃ©gia" 
+                  label="Estratégia" 
                   active={currentView === 'roadmap'} 
                   onClick={() => handleNavigate('roadmap')} 
                 />
@@ -376,7 +376,7 @@ export default function Sidebar({
                 />
                 <NavItem 
                   icon={FileText} 
-                  label="DocumentaÃ§Ã£o" 
+                  label="Documentação" 
                   active={currentView === 'documentacao'} 
                   onClick={() => handleNavigate('documentacao')} 
                 />
@@ -447,7 +447,7 @@ export default function Sidebar({
                 </div>
                 <NavItem 
                   icon={Settings} 
-                  label="ConfiguraÃ§Ãµes" 
+                  label="Configurações" 
                   active={currentView === 'configuracoes'} 
                   onClick={() => handleNavigate('configuracoes')} 
                 />
