@@ -3,7 +3,6 @@ import multer from "multer";
 import { GoogleGenAI } from "@google/genai";
 import { requireAuth, AuthRequest } from "../middleware/auth.ts";
 import { tenantMiddleware, TenantRequest } from "../middleware/tenant.ts";
-import { updateBesScore } from "./bes.ts";
 import { BESIntegrationService } from "../services/BESIntegrationService.ts";
 import { BusinessEventTranslator } from "../services/BusinessEventTranslator.ts";
 import { TechnicalEvent } from "../types/domainEvents.ts";
@@ -290,7 +289,7 @@ apiRouter.post("/workspaces", async (req: AuthRequest, res) => {
       name,
       tenantId: req.tenantId as any,
       ownerUid: req.user!.uid,
-      settings: { description, segment: segment || 'General', stage: segment === 'SaaS' ? 'Produto' : (segment === 'Serviços' ? 'Clientes' : 'Ideia'), besScore: 120, besMaturity: 1.2 }
+      settings: { description, segment: segment || 'General', stage: segment === 'SaaS' ? 'Produto' : (segment === 'Serviços' ? 'Clientes' : 'Ideia'), besScore: 120, besMaturity: 1.2, professionalEvolution: { xpTotal: 120 } }
     }).returning();
 
     // Add owner as member
@@ -631,7 +630,14 @@ apiRouter.post("/companies", async (req: AuthRequest, res) => {
       status: status || 'Ativo'
     }).returning();
 
-    await updateBesScore(req.workspaceId!, 'CREATE_COMPANY');
+    const technicalEvent: TechnicalEvent = {
+      type: 'COMPANY_CREATED',
+      payload: { workspaceId: req.workspaceId, userUid: req.user?.uid || undefined, tenantId: req.tenantId }
+    };
+    const businessEvent = BusinessEventTranslator.translate(technicalEvent);
+    if (businessEvent) {
+      await BESIntegrationService.processBusinessEvent(businessEvent);
+    }
 
     try {
       await db.insert(notifications).values({
@@ -702,7 +708,7 @@ apiRouter.post("/clients", async (req: AuthRequest, res) => {
     // Instrument technical event
     const technicalEvent: TechnicalEvent = { 
         type: 'CUSTOMER_CREATED', 
-        payload: { clientId: data[0].id, workspaceId: req.workspaceId! } 
+        payload: { clientId: data[0].id, workspaceId: req.workspaceId!, userUid: req.user?.uid || undefined, tenantId: req.tenantId }
     };
     const businessEvent = BusinessEventTranslator.translate(technicalEvent);
     if (businessEvent) {
@@ -849,7 +855,7 @@ apiRouter.post("/projects", async (req: AuthRequest, res) => {
     // Instrument technical event
     const technicalEvent: TechnicalEvent = { 
         type: 'PROJECT_CREATED', 
-        payload: { projectId: data[0].id, workspaceId: req.workspaceId! } 
+        payload: { projectId: data[0].id, workspaceId: req.workspaceId!, userUid: req.user?.uid || undefined, tenantId: req.tenantId }
     };
     const businessEvent = BusinessEventTranslator.translate(technicalEvent);
     if (businessEvent) {
@@ -1397,7 +1403,7 @@ apiRouter.put("/tasks/:id", async (req: AuthRequest, res) => {
   if (status === 'DONE') {
       const technicalEvent: TechnicalEvent = { 
           type: 'TASK_COMPLETED', 
-          payload: { taskId: taskId, workspaceId: req.workspaceId! } 
+          payload: { taskId: taskId, workspaceId: req.workspaceId!, userUid: req.user?.uid || undefined, tenantId: req.tenantId } 
       };
       const businessEvent = BusinessEventTranslator.translate(technicalEvent);
       if (businessEvent) {
@@ -1950,7 +1956,7 @@ apiRouter.put("/finance/:id", async (req: AuthRequest, res) => {
       if (status === 'PAID') {
           const technicalEvent: TechnicalEvent = { 
               type: 'INVOICE_PAID', 
-              payload: { financeEntryId: entryId, workspaceId: req.workspaceId! } 
+              payload: { financeEntryId: entryId, workspaceId: req.workspaceId!, userUid: req.user?.uid || undefined, tenantId: req.tenantId } 
           };
           const businessEvent = BusinessEventTranslator.translate(technicalEvent);
           if (businessEvent) {
@@ -3262,6 +3268,37 @@ apiRouter.use((err: any, req: any, res: any, next: any) => {
   });
 });
 
+apiRouter.get("/admin/evolution-config", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    // Prefer the new 'evolution_config' key, but fall back to legacy 'bes_config' for compatibility
+    let configRow = await db.select().from(platformSettings).where(eq(platformSettings.key, 'evolution_config')).limit(1);
+    if (!configRow || configRow.length === 0) {
+      configRow = await db.select().from(platformSettings).where(eq(platformSettings.key, 'bes_config')).limit(1);
+    }
+    res.json(configRow[0]?.value || {});
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch evolution config" });
+  }
+});
+
+apiRouter.put("/admin/evolution-config", requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { config } = req.body;
+    // Upsert into the new key and keep the legacy key in sync for backward compatibility
+    await db.insert(platformSettings)
+      .values({ key: 'evolution_config', value: config })
+      .onConflictDoUpdate({ target: platformSettings.key, set: { value: config, updatedAt: new Date() } });
+
+    await db.insert(platformSettings)
+      .values({ key: 'bes_config', value: config })
+      .onConflictDoUpdate({ target: platformSettings.key, set: { value: config, updatedAt: new Date() } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update evolution config" });
+  }
+});
+
+// Legacy BIS routes kept for compatibility
 apiRouter.get("/admin/bes-config", requireAuth, async (req: AuthRequest, res) => {
   try {
     const config = await db.select().from(platformSettings).where(eq(platformSettings.key, 'bes_config')).limit(1);
@@ -3283,22 +3320,22 @@ apiRouter.put("/admin/bes-config", requireAuth, async (req: AuthRequest, res) =>
   }
 });
 
-apiRouter.get("/bes/insights", requireAuth, async (req: AuthRequest, res) => {
+apiRouter.get("/evolution/insights", requireAuth, async (req: AuthRequest, res) => {
   try {
     const workspaceId = req.workspaceId!;
     
-    // Get BES score
+    // Determine evolution XP (prefer professionalEvolution, fall back to legacy besScore)
     const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
-    const besScore = (ws?.settings as any)?.besScore || 0;
-    
+    const evolutionXp = (ws?.settings as any)?.professionalEvolution?.xpTotal ?? (ws?.settings as any)?.besScore ?? 0;
+
     // Get Core metrics
     const completedTasks = await db.select({ count: sql<number>`count(*)` }).from(tasks).where(and(eq(tasks.workspaceId, workspaceId), eq(tasks.status, 'DONE')));
-    
+
     res.json({
-        besScore,
-        coreMetrics: {
-            completedTasks: Number(completedTasks[0].count)
-        }
+      evolutionXp,
+      coreMetrics: {
+        completedTasks: Number(completedTasks[0].count)
+      }
     });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch BES insights" });

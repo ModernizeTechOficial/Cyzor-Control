@@ -7,20 +7,20 @@ import { useTooltip } from '../ui/useTooltip';
 
 interface CompanyMaturityStatusProps {
   progress: number;
-  besScore: number;
+  evolutionXp: number;
   currentStage: { label: string; role: string };
   nextStage?: { label: string };
-  pointsToNext: number;
+  xpToNext: number;
   recommendations: any[];
   onRoadmapClick: () => void;
 }
 
 export function CompanyMaturityStatus({
   progress,
-  besScore,
+  evolutionXp,
   currentStage,
   nextStage,
-  pointsToNext,
+  xpToNext,
   recommendations,
   onRoadmapClick
 }: CompanyMaturityStatusProps) {
@@ -84,7 +84,7 @@ export function CompanyMaturityStatus({
             title="Indicador de Maturidade"
             description="Mostra o percentual de progresso e o nível atual."
           >
-            <MaturityGauge progress={progress} score={besScore} level={Math.floor(besScore / 100)} />
+            <MaturityGauge progress={progress} score={evolutionXp} level={Math.floor(evolutionXp / 100)} />
           </Tooltip>
         </div>
 
@@ -102,7 +102,7 @@ export function CompanyMaturityStatus({
             </div>
             <div className="text-right">
               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Faltam</span>
-              <span className="text-base font-black text-slate-700">{pointsToNext.toLocaleString()} BES</span>
+              <span className="text-base font-black text-slate-700">{xpToNext.toLocaleString()} XP</span>
             </div>
           </div>
 
@@ -122,7 +122,7 @@ export function CompanyMaturityStatus({
                   <p className="text-xs font-bold text-slate-800 group-hover:text-slate-900 truncate">{rec.title}</p>
                 </div>
                 <div className="shrink-0">
-                  <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded">+{rec.impact} BES</span>
+                  <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded">{rec.impact}</span>
                 </div>
               </motion.div>
             ))}

@@ -896,6 +896,60 @@ export const workspaceBesActions = pgTable('workspace_bes_actions', {
   wsActionIdx: index('ws_bes_action_idx').on(t.workspaceId, t.actionType, t.entityId),
 }));
 
+// PROFESSIONAL EVOLUTION ENTITIES
+export const professionalProfiles = pgTable('professional_profiles', {
+  id: serial('id').primaryKey(),
+  tenantId: uuid('tenant_id').notNull(),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  userUid: text('user_uid').notNull().references(() => users.uid, { onDelete: 'cascade' }),
+  title: text('title').default('Aprendiz'),
+  level: integer('level').default(1),
+  xpTotal: integer('xp_total').default(0),
+  xpMonth: integer('xp_month').default(0),
+  xpWeek: integer('xp_week').default(0),
+  xpToday: integer('xp_today').default(0),
+  nextLevelXp: integer('next_level_xp').default(100),
+  competencies: jsonb('competencies').default('{}'),
+  achievements: jsonb('achievements').default('[]'),
+  statistics: jsonb('statistics').default('{}'),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => ({
+  profileIdx: index('professional_profiles_user_ws_idx').on(t.userUid, t.workspaceId),
+}));
+
+export const professionalEvolutionEvents = pgTable('professional_evolution_events', {
+  id: serial('id').primaryKey(),
+  tenantId: uuid('tenant_id').notNull(),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  userUid: text('user_uid').notNull().references(() => users.uid, { onDelete: 'cascade' }),
+  eventType: text('event_type').notNull(),
+  payload: jsonb('payload').default('{}'),
+  xpDelta: integer('xp_delta').default(0),
+  skillDeltas: jsonb('skill_deltas').default('[]'),
+  achievementKeys: jsonb('achievement_keys').default('[]'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => ({
+  eventIdx: index('professional_evolution_events_user_ws_idx').on(t.userUid, t.workspaceId),
+}));
+
+export const professionalEvolutionRules = pgTable('professional_evolution_rules', {
+  id: serial('id').primaryKey(),
+  tenantId: uuid('tenant_id').notNull(),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  eventType: text('event_type').notNull(),
+  xpDelta: integer('xp_delta').notNull().default(0),
+  skillDeltas: jsonb('skill_deltas').default('[]'),
+  achievementKeys: jsonb('achievement_keys').default('[]'),
+  active: boolean('active').default(true),
+  criteria: jsonb('criteria').default('{}'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (t) => ({
+  ruleIdx: index('professional_evolution_rules_ws_idx').on(t.workspaceId),
+}));
+
 // PLATFORM SETTINGS
 export const platformSettings = pgTable('platform_settings', {
   id: serial('id').primaryKey(),

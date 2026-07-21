@@ -1,4 +1,4 @@
-import { useState, useRef, RefObject } from "react";
+import { useState, useRef } from "react";
 
 /**
  * Hook to control a tooltip anchored to an element.
@@ -6,7 +6,7 @@ import { useState, useRef, RefObject } from "react";
  */
 export const useTooltip = () => {
   const [open, setOpen] = useState(false);
-  const anchorRef = useRef<HTMLElement>(null);
+  const anchorRef = useRef<any>(null);
   const openTooltip = () => setOpen(true);
   const closeTooltip = () => setOpen(false);
   return { open, openTooltip, closeTooltip, anchorRef } as const;

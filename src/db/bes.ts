@@ -43,7 +43,12 @@ export async function updateBesScore(workspaceId: number, actionType: keyof type
     settings: {
       ...currentSettings,
       besScore: newBes,
-      besMaturity: newMaturity
+      besMaturity: newMaturity,
+      // Keep professionalEvolution in sync for migration compatibility
+      professionalEvolution: {
+        ...(currentSettings.professionalEvolution || {}),
+        xpTotal: newBes
+      }
     }
   }).where(eq(workspaces.id, workspaceId));
 

@@ -61,7 +61,7 @@ export const AIActions: Record<string, AIAction> = {
     description: 'Sugere OKRs para a empresa com base em seus objetivos.',
     agentId: 'business-advisor',
     contextModule: 'company',
-    promptTemplate: 'Baseado no estágio da empresa, seu score (BES) e prioridades atuais, proponha 2 Objetivos (Objectives) estratégicos para o semestre, cada um com 3 Resultados-Chave (Key Results) mensuráveis.',
+    promptTemplate: 'Baseado no estágio de evolução profissional da equipe, seus indicadores de XP e prioridades atuais, proponha 2 Objetivos (Objectives) estratégicos para o semestre, cada um com 3 Resultados-Chave (Key Results) mensuráveis.',
   }
 };
 

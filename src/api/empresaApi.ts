@@ -6,8 +6,6 @@
  * Esta camada NÃO contém lógica de negócio – apenas tratamento de request/response.
  */
 
-import { fetchWithAuth } from '../context/AuthContext'; // ajuste o caminho se necessário
-
 export interface Empresa {
   id: string;
   name: string;
@@ -26,21 +24,24 @@ export interface Empresa {
 
 /** Listar todas as empresas (workspaces) */
 export async function listarEmpresas(): Promise<Empresa[]> {
-  const res = await fetchWithAuth('/api/companies', { method: 'GET' });
+  const _fetchWithAuth = (globalThis as any).fetchWithAuth ?? ((url: string, options?: RequestInit) => fetch(url, options));
+  const res = await _fetchWithAuth('/api/companies', { method: 'GET' });
   if (!res.ok) throw new Error('Failed to fetch empresas');
   return res.json();
 }
 
 /** Buscar empresa por id */
 export async function buscarEmpresa(id: string): Promise<Empresa> {
-  const res = await fetchWithAuth(`/api/companies/${id}`, { method: 'GET' });
+  const _fetchWithAuth = (globalThis as any).fetchWithAuth ?? ((url: string, options?: RequestInit) => fetch(url, options));
+  const res = await _fetchWithAuth(`/api/companies/${id}`, { method: 'GET' });
   if (!res.ok) throw new Error(`Failed to fetch empresa ${id}`);
   return res.json();
 }
 
 /** Criar nova empresa */
 export async function criarEmpresa(data: Partial<Empresa>): Promise<Empresa> {
-  const res = await fetchWithAuth('/api/companies', {
+  const _fetchWithAuth = (globalThis as any).fetchWithAuth ?? ((url: string, options?: RequestInit) => fetch(url, options));
+  const res = await _fetchWithAuth('/api/companies', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -51,7 +52,8 @@ export async function criarEmpresa(data: Partial<Empresa>): Promise<Empresa> {
 
 /** Atualizar empresa existente */
 export async function atualizarEmpresa(id: string, data: Partial<Empresa>): Promise<Empresa> {
-  const res = await fetchWithAuth(`/api/companies/${id}`, {
+  const _fetchWithAuth = (globalThis as any).fetchWithAuth ?? ((url: string, options?: RequestInit) => fetch(url, options));
+  const res = await _fetchWithAuth(`/api/companies/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -62,6 +64,7 @@ export async function atualizarEmpresa(id: string, data: Partial<Empresa>): Prom
 
 /** Remover empresa */
 export async function removerEmpresa(id: string): Promise<void> {
-  const res = await fetchWithAuth(`/api/companies/${id}`, { method: 'DELETE' });
+  const _fetchWithAuth = (globalThis as any).fetchWithAuth ?? ((url: string, options?: RequestInit) => fetch(url, options));
+  const res = await _fetchWithAuth(`/api/companies/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error(`Failed to delete empresa ${id}`);
 }

@@ -33,7 +33,7 @@ export class ContextBuilder {
         break;
       case 'company':
         data.company = { id: entityId, name: 'Acme Corp', industry: 'SaaS' };
-        data.bes = { score: 75, level: 'Traction' };
+        data.professionalEvolution = { xp: 75, stage: 'Engajado' };
         data.priorities = ['Aumentar retenção', 'Lançar v2'];
         break;
       default:

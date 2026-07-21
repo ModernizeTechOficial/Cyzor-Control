@@ -521,7 +521,7 @@ function ContextsTab() {
       <div className="space-y-4">
         {[
           { module: 'Projetos', data: ['Backlog', 'Sprint', 'Roadmap', 'Equipe'] },
-          { module: 'Empresas', data: ['Indicadores (BES)', 'Clientes', 'Produtos', 'Saúde'] },
+          { module: 'Empresas', data: ['Indicadores de Evolução', 'Clientes', 'Produtos', 'Saúde'] },
           { module: 'Financeiro', data: ['Receitas', 'Despesas', 'Fluxo de Caixa', 'MRR'] }
         ].map((ctx, i) => (
           <div key={i} className="p-4 rounded-xl border border-gray-200 flex flex-col gap-3">

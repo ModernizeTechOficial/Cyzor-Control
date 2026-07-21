@@ -1,6 +1,7 @@
 import { db } from "../db/index.ts";
 import { tasks, financeEntries, deploys, notifications, projects, products } from "../db/schema.ts";
 import { eq } from "drizzle-orm";
+import { PROFESSIONAL_STAGES } from "../utils/professionalEvolutionCalculator";
 
 export class EventCascadeService {
   /**
@@ -127,11 +128,14 @@ export class EventCascadeService {
 
       for (const t of thresholds) {
         if (oldScore < t.value && newScore >= t.value) {
+          // Attempt to find a matching professional stage label
+          const stage = PROFESSIONAL_STAGES.find(s => newScore >= s.min && newScore <= s.max);
+          const stageLabel = stage ? stage.label : t.stage;
           await db.insert(notifications).values({
             workspaceId,
             tenantId: tenantId as any,
-            title: "🎉 Marco de Maturidade Atingido!",
-            description: `Seu Business Event Score (BES) atingiu ${newScore} pontos. Seu Workspace foi promovido para o estágio de "${t.stage}". Parabéns!`,
+            title: "🎉 Marco de Evolução Profissional Atingido!",
+            description: `Sua Evolução Profissional (XP) atingiu ${newScore} pontos. Seu Workspace foi promovido para o estágio de "${stageLabel}". Parabéns!`,
             type: "success"
           });
         }

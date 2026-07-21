@@ -8,7 +8,7 @@ interface TooltipProps {
   description?: string;
   placement?: Placement;
   open: boolean;
-  anchorRef: RefObject<HTMLElement>;
+  anchorRef: RefObject<any>;
 }
 
 /**

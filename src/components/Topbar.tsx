@@ -506,10 +506,10 @@ export default function Topbar({ isSidebarCollapsed, toggleSidebar, setCurrentVi
         <div className="hidden xl:flex items-center gap-6 pr-6 border-r border-[#0F172A0A]">
           <div className="flex flex-col items-end gap-0.5">
             <span className="text-xs font-display font-black text-[#111111]">
-              {((business.companySettings && business.companySettings.besScore) || business.workspace?.settings?.besScore || 0).toLocaleString('pt-BR')} BES
+              {((business.companySettings && business.companySettings.professionalEvolution?.xpTotal) || business.workspace?.settings?.professionalEvolution?.xpTotal || ((business.companySettings && business.companySettings.besScore) || business.workspace?.settings?.besScore || 0)).toLocaleString('pt-BR')} XP
             </span>
             <span className="text-[9px] font-bold text-[#64748B] uppercase tracking-wider">
-              Score Global
+              Evolução Global
             </span>
           </div>
           <div className="flex flex-col items-end gap-0.5">

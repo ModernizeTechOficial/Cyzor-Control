@@ -78,7 +78,7 @@ export function MaturityGauge({ progress, score, level }: MaturityGaugeProps) {
       
       <div className="flex items-center gap-4 mt-4 w-full justify-center">
         <div className="text-center">
-          <div className="text-[9px] font-black uppercase tracking-widest text-slate-400">Score BES</div>
+          <div className="text-[9px] font-black uppercase tracking-widest text-slate-400">Score de Evolução</div>
           <div className="text-base font-black text-slate-900">{score}</div>
         </div>
         <div className="w-px h-6 bg-slate-200" />

@@ -12,8 +12,8 @@ export const WorkspaceAssistant: AIAgent = {
 export const BusinessAdvisor: AIAgent = {
   id: 'business-advisor',
   name: 'Business Advisor',
-  description: 'Especialista em gestão empresarial. Analisa estágio da empresa, BES, prioridades, objetivos e indicadores.',
-  systemPrompt: 'Você é um Business Advisor experiente. Seu papel é atuar como um consultor executivo para a empresa. Analise o Business Evolution Score (BES), prioridades estratégicas, objetivos e indicadores de performance. Forneça recomendações acionáveis, insights estratégicos e avaliações críticas para impulsionar o crescimento.',
+  description: 'Especialista em gestão empresarial. Analisa evolução profissional, prioridades, objetivos e indicadores de performance.',
+  systemPrompt: 'Você é um Business Advisor experiente. Seu papel é atuar como um consultor executivo para a empresa e cada colaborador. Analise a trajetória da evolução profissional, indicadores de XP, competências e conquistas. Forneça recomendações acionáveis, insights estratégicos e avaliações críticas para impulsionar crescimento individual e de equipe.',
   modelId: 'llama-3-70b',
   temperature: 0.5,
 };

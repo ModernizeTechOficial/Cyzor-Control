@@ -18,7 +18,7 @@ import { OperationalAlertCard } from './dashboard/OperationalAlertCard';
 import { CompanyMaturityStatus } from './dashboard/CompanyMaturityStatus';
 import { ArrowRight, Activity, ShieldAlert, CheckCircle2, Clock, ShieldCheck } from 'lucide-react';
 import { motion } from 'motion/react';
-import { getMaturityInfo, generateAIDiagnostics } from '../utils/besCalculator';
+import { getProfessionalEvolutionInfo, generateProfessionalInsights } from '../utils/professionalEvolutionCalculator';
 
 export default function DashboardView({ setCurrentView }: { setCurrentView: (view: View) => void }) {
   const { activeWorkspace } = useAuth();
@@ -129,8 +129,8 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
     return alerts;
   }, [projects, tasks, finance]);
 
-  // BES Calculation
-  const besScore = activeWorkspace?.settings?.besScore || 120;
+  // Professional evolution calculation
+  const evolutionXp = activeWorkspace?.settings?.professionalEvolution?.xpTotal || activeWorkspace?.settings?.besScore || 120;
   const entitiesCount = {
     companies: companiesData.length,
     projects: projects.length,
@@ -140,8 +140,8 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
     clients: 0 
   };
   
-  const { currentStage, nextStage, progress, pointsToNext } = getMaturityInfo(besScore);
-  const { recommendations } = generateAIDiagnostics(besScore, entitiesCount);
+  const { currentStage, nextStage, progress, xpToNext } = getProfessionalEvolutionInfo(evolutionXp);
+  const { recommendations } = generateProfessionalInsights(evolutionXp, entitiesCount);
   const isOnboardingCompleted = activeWorkspace?.settings?.onboardingCompleted === true;
   const stage = currentStage.label || 'Ideia';
 
@@ -178,10 +178,10 @@ export default function DashboardView({ setCurrentView }: { setCurrentView: (vie
         <div className="xl:col-span-8">
           <CompanyMaturityStatus 
             progress={progress}
-            besScore={besScore}
+            evolutionXp={evolutionXp}
             currentStage={currentStage}
             nextStage={nextStage}
-            pointsToNext={pointsToNext}
+            xpToNext={xpToNext}
             recommendations={recommendations}
             onRoadmapClick={() => setCurrentView('roadmap')}
           />

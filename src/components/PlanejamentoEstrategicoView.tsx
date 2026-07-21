@@ -8,7 +8,7 @@ import {
 } from '../hooks/useCyzorQueries';
 import { View } from '../types';
 import { useState, useMemo } from 'react';
-import { getMaturityInfo, generateAIDiagnostics, BES_STAGES } from '../utils/besCalculator';
+import { getProfessionalEvolutionInfo, generateProfessionalInsights, PROFESSIONAL_STAGES } from '../utils/professionalEvolutionCalculator';
 
 export default function PlanejamentoEstrategicoView({ setCurrentView }: { setCurrentView: (view: View) => void }) {
   const { activeWorkspace } = useAuth();
@@ -35,21 +35,21 @@ export default function PlanejamentoEstrategicoView({ setCurrentView }: { setCur
     };
   }, [companies, projects, products, tasks, financeEntries]);
 
-  // For the specific entity or global, we compute the BES.
+  // For the specific entity or global, we compute the professional evolution XP.
   // In a real scenario, each entity would have its own score computed.
-  // Here we just use the workspace score for simplicity on the frontend,
-  // or a mock value based on the selection to demonstrate the feature.
-  const besScore = activeWorkspace?.settings?.besScore || 3250; 
+  // Here we use the workspace evolution XP for simplicity on the frontend,
+  // or fall back to the legacy BES value while the migration stabilizes.
+  const evolutionXp = activeWorkspace?.settings?.professionalEvolution?.xpTotal || activeWorkspace?.settings?.besScore || 3250; 
   
-  const { currentStage, nextStage, progress, pointsToNext } = getMaturityInfo(besScore);
-  const { diagnostics, recommendations, reasons } = generateAIDiagnostics(besScore, entitiesCount);
+  const { currentStage, nextStage, progress, xpToNext } = getProfessionalEvolutionInfo(evolutionXp);
+  const { diagnostics, recommendations, reasons } = generateProfessionalInsights(evolutionXp, entitiesCount);
 
   return (
     <div className="w-full mx-auto pb-12 flex flex-col gap-6 animate-in fade-in duration-500 relative px-4 sm:px-6 lg:px-10">
       
       <StandardHeader 
-        title="Evolução Estratégica (BES)"
-        subtitle={selectedEntity === 'global' ? "Maturidade inteligente do seu Workspace baseada em eventos." : `Maturidade específica de: ${[...companies, ...projects, ...products].find(e => e.id === selectedEntity)?.name || selectedEntity}`}
+        title="Evolução Profissional"
+        subtitle={selectedEntity === 'global' ? "Maturidade inteligente do seu Workspace baseada em eventos de evolução." : `Maturidade específica de: ${[...companies, ...projects, ...products].find(e => e.id === selectedEntity)?.name || selectedEntity}`}
         breadcrumb={[{ label: 'Maturidade Corporativa' }]}
         actions={[
           {
@@ -123,12 +123,12 @@ export default function PlanejamentoEstrategicoView({ setCurrentView }: { setCur
         <div className="lg:col-span-1 bg-white border border-slate-100 rounded-[24px] p-6 shadow-[0_1px_3px_0_rgba(15,23,42,0.03),0_1px_2px_0_rgba(15,23,42,0.02)] flex flex-col justify-between">
           <div>
             <h3 className="text-sm font-display font-black text-[#0F172A] mb-1">Maturidade Operacional</h3>
-            <p className="text-[11px] text-slate-400 font-medium mb-6">Calculada via Eventos (BES)</p>
+            <p className="text-[11px] text-slate-400 font-medium mb-6">Calculada via Eventos de Evolução</p>
             
             <div className="flex flex-col items-center justify-center gap-2 mb-6">
               <span className="text-xs font-display font-black text-slate-500 uppercase tracking-wider">{currentStage.label}</span>
               <span className="text-7xl font-display font-black text-[#0F172A] tracking-tighter">{progress}%</span>
-              <span className="text-xs font-bold bg-slate-50 text-slate-600 px-3 py-1 rounded-full">{besScore.toLocaleString()} Pontos de Evolução</span>
+              <span className="text-xs font-bold bg-slate-50 text-slate-600 px-3 py-1 rounded-full">{evolutionXp.toLocaleString()} XP</span>
             </div>
             
             {nextStage && (
@@ -141,7 +141,7 @@ export default function PlanejamentoEstrategicoView({ setCurrentView }: { setCur
                 <div className="w-full h-1.5 bg-slate-200 rounded-full mt-2 overflow-hidden">
                   <div className="h-full bg-[#111111] rounded-full" style={{ width: `${progress}%` }} />
                 </div>
-                <p className="text-[10px] font-bold text-slate-500 mt-1">Faltam <strong className="text-[#0F172A]">{pointsToNext.toLocaleString()} pontos</strong> de evolução.</p>
+                <p className="text-[10px] font-bold text-slate-500 mt-1">Faltam <strong className="text-[#0F172A]">{xpToNext.toLocaleString()} pontos</strong> de evolução.</p>
               </div>
             )}
           </div>
@@ -213,7 +213,7 @@ export default function PlanejamentoEstrategicoView({ setCurrentView }: { setCur
 
       {/* Tabela de Níveis (Informativa) */}
       <div className="bg-white border border-slate-100 rounded-[24px] p-6 shadow-[0_1px_3px_0_rgba(15,23,42,0.03),0_1px_2px_0_rgba(15,23,42,0.02)]">
-        <h3 className="text-sm font-display font-black text-[#0F172A] mb-1">Mapa de Evolução (BES)</h3>
+        <h3 className="text-sm font-display font-black text-[#0F172A] mb-1">Mapa de Evolução</h3>
         <p className="text-[11px] text-slate-400 font-medium mb-6">Acompanhe a trilha de maturidade da plataforma.</p>
         
         <div className="overflow-x-auto custom-scrollbar">
@@ -221,15 +221,15 @@ export default function PlanejamentoEstrategicoView({ setCurrentView }: { setCur
             <thead>
               <tr className="border-b border-slate-100">
                 <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-[20%]">Estágio</th>
-                <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-[20%]">Pontuação BES</th>
+                <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-[20%]">Pontuação de Evolução</th>
                 <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-[30%]">Foco Operacional</th>
                 <th className="py-3 px-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-[30%]">Status</th>
               </tr>
             </thead>
             <tbody>
-              {BES_STAGES.map((stage) => {
+              {PROFESSIONAL_STAGES.map((stage) => {
                 const isCurrent = stage.id === currentStage.id;
-                const isPast = stage.max < besScore;
+                const isPast = stage.max < evolutionXp;
                 
                 return (
                   <tr key={stage.id} className={`border-b border-slate-50 last:border-0 ${isCurrent ? 'bg-slate-50' : ''}`}>
@@ -266,7 +266,7 @@ export default function PlanejamentoEstrategicoView({ setCurrentView }: { setCur
       <div className="bg-white border border-slate-100 rounded-[24px] p-6 shadow-[0_1px_3px_0_rgba(15,23,42,0.03),0_1px_2px_0_rgba(15,23,42,0.02)]">
         <div className="flex justify-between items-start mb-6">
           <div>
-            <h3 className="text-sm font-display font-black text-[#0F172A] mb-1">Últimos Eventos (Timeline BES)</h3>
+            <h3 className="text-sm font-display font-black text-[#0F172A] mb-1">Últimos Eventos (Timeline de Evolução)</h3>
             <p className="text-[11px] text-slate-400 font-medium">Ações que impactaram sua pontuação recentemente.</p>
           </div>
           <button className="text-blue-600 font-display font-bold text-xs hover:underline">Ver tudo</button>
