@@ -3346,10 +3346,30 @@ apiRouter.get("/career/profile", requireAuth, tenantMiddleware as any, async (re
   try {
     const workspaceId = req.workspaceId!;
     const userUid = req.user!.uid;
-    const [profile] = await db.select().from(professionalProfiles).where(and(eq(professionalProfiles.workspaceId, workspaceId), eq(professionalProfiles.userUid, userUid))).limit(1);
+    const tenantId = req.tenantId!;
+
+    let [profile] = await db.select().from(professionalProfiles).where(and(eq(professionalProfiles.workspaceId, workspaceId), eq(professionalProfiles.userUid, userUid))).limit(1);
 
     if (!profile) {
-      return res.status(404).json({ error: 'Professional profile not found for current user' });
+      const [newProfile] = await db.insert(professionalProfiles).values({
+        tenantId,
+        workspaceId,
+        userUid,
+        title: 'Aprendiz',
+        level: 1,
+        xpTotal: 0,
+        xpMonth: 0,
+        xpWeek: 0,
+        xpToday: 0,
+        nextLevelXp: 100,
+        competencies: {},
+        achievements: [],
+        statistics: {},
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).returning();
+
+      profile = newProfile;
     }
 
     const recentEvents = await db.select({
