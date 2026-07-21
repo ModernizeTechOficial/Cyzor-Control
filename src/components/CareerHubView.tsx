@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext.tsx';
 import { getProfessionalEvolutionInfo } from '../utils/professionalEvolutionCalculator.ts';
-import { Trophy, Sparkles, Award, TrendingUp, ListChecks } from 'lucide-react';
+import { Trophy, Sparkles, Award, TrendingUp, ListChecks, Star, ShieldCheck, ArrowUpRight, Bolt, Zap } from 'lucide-react';
 
 interface ProfessionalProfileResponse {
   profile: {
@@ -123,35 +124,83 @@ export default function CareerHubView() {
     return getProfessionalEvolutionInfo(profileData.profile.xpTotal);
   }, [profileData]);
 
+  const stage = evolutionSummary?.currentStage;
+  const nextStage = evolutionSummary?.nextStage;
+  const progress = evolutionSummary?.progress ?? 0;
+  const totalCompetencies = Object.keys(profileData?.profile.competencies || {}).length;
+  const profileUpdatedAt = profileData?.profile.updatedAt ? new Date(profileData.profile.updatedAt).toLocaleDateString('pt-BR') : '--';
+
   return (
     <div id="career-hub-view" className="w-full mx-auto pb-16 flex flex-col gap-8 px-4 sm:px-6 lg:px-10">
-      <div className="bg-white border border-slate-200 rounded-[32px] shadow-sm p-8">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Career Hub</p>
-            <h1 className="mt-2 text-3xl font-extrabold text-slate-900">Sua jornada profissional</h1>
-            <p className="mt-2 max-w-2xl text-sm text-slate-500">Visão interna de evolução, competências e posicionamento do usuário dentro do workspace.</p>
+      <motion.section
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.65, ease: 'easeOut' }}
+        className="relative overflow-hidden rounded-[32px] bg-slate-950 text-white shadow-[0_35px_120px_-40px_rgba(15,23,42,0.9)]"
+      >
+        <div className="absolute left-0 top-0 h-64 w-64 -translate-x-1/3 -translate-y-1/3 rounded-full bg-gradient-to-br from-sky-500/25 to-indigo-500/10 blur-3xl" />
+        <div className="absolute right-0 top-28 h-56 w-56 translate-x-1/4 -translate-y-1/4 rounded-full bg-gradient-to-br from-emerald-400/15 to-cyan-300/10 blur-3xl" />
+        <div className="relative grid gap-8 p-8 lg:grid-cols-[1.5fr_1fr]">
+          <div className="space-y-6">
+            <div className="inline-flex items-center gap-3 rounded-full border border-slate-700 bg-slate-900/80 px-4 py-2 text-xs uppercase tracking-[0.35em] text-sky-300">
+              <Star size={16} /> Career Intelligence
+            </div>
+            <div className="max-w-2xl space-y-4">
+              <p className="text-sm uppercase tracking-[0.35em] text-sky-300">Jornada Profissional</p>
+              <h1 className="text-4xl font-extrabold leading-tight text-white">Transforme sua evolução em performance real.</h1>
+              <p className="max-w-xl text-base leading-7 text-slate-300">Explore um dashboard de carreira com dados de XP, competências, conquistas e metas criadas para transmitir poder e profissionalismo.</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-[28px] border border-slate-800 bg-slate-900/90 p-5">
+                <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Estágio atual</p>
+                <p className="mt-3 text-2xl font-bold text-white">{stage?.label ?? 'Onboarding'}</p>
+                <p className="mt-2 text-sm text-slate-400">Nível: {profileData?.profile.level ?? '--'}</p>
+              </div>
+              <div className="rounded-[28px] border border-slate-800 bg-slate-900/90 p-5">
+                <p className="text-xs uppercase tracking-[0.35em] text-slate-500">XP acumulado</p>
+                <p className="mt-3 text-2xl font-bold text-white">{profileData?.profile.xpTotal?.toLocaleString() ?? '0'}</p>
+                <p className="mt-2 text-sm text-slate-400">Até o próximo estágio: {evolutionSummary?.xpToNext?.toLocaleString() ?? '0'} XP</p>
+              </div>
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 w-full lg:w-auto">
-            <div className="rounded-3xl bg-slate-50 p-4">
-              <p className="text-[10px] uppercase tracking-[0.3em] text-slate-500">Nível</p>
-              <p className="mt-2 text-2xl font-black text-slate-900">{profileData?.profile.level ?? '--'}</p>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.65, delay: 0.15 }}
+            className="rounded-[32px] border border-slate-800 bg-slate-900/85 p-6"
+          >
+            <div className="flex flex-col gap-6">
+              <div className="rounded-[28px] bg-gradient-to-r from-slate-800/90 to-slate-900/90 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Progresso de carreira</p>
+                <div className="mt-4 flex items-end justify-between gap-6">
+                  <div>
+                    <p className="text-4xl font-bold text-white">{progress}%</p>
+                    <p className="mt-2 text-sm text-slate-400">Caminho até {nextStage?.label ?? 'o próximo estágio'}</p>
+                  </div>
+                  <div className="rounded-3xl bg-slate-800/80 p-4 text-center text-white">
+                    <Bolt size={28} className="mx-auto text-sky-400" />
+                    <p className="mt-2 text-xs uppercase tracking-[0.35em] text-slate-400">Ritmo de XP</p>
+                    <p className="mt-1 text-lg font-semibold text-white">{profileData?.profile.xpMonth.toLocaleString() ?? '0'} / mês</p>
+                  </div>
+                </div>
+                <div className="mt-5 h-3 overflow-hidden rounded-full bg-slate-800">
+                  <div className="h-full rounded-full bg-gradient-to-r from-sky-500 to-emerald-400" style={{ width: `${progress}%` }} />
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-[28px] bg-slate-900/90 p-5 text-center text-white">
+                  <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Metas abertas</p>
+                  <p className="mt-3 text-3xl font-semibold">{goals.length}</p>
+                </div>
+                <div className="rounded-[28px] bg-slate-900/90 p-5 text-center text-white">
+                  <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Certificações</p>
+                  <p className="mt-3 text-3xl font-semibold">{certifications.length}</p>
+                </div>
+              </div>
             </div>
-            <div className="rounded-3xl bg-slate-50 p-4">
-              <p className="text-[10px] uppercase tracking-[0.3em] text-slate-500">XP Total</p>
-              <p className="mt-2 text-2xl font-black text-slate-900">{profileData?.profile.xpTotal?.toLocaleString() ?? '--'}</p>
-            </div>
-            <div className="rounded-3xl bg-slate-50 p-4">
-              <p className="text-[10px] uppercase tracking-[0.3em] text-slate-500">Título</p>
-              <p className="mt-2 text-2xl font-black text-slate-900">{profileData?.profile.title ?? '--'}</p>
-            </div>
-            <div className="rounded-3xl bg-slate-50 p-4">
-              <p className="text-[10px] uppercase tracking-[0.3em] text-slate-500">Atualizado</p>
-              <p className="mt-2 text-2xl font-black text-slate-900">{profileData?.profile.updatedAt ? new Date(profileData.profile.updatedAt).toLocaleDateString('pt-BR') : '--'}</p>
-            </div>
-          </div>
+          </motion.div>
         </div>
-      </div>
+      </motion.section>
 
       {loading ? (
         <div className="flex items-center justify-center min-h-[240px] rounded-[32px] border border-dashed border-slate-200 bg-white text-slate-500">
