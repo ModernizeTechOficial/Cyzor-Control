@@ -28,6 +28,7 @@ import { View } from './types';
 import { useURLSync } from './hooks/useURLSync';
 import { useNavigation } from './context/NavigationContext';
 import { useAuth } from './context/AuthContext.tsx';
+import { useWorkspacePermissions } from './hooks/useWorkspacePermissions';
 import { Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import HomeIntelligence from './components/home/HomeIntelligence';
@@ -42,6 +43,7 @@ import GlobalVoiceActivator from './components/GlobalVoiceActivator';
 
 export default function App() {
   const { user, dbUser, loading, activeWorkspace, isSwitchingWorkspace, isCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen } = useAuth();
+  const { canViewFinance, isLoading: permissionsLoading } = useWorkspacePermissions();
   const [currentView, setCurrentView] = useState<View | 'admin'>('landing');
   const { globalFilters, setGlobalFilters } = useNavigation();
   useURLSync(currentView, setCurrentView, globalFilters, setGlobalFilters);
@@ -112,6 +114,12 @@ export default function App() {
       }
     }
   }, [user, dbUser, loading, currentView, globalFilters]);
+
+  useEffect(() => {
+    if (!loading && !permissionsLoading && currentView === 'financeiro' && !canViewFinance) {
+      setCurrentView('dashboard');
+    }
+  }, [loading, permissionsLoading, currentView, canViewFinance]);
 
   if (loading) {
     return (

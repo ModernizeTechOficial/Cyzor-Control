@@ -8,6 +8,7 @@ import FinanceEntryModal from './FinanceEntryModal';
 import { useAuth } from '../context/AuthContext';
 import { useFinance, useProjects, useCompanies } from '../hooks/useCyzorQueries';
 import { SkeletonDashboard } from './common/skeletons/SkeletonDashboard';
+import { useWorkspacePermissions } from '../hooks/useWorkspacePermissions';
 import { useQueryClient } from '@tanstack/react-query';
 import { DollarSign, TrendingUp, TrendingDown, CreditCard, ArrowUpRight, ArrowDownRight, Server, Globe, Key, Database, MoreHorizontal, Edit3, Layers, ChevronRight, Plus } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
@@ -25,6 +26,7 @@ export default function FinanceiroView() {
   const { data: financeData, isLoading: isFinanceLoading } = useFinance();
   const { data: projectsData } = useProjects();
   const { data: companiesData } = useCompanies();
+  const { canViewFinance, isLoading: permissionsLoading } = useWorkspacePermissions();
 
   const [entries, setEntries] = useState<any[]>([]);
   useEffect(() => { if (financeData) setEntries(financeData); }, [financeData]);
@@ -34,7 +36,7 @@ export default function FinanceiroView() {
   const { iconUrl, appName } = useBranding();
   
   const fetchData = async () => {
-    if (!activeWorkspace) return;
+    if (!activeWorkspace || !canViewFinance) return;
     try {
       const [finRes, projRes] = await Promise.all([
         fetchWithAuth('/api/finance'),
@@ -49,7 +51,7 @@ export default function FinanceiroView() {
 
   useEffect(() => {
     fetchData();
-  }, [activeWorkspace]);
+  }, [activeWorkspace, canViewFinance]);
 
   const handleEditClick = (entry: any) => {
     setEditingEntry(entry);
@@ -186,6 +188,17 @@ export default function FinanceiroView() {
       totalAReceberMes: tAReceberMes
     };
   }, [entries, projects, globalFilters.companyId]);
+
+  if (!permissionsLoading && !canViewFinance) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center rounded-[32px] bg-white border border-[#0F172A0A] p-12 shadow-[0_8px_30px_rgba(0,0,0,0.03)] text-center">
+        <div>
+          <h2 className="text-xl font-bold text-[#111111] mb-2">Acesso negado</h2>
+          <p className="text-sm text-[#64748B]">Você não tem permissão para acessar o módulo Financeiro.</p>
+        </div>
+      </div>
+    );
+  }
 
   const filteredByTab = useMemo(() => {
     switch (activeTab) {

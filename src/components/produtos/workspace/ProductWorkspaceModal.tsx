@@ -3,6 +3,7 @@ import {
   CloudLightning, HardDrive, Cpu, Fingerprint, History, CreditCard, ChevronRight, Activity, Github, ExternalLink
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
+import { useWorkspacePermissions } from '../../../hooks/useWorkspacePermissions';
 import { EntityHero } from '../../common/EntityHero';
 import WorkspaceKPIs from './WorkspaceKPIs';
 import WorkspaceSidebar from './WorkspaceSidebar';
@@ -102,12 +103,19 @@ import { VisualIdentityTab } from '../../common/VisualIdentityTab';
 function WorkspaceTabsContainer({ product, onSave, onDelete, companies }: any) {
   const [activeTab, setActiveTab] = useState('visao_geral');
   const [localProduct, setLocalProduct] = useState(product);
+  const { canViewFinance } = useWorkspacePermissions();
 
   useEffect(() => {
     setLocalProduct(product);
   }, [product]);
 
-  const tabs = [
+  useEffect(() => {
+    if (!canViewFinance && activeTab === 'financeiro') {
+      setActiveTab('visao_geral');
+    }
+  }, [canViewFinance, activeTab]);
+
+  const allTabs = [
     { id: 'visao_geral', label: 'Visão Geral' },
     { id: 'visao_360', label: 'Visão 360°' },
     { id: 'identidade_visual', label: 'Identidade Visual' },
@@ -122,6 +130,7 @@ function WorkspaceTabsContainer({ product, onSave, onDelete, companies }: any) {
     { id: 'logs', label: 'Logs' },
     { id: 'configuracoes', label: 'Configurações' },
   ];
+  const tabs = canViewFinance ? allTabs : allTabs.filter((tab) => tab.id !== 'financeiro');
 
   return (
     <div className="flex flex-col h-full">
@@ -167,7 +176,7 @@ function WorkspaceTabsContainer({ product, onSave, onDelete, companies }: any) {
         )}
         {activeTab === 'projetos' && <ProjetosTab product={localProduct} onSave={onSave} />}
         {activeTab === 'clientes' && <ClientesTab product={localProduct} />}
-        {activeTab === 'financeiro' && <FinanceiroTab product={localProduct} />}
+        {activeTab === 'financeiro' && canViewFinance && <FinanceiroTab product={localProduct} />}
         {activeTab === 'licencas' && <LicencasTab product={localProduct} />}
         {activeTab === 'roadmap' && <RoadmapTab product={localProduct} onSave={onSave} />}
         {activeTab === 'analytics' && <AnalyticsTab product={localProduct} />}

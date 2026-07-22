@@ -5,6 +5,7 @@ import { useBusinessContext } from '../hooks/useBusinessContext';
 import { useBranding } from '../hooks/useBranding.ts';
 import { useNavigation } from '../context/NavigationContext.tsx';
 import { useCompanies, useProjects, useProducts } from '../hooks/useCyzorQueries';
+import { useWorkspacePermissions } from '../hooks/useWorkspacePermissions';
 import { 
   LayoutDashboard, Building2, Users, Package, GitBranch, Lightbulb, FileText, 
   DollarSign, BotMessageSquare, Settings, Calendar, ShieldCheck, StickyNote, 
@@ -49,6 +50,7 @@ export default function Sidebar({
   setCurrentView: (view: View) => void
 }) {
   const { activeWorkspace, dbUser } = useAuth();
+  const { canViewFinance } = useWorkspacePermissions();
   const business = useBusinessContext();
   const { iconUrl, appName } = useBranding();
   const { badges, setGlobalFilters, globalFilters } = useNavigation();
@@ -342,12 +344,14 @@ export default function Sidebar({
                 <div className="px-6 py-1">
                   <span className="text-[10px] font-black text-[#A1A1AA] uppercase tracking-[0.2em]">Controladoria</span>
                 </div>
-                <NavItem 
-                  icon={DollarSign} 
-                  label="Financeiro" 
-                  active={currentView === 'financeiro'} 
-                  onClick={() => handleNavigate('financeiro')} 
-                />
+                {canViewFinance && (
+                  <NavItem 
+                    icon={DollarSign} 
+                    label="Financeiro" 
+                    active={currentView === 'financeiro'} 
+                    onClick={() => handleNavigate('financeiro')} 
+                  />
+                )}
                 <NavItem 
                   icon={Users} 
                   label="Equipe" 

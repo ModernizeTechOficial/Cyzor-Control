@@ -2,31 +2,30 @@ import { useState, useEffect } from 'react';
 import { DollarSign, ArrowUpRight, TrendingUp, CreditCard } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../../../../context/AuthContext';
+import { useWorkspacePermissions } from '../../../../hooks/useWorkspacePermissions';
 
 export default function FinanceiroTab({ product }: any) {
-  const { token } = useAuth();
+  const { fetchWithAuth } = useAuth();
+  const { canViewFinance, isLoading: permissionsLoading } = useWorkspacePermissions();
   const [loading, setLoading] = useState(true);
   const [financeData, setFinanceData] = useState<any[]>([]);
   const [metrics, setMetrics] = useState({ mrr: 0, arr: 0, arpu: 0, lucroBruto: 0, margem: 0 });
 
   useEffect(() => {
-    if (!product?.id || !token) return;
+    if (!product?.id || !canViewFinance) return;
 
     const fetchFinance = async () => {
       try {
         setLoading(true);
         // First get projects for this product
-        const projRes = await fetch(`/api/projects`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const projRes = await fetchWithAuth('/api/projects');
         const projects = await projRes.json();
         if (!Array.isArray(projects)) throw new Error("Invalid projects data");
         const productProjectIds = projects.filter(p => p.productId === product.id).map(p => p.id);
 
         // Then get finance entries
-        const finRes = await fetch(`/api/finance`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const finRes = await fetchWithAuth('/api/finance');
+        if (!finRes.ok) throw new Error("Failed to fetch finance entries");
         const finances = await finRes.json();
         
         if (Array.isArray(finances)) {
@@ -82,6 +81,14 @@ export default function FinanceiroTab({ product }: any) {
 
     fetchFinance();
   }, [product?.id, token]);
+
+  if (!permissionsLoading && !canViewFinance) {
+    return (
+      <div className="p-8 text-center text-[#64748B] text-sm font-medium">
+        Você não tem permissão para acessar o Financeiro deste produto.
+      </div>
+    );
+  }
 
   if (loading) {
     return <div className="p-8 text-center text-[#64748B] text-sm font-medium">Carregando dados financeiros...</div>;

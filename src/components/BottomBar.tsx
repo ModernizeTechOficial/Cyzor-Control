@@ -5,6 +5,7 @@ import {
   Calendar, StickyNote, Settings, TrendingUp, Star 
 } from 'lucide-react';
 import { View } from '../types';
+import { useWorkspacePermissions } from '../hooks/useWorkspacePermissions';
 
 export default function BottomBar({ 
   currentView, 
@@ -14,14 +15,16 @@ export default function BottomBar({
   setCurrentView: (view: View) => void 
 }) {
   const [showMenu, setShowMenu] = useState(false);
+  const { canViewFinance } = useWorkspacePermissions();
 
   // Main primary tabs on the bottom bar itself
-  const mainTabs = [
+  const allMainTabs = [
     { id: 'dashboard', label: 'Início', icon: LayoutDashboard },
     { id: 'projetos', label: 'Projetos', icon: GitBranch },
     { id: 'financeiro', label: 'Financeiro', icon: DollarSign },
     { id: 'ia', label: 'IA Copilot', icon: BotMessageSquare },
   ] as const;
+  const mainTabs = allMainTabs.filter((tab) => tab.id !== 'financeiro' || canViewFinance);
 
   // The rest of the tabs grouped in "Mais"
   const moreTabs = [

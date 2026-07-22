@@ -2237,6 +2237,10 @@ apiRouter.post("/activities", async (req: AuthRequest, res) => {
 // --- FINANCE ---
 apiRouter.get("/finance", async (req: AuthRequest, res) => {
   try {
+    const canViewFinance = await hasPermission(req.user!.uid, req.workspaceId!, 'view_finance');
+    if (!canViewFinance) {
+      return res.status(403).json({ error: "Access denied to finance entries" });
+    }
     const data = await db.select().from(financeEntries).where(eq(financeEntries.workspaceId, req.workspaceId!));
     res.json(data);
   } catch (error) {
@@ -2246,6 +2250,10 @@ apiRouter.get("/finance", async (req: AuthRequest, res) => {
 });
 apiRouter.post("/finance", async (req: AuthRequest, res) => {
   try {
+    const canManageFinance = await hasPermission(req.user!.uid, req.workspaceId!, 'manage_finance');
+    if (!canManageFinance) {
+      return res.status(403).json({ error: "Access denied to manage finance" });
+    }
     const { description, amount, type, category, date, companyId, projectId, status, isRecurrent, dueDate, paymentDate } = req.body;
     const data = await db.insert(financeEntries).values({ 
         workspaceId: req.workspaceId!,
@@ -2286,6 +2294,10 @@ apiRouter.put("/finance/:id", async (req: AuthRequest, res) => {
   const entryId = Number(req.params.id);
   const { description, amount, type, category, date, companyId, projectId, status, isRecurrent, dueDate, paymentDate } = req.body;
   try {
+      const canManageFinance = await hasPermission(req.user!.uid, req.workspaceId!, 'manage_finance');
+      if (!canManageFinance) {
+        return res.status(403).json({ error: "Access denied to manage finance" });
+      }
       const existing = await db.select().from(financeEntries)
         .where(and(eq(financeEntries.id, entryId), eq(financeEntries.workspaceId, req.workspaceId!)));
       
