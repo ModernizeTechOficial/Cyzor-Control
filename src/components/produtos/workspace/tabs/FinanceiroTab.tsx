@@ -80,7 +80,7 @@ export default function FinanceiroTab({ product }: any) {
     };
 
     fetchFinance();
-  }, [product?.id, token]);
+  }, [product?.id, canViewFinance]);
 
   if (!permissionsLoading && !canViewFinance) {
     return (

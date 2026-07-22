@@ -12,12 +12,14 @@ import { companies, clients, products, projects, tasks, ideas, documents, financ
 import { eq, and, desc, sql, or, inArray, gte, lte, not } from "drizzle-orm";
 import { getUserSaaSState } from "./queries.ts";
 import { hasPermission, getMemberRole, sanitizePermissionsForRole, validateRolePermissionAssignment, isWorkspaceRole, WorkspaceRole } from "./permissions.ts";
+import { enforcePermission } from '../middleware/permission.ts';
 
 const ai = new GoogleGenAI({ 
   apiKey: process.env.GEMINI_API_KEY,
   httpOptions: { headers: { "User-Agent": "aistudio-build" } }
 });
 import { sendProjectNotificationEmail, sendWorkspaceInvitationEmail, testSmtpConnection } from "./mail.ts";
+import { generateNodeDefinition, executeOperationalAgent } from "../lib/gemini.ts";
 import { randomUUID } from 'crypto';
 
 const apiRouter = Router();
@@ -342,6 +344,55 @@ apiRouter.post("/user/complete-tour", async (req: AuthRequest, res) => {
 });
 
 apiRouter.use(tenantMiddleware as any);
+
+// Auto-enforce permissions for mutating routes (POST/PUT/DELETE)
+apiRouter.use((req: any, res: any, next: any) => {
+  try {
+    const method = req.method.toUpperCase();
+    if (!['POST', 'PUT', 'DELETE'].includes(method)) return next();
+
+    const segments = (req.path || req.url || '').split('/').filter(Boolean);
+    const resource = segments[0] || '';
+    let permission = '';
+
+    if (resource === 'workspace' || resource === 'workspaces') {
+      const sub = segments[1] || '';
+      if (sub === 'members' || sub === 'invitations') permission = 'manage_members';
+      else if (sub === 'teams' || sub === 'departments') permission = 'manage_organization';
+      else permission = 'manage_workspaces';
+    } else {
+      switch (resource) {
+        case 'projects': permission = 'manage_projects'; break;
+        case 'clients': permission = 'manage_clients'; break;
+        case 'companies': permission = 'manage_companies'; break;
+        case 'ideas': permission = 'manage_ideas'; break;
+        case 'products': permission = 'manage_products'; break;
+        case 'tasks': permission = 'manage_tasks'; break;
+        case 'sprints': permission = 'manage_sprints'; break;
+        case 'templates': case 'entityTemplates': permission = 'manage_templates'; break;
+        case 'documents': permission = 'manage_documents'; break;
+        case 'deploys': permission = 'manage_deploys'; break;
+        case 'finance': permission = 'manage_finance'; break;
+        case 'approvals': permission = 'manage_approvals'; break;
+        case 'comments': permission = 'manage_comments'; break;
+        case 'activities': permission = 'manage_activities'; break;
+        case 'notifications': permission = 'manage_notifications'; break;
+        case 'agenda': permission = 'manage_agenda'; break;
+        case 'milestones': permission = 'manage_milestones'; break;
+        default: permission = 'manage_workspace';
+      }
+    }
+
+    if (permission) {
+      // Call enforcePermission middleware dynamically
+      return (enforcePermission(permission) as any)(req, res, next);
+    }
+    return next();
+  } catch (err) {
+    console.error('Auto permission middleware error:', err);
+    return next();
+  }
+});
 
 import { processAIChat, generateProactiveInsights, getAIInstance, generateEntityInsights } from './aiModel.ts';
 
@@ -2441,12 +2492,8 @@ apiRouter.post("/activities", async (req: AuthRequest, res) => {
 });
 
 // --- FINANCE ---
-apiRouter.get("/finance", async (req: AuthRequest, res) => {
+apiRouter.get("/finance", enforcePermission('view_finance'), async (req: AuthRequest, res) => {
   try {
-    const canViewFinance = await hasPermission(req.user!.uid, req.workspaceId!, 'view_finance');
-    if (!canViewFinance) {
-      return res.status(403).json({ error: "Access denied to finance entries" });
-    }
     const data = await db.select().from(financeEntries).where(eq(financeEntries.workspaceId, req.workspaceId!));
     res.json(data);
   } catch (error) {
@@ -2837,32 +2884,28 @@ apiRouter.delete("/documents/:id", async (req: AuthRequest, res) => {
 });
 
 // --- NOTES ---
-apiRouter.get("/notes", async (req: AuthRequest, res) => {
+apiRouter.post("/finance", enforcePermission('manage_finance'), async (req: AuthRequest, res) => {
   try {
-    const data = await db.select().from(notes).where(eq(notes.workspaceId, req.workspaceId!)).orderBy(desc(notes.updatedAt));
-    res.json(data);
-  } catch (error) {
-    console.error("Error fetching notes:", error);
-    res.status(500).json({ error: "Failed to fetch notes" });
-  }
-});
-
-apiRouter.post("/notes", async (req: AuthRequest, res) => {
-  try {
-    const { title, content, color, isPinned, tags } = req.body;
-    const [inserted] = await db.insert(notes).values({
+    const { description, amount, type, category, date, companyId, projectId, status, isRecurrent, dueDate, paymentDate } = req.body;
+    const data = await db.insert(financeEntries).values({
+      tenantId: req.tenantId as any,
       workspaceId: req.workspaceId!,
-      authorUid: req.user!.uid,
-      title: title || "",
-      content: content || "",
-      color: color || "bg-white",
-      isPinned: isPinned || false,
-      tags: tags || [],
+      description,
+      amount,
+      type,
+      category,
+      date: date ? new Date(date) : null,
+      companyId: companyId ? Number(companyId) : null,
+      projectId: projectId ? Number(projectId) : null,
+      status: status || 'PENDING',
+      isRecurrent: !!isRecurrent,
+      dueDate: dueDate ? new Date(dueDate) : null,
+      paymentDate: paymentDate ? new Date(paymentDate) : null
     }).returning();
-    res.json(inserted);
+    res.json(data[0]);
   } catch (error) {
-    console.error("Error creating note:", error);
-    res.status(500).json({ error: "Failed to create note" });
+    console.error("Error creating finance entry:", error);
+    res.status(500).json({ error: "Failed to create finance entry" });
   }
 });
 
@@ -2890,40 +2933,36 @@ apiRouter.put("/notes/:id", async (req: AuthRequest, res) => {
   }
 });
 
-apiRouter.delete("/notes/:id", async (req: AuthRequest, res) => {
+apiRouter.put("/finance/:id", enforcePermission('manage_finance'), async (req: AuthRequest, res) => {
+  const entryId = Number(req.params.id);
+  const { description, amount, type, category, date, companyId, projectId, status, isRecurrent, dueDate, paymentDate } = req.body;
   try {
-    const noteId = Number(req.params.id);
-    await db.delete(notes).where(and(eq(notes.id, noteId), eq(notes.workspaceId, req.workspaceId!)));
-    res.json({ success: true });
+      const existing = await db.select().from(financeEntries)
+        .where(and(eq(financeEntries.id, entryId), eq(financeEntries.workspaceId, req.workspaceId!)));
+      if (existing.length === 0) {
+        return res.status(404).json({ error: "Finance entry not found" });
+      }
+      const updateValues: any = {};
+      if (description !== undefined) updateValues.description = description;
+      if (amount !== undefined) updateValues.amount = amount;
+      if (type !== undefined) updateValues.type = type;
+      if (category !== undefined) updateValues.category = category;
+      if (date !== undefined) updateValues.date = date ? new Date(date) : null;
+      if (companyId !== undefined) updateValues.companyId = companyId ? Number(companyId) : null;
+      if (projectId !== undefined) updateValues.projectId = projectId ? Number(projectId) : null;
+      if (status !== undefined) updateValues.status = status;
+      if (isRecurrent !== undefined) updateValues.isRecurrent = !!isRecurrent;
+      if (dueDate !== undefined) updateValues.dueDate = dueDate ? new Date(dueDate) : null;
+      if (paymentDate !== undefined) updateValues.paymentDate = paymentDate ? new Date(paymentDate) : null;
+      updateValues.updatedAt = new Date();
+
+      const data = await db.update(financeEntries).set(updateValues).where(eq(financeEntries.id, entryId)).returning();
+      res.json(data[0]);
   } catch (error) {
-    console.error("Error deleting note:", error);
-    res.status(500).json({ error: "Failed to delete note" });
+    console.error("Error updating finance entry:", error);
+    res.status(500).json({ error: "Failed to update finance entry" });
   }
 });
-
-// --- FLOW BUILDER ---
-apiRouter.get("/flow-builder", async (req: AuthRequest, res) => {
-  try {
-    const data = await db.select().from(flows).where(eq(flows.workspaceId, req.workspaceId!));
-    res.json(data);
-  } catch (error) {
-    console.error("Error fetching flows:", error);
-    res.status(500).json({ error: "Failed to fetch flows" });
-  }
-});
-
-apiRouter.get("/flow-builder/:id", async (req: AuthRequest, res) => {
-  try {
-    const [data] = await db.select().from(flows).where(and(eq(flows.id, Number(req.params.id)), eq(flows.workspaceId, req.workspaceId!)));
-    if (!data) return res.status(404).json({ error: "Flow not found" });
-    res.json(data);
-  } catch (error) {
-    console.error("Error fetching flow:", error);
-    res.status(500).json({ error: "Failed to fetch flow" });
-  }
-});
-
-import { generateNodeDefinition, executeOperationalAgent } from "../lib/gemini";
 
 apiRouter.post("/ai/agent", async (req: AuthRequest, res) => {
   try {

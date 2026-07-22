@@ -5,11 +5,12 @@ import { db } from "../db/index.ts";
 import { plans, billingCustomers, billingSubscriptions, billingPayments, billingWebhookEvents, users, tenants } from "../db/schema.ts";
 import { eq, and } from "drizzle-orm";
 import { getStripe, getStripeConfig } from "../services/stripe.ts";
+import { enforcePermission } from '../middleware/permission.ts';
 
 export const stripeRouter = Router();
 
 // Endpoint for users to start checkout
-stripeRouter.post("/stripe/checkout-session", requireAuth, tenantMiddleware, async (req: AuthRequest, res) => {
+stripeRouter.post("/stripe/checkout-session", requireAuth, tenantMiddleware, enforcePermission('manage_finance'), async (req: AuthRequest, res) => {
   try {
     const { planId } = req.body;
     const userId = req.user!.uid;
@@ -129,7 +130,7 @@ stripeRouter.post("/stripe/checkout-session", requireAuth, tenantMiddleware, asy
 });
 
 // Endpoint for Stripe Customer Portal
-stripeRouter.post("/stripe/portal-session", requireAuth, tenantMiddleware, async (req: AuthRequest, res) => {
+stripeRouter.post("/stripe/portal-session", requireAuth, tenantMiddleware, enforcePermission('manage_finance'), async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.uid;
     const tenantId = req.tenantId!;
@@ -170,7 +171,7 @@ stripeRouter.post("/stripe/portal-session", requireAuth, tenantMiddleware, async
 });
 
 // Endpoint for listing user payments
-stripeRouter.get("/stripe/invoices", requireAuth, tenantMiddleware, async (req: AuthRequest, res) => {
+stripeRouter.get("/stripe/invoices", requireAuth, tenantMiddleware, enforcePermission('view_finance'), async (req: AuthRequest, res) => {
   try {
     const tenantId = req.tenantId!;
     const { desc } = await import("drizzle-orm");

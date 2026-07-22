@@ -1044,6 +1044,49 @@ export const platformSettings = pgTable('platform_settings', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
+// ASSIGNMENTS (Central engine for resource participation)
+export const assignments = pgTable('assignments', {
+  id: serial('id').primaryKey(),
+  tenantId: uuid('tenant_id').defaultRandom().notNull(),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  resourceType: text('resource_type').notNull(), // project, product, idea, document, client, flow, sprint, task, etc.
+  resourceId: integer('resource_id').notNull(),
+  // member association: references workspace_members.id when assigning individual member
+  memberId: integer('member_id').references(() => workspaceMembers.id, { onDelete: 'cascade' }),
+  // support group assignment types: TEAM, DEPARTMENT, ROLE, MEMBER
+  memberType: text('member_type').default('MEMBER'),
+  memberRef: text('member_ref'), // e.g., team name or department name when memberType != MEMBER
+  role: text('role'), // role within the assignment (e.g., OWNER, REVIEWER, CONTRIBUTOR)
+  permissionSet: jsonb('permission_set').default('[]'), // e.g. ['view','edit','delete']
+  visibilityScope: text('visibility_scope').default('Private'), // Private, Project Members, Team, Department, Organization, OwnerOnly, Custom
+  assignedBy: text('assigned_by').references(() => users.uid, { onDelete: 'set null' }),
+  assignedAt: timestamp('assigned_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  status: text('status').default('ACTIVE'), // ACTIVE, PENDING, SUSPENDED, REMOVED
+}, (t) => ({
+  wsIdx: index('assignments_ws_idx').on(t.workspaceId),
+  resourceIdx: index('assignments_resource_idx').on(t.resourceType, t.resourceId),
+  memberIdx: index('assignments_member_idx').on(t.memberId),
+}));
+
+// ASSIGNMENT TEMPLATES
+export const assignmentTemplates = pgTable('assignment_templates', {
+  id: serial('id').primaryKey(),
+  tenantId: uuid('tenant_id').defaultRandom().notNull(),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  description: text('description'),
+  role: text('role'),
+  memberType: text('member_type').default('TEAM'),
+  memberRef: text('member_ref'),
+  permissionSet: jsonb('permission_set').default('[]'),
+  defaultResources: jsonb('default_resources').default('[]'), // [{resourceType, resourceId}]
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (t) => ({
+  wsIdx: index('assignment_templates_ws_idx').on(t.workspaceId),
+}));
+
 // MISSIONS (Journey)
 export const missions = pgTable('missions', {
   id: serial('id').primaryKey(),

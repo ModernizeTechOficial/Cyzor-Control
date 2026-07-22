@@ -6,6 +6,7 @@ import { useBranding } from '../hooks/useBranding.ts';
 import { useNavigation } from '../context/NavigationContext.tsx';
 import { useCompanies, useProjects, useProducts } from '../hooks/useCyzorQueries';
 import { useWorkspacePermissions } from '../hooks/useWorkspacePermissions';
+import { getSidebarModules } from '../db/accessControl';
 import { 
   LayoutDashboard, Building2, Users, Package, GitBranch, Lightbulb, FileText, 
   DollarSign, BotMessageSquare, Settings, Calendar, ShieldCheck, StickyNote, 
@@ -50,7 +51,7 @@ export default function Sidebar({
   setCurrentView: (view: View) => void
 }) {
   const { activeWorkspace, dbUser } = useAuth();
-  const { canViewFinance } = useWorkspacePermissions();
+  const { canViewFinance, currentMember } = useWorkspacePermissions();
   const business = useBusinessContext();
   const { iconUrl, appName } = useBranding();
   const { badges, setGlobalFilters, globalFilters } = useNavigation();
@@ -101,9 +102,13 @@ export default function Sidebar({
     badge,
     indent = 0
   }: any) => {
+    const tooltip = useTooltip();
     return (
       <div className="flex flex-col px-3 relative">
         <div 
+          ref={tooltip.anchorRef}
+          onMouseEnter={() => { if (isCollapsed) tooltip.openTooltip(); }}
+          onMouseLeave={() => { if (isCollapsed) tooltip.closeTooltip(); }}
           onClick={(e) => {
             if (onClick) onClick(e);
             else if (hasChildren && onExpand) onExpand(e);
@@ -114,17 +119,21 @@ export default function Sidebar({
               : 'text-[#71717A] hover:bg-[#F4F4F5] hover:text-[#18181B]'
           }`}
           style={!isCollapsed ? { paddingLeft: `${indent > 0 ? 16 + indent * 16 : 12}px` } : {}}
+          title={isCollapsed ? label : undefined}
+          aria-label={label}
         >
-          <div className={`flex items-center ${isCollapsed ? 'justify-center w-full' : 'gap-3.5 overflow-hidden flex-1'}`}>
-            <Icon 
-              size={isCollapsed ? 22 : 19} 
-              strokeWidth={active ? 2.5 : 2} 
-              className={`flex-shrink-0 transition-colors ${active ? 'text-[#18181B]' : 'text-[#A1A1AA] group-hover:text-[#18181B]'}`} 
-            />
-            {!isCollapsed && (
-              <span className={`text-[13px] tracking-tight truncate ${active ? 'font-black' : 'font-semibold'}`}>{label}</span>
-            )}
-          </div>
+          <Tooltip title={label} open={isCollapsed && tooltip.open} anchorRef={tooltip.anchorRef} placement="right">
+            <div className={`flex items-center ${isCollapsed ? 'justify-center w-full' : 'gap-3.5 overflow-hidden flex-1'}`}>
+              <Icon 
+                size={isCollapsed ? 22 : 19} 
+                strokeWidth={active ? 2.5 : 2} 
+                className={`flex-shrink-0 transition-colors ${active ? 'text-[#18181B]' : (isCollapsed ? 'text-[#6B7280]' : 'text-[#A1A1AA] group-hover:text-[#18181B]')}`} 
+              />
+              {!isCollapsed && (
+                <span className={`text-[13px] tracking-tight truncate ${active ? 'font-black' : 'font-semibold'}`}>{label}</span>
+              )}
+            </div>
+          </Tooltip>
 
           {!isCollapsed && active && (
             <div className="absolute right-[-20px] top-1/2 -translate-y-1/2 w-[3px] h-4 bg-yellow-400 rounded-l-full shadow-[0_0_8px_rgba(250,204,21,0.4)]" />
@@ -149,6 +158,49 @@ export default function Sidebar({
         </div>
       </div>
     );
+  };
+
+  const rawRole = (dbUser?.role || currentMember?.role || 'MEMBER');
+  const normalizedRole = String(rawRole).split(/\s|\u2022|·|•/).filter(Boolean)[0].toUpperCase();
+  const modules = getSidebarModules({ role: normalizedRole, permissions: currentMember?.permissions || [] });
+
+  // debug info to help diagnose missing icons/modules
+  useEffect(() => {
+    try {
+      console.debug('Sidebar debug:', { rawRole, normalizedRole, permissions: currentMember?.permissions || [], modulesCount: modules.length });
+    } catch (e) { /* ignore */ }
+  }, [rawRole, normalizedRole, currentMember?.permissions, modules.length]);
+
+  // Fallback modules for Owner (in case role resolution fails or modules list is empty)
+  const defaultOwnerModules = [
+    { id: 'dashboard', label: 'Dashboard' },
+    { id: 'empresas', label: 'Empresas' },
+    { id: 'financeiro', label: 'Financeiro' },
+    { id: 'projetos', label: 'Projetos' },
+    { id: 'clientes', label: 'Clientes' },
+    { id: 'equipe', label: 'Equipe' },
+    { id: 'documentacao', label: 'Documentação' },
+    { id: 'configuracoes', label: 'Configurações' }
+  ];
+
+  const effectiveModules = modules.length > 0 ? modules : ((dbUser?.isPlatformAdmin || normalizedRole === 'OWNER') ? defaultOwnerModules : modules);
+
+  const iconMap: Record<string, any> = {
+    dashboard: LayoutDashboard,
+    roadmap: TrendingUp,
+    'career-hub': Star,
+    agenda: Calendar,
+    empresas: Building2,
+    clientes: Users,
+    ideias: Lightbulb,
+    financeiro: DollarSign,
+    equipe: Users,
+    ia: BotMessageSquare,
+    'flow-builder': Workflow,
+    documentacao: FileText,
+    keep: StickyNote,
+    configuracoes: Settings,
+    integracoes: Building2
   };
 
   const [empresasExpanded, toggleEmpresas] = useExpandedState('empresas', true);
@@ -190,97 +242,23 @@ export default function Sidebar({
           
           {/* Dynamic Navigation for Expanded or Collapsed States */}
           {isCollapsed ? (
-            <div className="flex flex-col gap-0.5">
-              <NavItem 
-                icon={LayoutDashboard} 
-                label="Dashboard" 
-                active={currentView === 'dashboard'} 
-                onClick={() => handleNavigate('dashboard')} 
-              />
-              <NavItem 
-                icon={TrendingUp} 
-                label="Estratégia" 
-                active={currentView === 'roadmap'} 
-                onClick={() => handleNavigate('roadmap')} 
-              />
-              <NavItem 
-                icon={Star} 
-                label="Carreira" 
-                active={currentView === 'career-hub'} 
-                onClick={() => handleNavigate('career-hub')} 
-              />
-              <NavItem 
-                icon={Calendar} 
-                label="Agenda" 
-                active={currentView === 'agenda'} 
-                onClick={() => handleNavigate('agenda')} 
-              />
-              <NavItem 
-                icon={Building2} 
-                label="Empresas" 
-                active={currentView === 'empresas'} 
-                onClick={() => {
-                  setGlobalFilters({});
-                  setCurrentView('empresas');
-                }} 
-              />
-              <NavItem 
-                icon={Users} 
-                label="Clientes" 
-                active={currentView === 'clientes'} 
-                onClick={() => handleNavigate('clientes')} 
-              />
-              <NavItem 
-                icon={Lightbulb} 
-                label="Ideias" 
-                active={currentView === 'ideias'} 
-                onClick={() => handleNavigate('ideias')} 
-              />
-              <NavItem 
-                icon={DollarSign} 
-                label="Financeiro" 
-                active={currentView === 'financeiro'} 
-                onClick={() => handleNavigate('financeiro')} 
-              />
-              <NavItem 
-                icon={Users} 
-                label="Equipe" 
-                active={currentView === 'equipe'} 
-                onClick={() => handleNavigate('equipe')} 
-              />
-              <NavItem 
-                icon={BotMessageSquare} 
-                label="IA Intel" 
-                active={currentView === 'ia'} 
-                onClick={() => handleNavigate('ia')} 
-                badge={badges?.ia > 0 ? badges.ia.toString() : null}
-              />
-              <NavItem 
-                icon={Workflow} 
-                label="Flow Builder" 
-                active={currentView === 'flow-builder'} 
-                onClick={() => handleNavigate('flow-builder')} 
-              />
-              <NavItem 
-                icon={FileText} 
-                label="Documentação" 
-                active={currentView === 'documentacao'} 
-                onClick={() => handleNavigate('documentacao')}  
-              />
-              <NavItem 
-                icon={StickyNote} 
-                label="Keep Notas" 
-                active={currentView === 'keep'} 
-                onClick={() => handleNavigate('keep')} 
-              />
-              <NavItem 
-                icon={Settings} 
-                label="Configurações" 
-                active={currentView === 'configuracoes'} 
-                onClick={() => handleNavigate('configuracoes')} 
-              />
+            <div className="flex flex-col gap-0.5 relative">
+              {/* Debug badge showing modules count when collapsed */}
+              <div className="absolute left-1 top-1 text-[10px] text-[#94A3B8]">{modules.length} modules</div>
+              {effectiveModules.map((m: any) => (
+                <NavItem
+                  key={m.id}
+                  icon={iconMap[m.id] || Building2}
+                  label={m.label}
+                  active={currentView === m.id}
+                  onClick={() => handleNavigate(m.id as any)}
+                />
+              ))}
               {dbUser?.isPlatformAdmin && (
                  <NavItem icon={ShieldCheck} label="Admin" active={currentView === 'admin'} onClick={() => handleNavigate('admin')} />
+              )}
+              {effectiveModules.length === 0 && (
+                <div className="px-3 text-[11px] text-[#94A3B8]">Sem menus disponíveis</div>
               )}
             </div>
           ) : (
