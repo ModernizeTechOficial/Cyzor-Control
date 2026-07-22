@@ -15,6 +15,200 @@ async function loadPlatformSmtpConfig() {
   return null;
 }
 
+async function createMailTransporter() {
+  let host = process.env.SMTP_HOST;
+  let port = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 587;
+  let user = process.env.SMTP_USER;
+  let pass = process.env.SMTP_PASS;
+  let from = process.env.SMTP_FROM || '"Cyzor Control" <noreply@cyzor.com>';
+  let secure = port === 465;
+
+  try {
+    const platformSmtp: any = await loadPlatformSmtpConfig();
+    if (platformSmtp?.enabled) {
+      host = platformSmtp.host || host;
+      port = platformSmtp.port ? Number(platformSmtp.port) : port;
+      user = platformSmtp.user || user;
+      pass = platformSmtp.pass || pass;
+      from = platformSmtp.from || from;
+      secure = platformSmtp.secure ?? secure;
+    }
+  } catch (err) {
+    console.error('[Mail] Erro ao carregar SMTP global da plataforma:', err);
+  }
+
+  let transporter;
+  if (host && user && pass) {
+    transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure,
+      auth: { user, pass }
+    });
+  } else {
+    try {
+      console.warn('[Mail] SMTP config not found. Creating Ethereal test account for fallback.');
+      const testAccount = await nodemailer.createTestAccount();
+      transporter = nodemailer.createTransport({
+        host: testAccount.smtp.host,
+        port: testAccount.smtp.port,
+        secure: testAccount.smtp.secure,
+        auth: {
+          user: testAccount.user,
+          pass: testAccount.pass,
+        },
+      });
+      from = `"Cyzor Control" <${testAccount.user}>`;
+    } catch (err) {
+      console.error('[Mail] Failed to create Ethereal test account:', err);
+      transporter = null;
+    }
+  }
+
+  return { transporter, from };
+}
+
+export async function sendWorkspaceInvitationEmail({
+  to,
+  inviterName,
+  workspaceName,
+  inviteLink,
+  role,
+  teamName,
+  department,
+  cargo,
+  workspaceId,
+}: {
+  to: string;
+  inviterName: string;
+  workspaceName: string;
+  inviteLink: string;
+  role: string;
+  teamName?: string | null;
+  department?: string | null;
+  cargo?: string | null;
+  workspaceId?: number;
+}) {
+  const { transporter, from } = await createMailTransporter();
+
+  const subject = `Você foi convidado para o workspace "${workspaceName}"`;
+
+  const textBody = `Olá,
+
+Você recebeu um convite para entrar no workspace "${workspaceName}".
+
+Convite enviado por: ${inviterName}
+Função proposta: ${role}
+${teamName ? `Equipe: ${teamName}\n` : ''}${department ? `Departamento: ${department}\n` : ''}${cargo ? `Cargo: ${cargo}\n` : ''}
+
+Use o link abaixo para aceitar o convite:
+${inviteLink}
+
+O convite expira em 7 dias.
+
+Atenciosamente,
+Equipe Cyzor Control`;
+
+  const htmlBody = `
+    <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; color: #1e293b; background-color: #f8fafc;">
+      <div style="background-color: #ffffff; border-radius: 20px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);">
+        <div style="background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%); padding: 30px; text-align: center; color: #ffffff;">
+          <h2 style="margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.025em; text-transform: uppercase;">Cyzor Control</h2>
+          <p style="margin: 5px 0 0; font-size: 13px; opacity: 0.9; font-weight: 500;">Convite para Workspace</p>
+        </div>
+        <div style="padding: 30px; line-height: 1.6;">
+          <p style="margin-top: 0; font-size: 16px; font-weight: 700; color: #0f172a;">Olá!</p>
+          <p style="font-size: 14px; color: #475569;">
+            Você foi convidado para participar do workspace <strong style="color: #1e2530;">${workspaceName}</strong>.
+          </p>
+          <p style="font-size: 14px; color: #475569;">
+            Convite enviado por <strong>${inviterName}</strong> com a função <strong>${role}</strong>.
+          </p>
+          <div style="background-color: #f1f5f9; border-radius: 12px; padding: 20px; margin: 25px 0;">
+            <p style="margin: 0; font-size: 13px; color: #334155;"><strong>Link de convite:</strong></p>
+            <p style="margin: 8px 0 0; word-break: break-all; font-size: 13px; color: #0f172a;">${inviteLink}</p>
+            ${teamName ? `<p style="margin: 8px 0 0; font-size: 13px; color: #0f172a;"><strong>Equipe:</strong> ${teamName}</p>` : ''}
+            ${department ? `<p style="margin: 8px 0 0; font-size: 13px; color: #0f172a;"><strong>Departamento:</strong> ${department}</p>` : ''}
+            ${cargo ? `<p style="margin: 8px 0 0; font-size: 13px; color: #0f172a;"><strong>Cargo:</strong> ${cargo}</p>` : ''}
+          </div>
+          <p style="font-size: 14px; color: #475569; margin-bottom: 30px;">
+            O convite expira em 7 dias. Clique no link acima para aceitar e começar a colaborar.
+          </p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${inviteLink}" style="background-color: #0f172a; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 12px; font-size: 13px; font-weight: 700; display: inline-block;">
+              Aceitar Convite
+            </a>
+          </div>
+          <p style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+            Este é um e-mail automático enviado pelo Cyzor Control. Por favor, não responda a esta mensagem.
+          </p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  if (transporter) {
+    try {
+      const info = await transporter.sendMail({
+        from,
+        to,
+        subject,
+        text: textBody,
+        html: htmlBody,
+      });
+
+      console.log(`[Mail] Convite enviado com sucesso para ${to}. ID: ${info.messageId}`);
+      const previewUrl = nodemailer.getTestMessageUrl(info);
+      if (previewUrl) {
+        console.log(`[Mail] URL de visualização do Ethereal: ${previewUrl}`);
+      }
+
+      if (workspaceId) {
+        await logEmailAction(workspaceId, {
+          to,
+          subject,
+          templateType: 'Convite de Workspace',
+          status: 'success',
+          previewUrl: previewUrl || undefined,
+        });
+      }
+
+      return { success: true, messageId: info.messageId, previewUrl: previewUrl || undefined };
+    } catch (err: any) {
+      console.error('[Mail Error] Erro ao enviar convite por e-mail:', err);
+      if (workspaceId) {
+        await logEmailAction(workspaceId, {
+          to,
+          subject,
+          templateType: 'Convite de Workspace',
+          status: 'error',
+          errorMessage: err instanceof Error ? err.message : String(err),
+        });
+      }
+      return { success: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  }
+
+  console.log('================== EMAIL INVITE LOG ==================');
+  console.log(`Para: ${to}`);
+  console.log(`Assunto: ${subject}`);
+  console.log(`Link: ${inviteLink}`);
+  console.log(`Corpo de Texto:\n${textBody}`);
+  console.log('====================================================');
+
+  if (workspaceId) {
+    await logEmailAction(workspaceId, {
+      to,
+      subject,
+      templateType: 'Convite de Workspace',
+      status: 'success',
+      errorMessage: 'Simulação / Logger Console',
+    });
+  }
+
+  return { success: true, mocked: true };
+}
+
 async function logEmailAction(workspaceId: number, emailLog: {
   to: string;
   subject: string;
@@ -71,13 +265,7 @@ export async function sendProjectNotificationEmail({
   assignedBy: string;
   workspaceId?: number;
 }) {
-  let host = process.env.SMTP_HOST;
-  let port = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 587;
-  let user = process.env.SMTP_USER;
-  let pass = process.env.SMTP_PASS;
-  let from = process.env.SMTP_FROM || '"Cyzor Control" <noreply@cyzor.com>';
-
-  let platformSmtp: any = null;
+  const { transporter, from } = await createMailTransporter();
   let wsSettings: any = null;
   if (workspaceId) {
     try {
@@ -91,53 +279,6 @@ export async function sendProjectNotificationEmail({
       }
     } catch (e) {
       console.error('[Mail] Erro ao carregar configurações do workspace para templates:', e);
-    }
-  }
-
-  try {
-    platformSmtp = await loadPlatformSmtpConfig();
-  } catch (e) {
-    console.error('[Mail] Erro ao carregar SMTP global da plataforma:', e);
-  }
-
-  let secure = port === 465;
-  if (platformSmtp?.enabled) {
-    host = platformSmtp.host || host;
-    port = platformSmtp.port ? Number(platformSmtp.port) : port;
-    user = platformSmtp.user || user;
-    pass = platformSmtp.pass || pass;
-    from = platformSmtp.from || from;
-    secure = platformSmtp.secure ?? secure;
-  }
-
-  let transporter;
-
-  if (host && user && pass) {
-    transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure,
-      auth: {
-        user,
-        pass,
-      },
-    });
-  } else {
-    // Fallback: create an ethereal test account on the fly (very real and works out-of-the-box in Node!)
-    try {
-      console.log("[Mail] Criando conta de teste temporária (Ethereal)...");
-      const testAccount = await nodemailer.createTestAccount();
-      transporter = nodemailer.createTransport({
-        host: testAccount.smtp.host,
-        port: testAccount.smtp.port,
-        secure: testAccount.smtp.secure,
-        auth: {
-          user: testAccount.user,
-          pass: testAccount.pass,
-        },
-      });
-    } catch (err) {
-      console.warn("[Mail] Falha ao criar conta de teste do Nodemailer. Usando logger de console.", err);
     }
   }
 

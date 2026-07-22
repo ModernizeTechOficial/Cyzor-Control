@@ -16,8 +16,8 @@ const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
   httpOptions: { headers: { "User-Agent": "aistudio-build" } }
 });
-import { sendProjectNotificationEmail, testSmtpConnection } from "./mail.ts";
-import { v4 as uuidv4 } from 'uuid';
+import { sendProjectNotificationEmail, sendWorkspaceInvitationEmail, testSmtpConnection } from "./mail.ts";
+import { randomUUID } from 'crypto';
 
 const apiRouter = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -829,6 +829,10 @@ apiRouter.post("/workspace/invitations", async (req: AuthRequest, res) => {
   try {
     const { email, role, teamName, department, cargo, permissions } = req.body;
 
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({ error: "Email do convidado é obrigatório" });
+    }
+
     // Permission check
     const { getMemberRole, WorkspaceRole } = await import("./permissions.ts");
     const myRole = await getMemberRole(req.user!.uid, req.workspaceId!);
@@ -836,14 +840,14 @@ apiRouter.post("/workspace/invitations", async (req: AuthRequest, res) => {
       return res.status(403).json({ error: "Insufficient permissions" });
     }
 
-    const token = uuidv4();
+    const token = randomUUID();
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiration
 
     const [invitation] = await db.insert(workspaceInvitations).values({
       workspaceId: req.workspaceId!,
       tenantId: req.tenantId as any,
-      email: email || '',
+      email,
       role: role || 'MEMBER',
       teamName: teamName || null,
       department: department || null,
@@ -855,16 +859,35 @@ apiRouter.post("/workspace/invitations", async (req: AuthRequest, res) => {
     }).returning();
 
     const origin = req.headers.origin || `${req.protocol}://${req.get('host')}`;
+    const inviteLink = `${origin}/invite/${token}`;
     const invitationWithLink = {
       ...invitation,
-      inviteLink: `${origin}/invite/${token}`
+      inviteLink
     };
 
-    // In a real app, send email here
-    console.log(`Invitation token for ${email || '[sem email]'}: ${token}`);
+    const [workspace] = await db.select({ name: workspaces.name }).from(workspaces).where(eq(workspaces.id, req.workspaceId!)).limit(1);
+    const workspaceName = workspace?.name || 'Cyzor Control';
+    const inviterName = req.user?.displayName || 'Administrador';
+
+    const emailResult = await sendWorkspaceInvitationEmail({
+      to: email,
+      inviterName,
+      workspaceName,
+      inviteLink,
+      role: role || 'MEMBER',
+      teamName,
+      department,
+      cargo,
+      workspaceId: req.workspaceId!
+    });
+
+    if (!emailResult.success) {
+      console.error('Failed to send invitation email:', emailResult.error);
+      return res.status(500).json({ error: 'Failed to send invitation email', details: emailResult.error });
+    }
 
     await logAction(req, 'INVITE', 'workspace_invitations', invitation.id.toString(), null, invitation);
-    res.json(invitationWithLink);
+    res.json({ ...invitationWithLink, emailSent: true });
   } catch (error) {
     console.error("Error creating invitation:", error);
     res.status(500).json({ error: "Failed to create invitation" });
