@@ -100,12 +100,14 @@ export async function sendProjectNotificationEmail({
     console.error('[Mail] Erro ao carregar SMTP global da plataforma:', e);
   }
 
+  let secure = port === 465;
   if (platformSmtp?.enabled) {
     host = platformSmtp.host || host;
     port = platformSmtp.port ? Number(platformSmtp.port) : port;
     user = platformSmtp.user || user;
     pass = platformSmtp.pass || pass;
     from = platformSmtp.from || from;
+    secure = platformSmtp.secure ?? secure;
   }
 
   let transporter;
@@ -114,7 +116,7 @@ export async function sendProjectNotificationEmail({
     transporter = nodemailer.createTransport({
       host,
       port,
-      secure: port === 465,
+      secure,
       auth: {
         user,
         pass,

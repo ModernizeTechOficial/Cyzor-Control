@@ -393,7 +393,7 @@ adminRouter.get('/smtp/config', async (req: AuthRequest, res) => {
 
 adminRouter.post('/smtp/config', async (req: AuthRequest, res) => {
   try {
-    const { enabled, host, port, user, pass, from } = req.body;
+    const { enabled, host, port, user, pass, from, secure } = req.body;
     const config = {
       enabled: !!enabled,
       host: host || null,
@@ -401,6 +401,7 @@ adminRouter.post('/smtp/config', async (req: AuthRequest, res) => {
       user: user || null,
       pass: pass || null,
       from: from || null,
+      secure: secure === true,
     };
 
     await db.insert(platformSettings)
