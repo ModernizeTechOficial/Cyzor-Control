@@ -2,8 +2,9 @@ import { Router, Request, Response, NextFunction } from "express";
 import multer from "multer";
 import { requireAuth, AuthRequest } from "../middleware/auth.ts";
 import { db } from "./index.ts";
-import { tenants, users, companies, products, projects, userTenants, financeEntries, tasks, ideas, workspaces, plans, stripeConfig, billingSubscriptions, billingPayments, billingWebhookEvents } from "./schema.ts";
-import { eq, sql, desc, count } from "drizzle-orm";
+import { tenants, users, companies, products, projects, userTenants, financeEntries, tasks, ideas, workspaces, plans, stripeConfig, billingSubscriptions, billingPayments, billingWebhookEvents, platformSettings } from "./schema.ts";
+import { eq, sql, desc, count } from 'drizzle-orm';
+import { testSmtpConnection } from './mail.ts';
 
 export const adminRouter = Router();
 
@@ -378,6 +379,58 @@ adminRouter.post("/stripe/config", async (req: AuthRequest, res) => {
     res.json(result[0]);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+adminRouter.get('/smtp/config', async (req: AuthRequest, res) => {
+  try {
+    const [configRow] = await db.select().from(platformSettings).where(eq(platformSettings.key, 'smtp_config')).limit(1);
+    res.json(configRow?.value || null);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+adminRouter.post('/smtp/config', async (req: AuthRequest, res) => {
+  try {
+    const { enabled, host, port, user, pass, from } = req.body;
+    const config = {
+      enabled: !!enabled,
+      host: host || null,
+      port: port ? Number(port) : null,
+      user: user || null,
+      pass: pass || null,
+      from: from || null,
+    };
+
+    await db.insert(platformSettings)
+      .values({ key: 'smtp_config', value: config })
+      .onConflictDoUpdate({ target: platformSettings.key, set: { value: config, updatedAt: new Date() } });
+
+    res.json({ success: true, config });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+adminRouter.post('/mail/test-smtp', async (req: AuthRequest, res) => {
+  try {
+    const { host, port, user, pass, from, to } = req.body;
+    if (!host || !port || !user || !pass || !from || !to) {
+      return res.status(400).json({ error: 'Todos os campos (servidor, porta, usuário, senha, remetente, destinatário) são obrigatórios para o teste.' });
+    }
+    const result = await testSmtpConnection({
+      host,
+      port: Number(port),
+      user,
+      pass,
+      from,
+      to,
+    });
+    res.json(result);
+  } catch (error: any) {
+    console.error('Admin SMTP test error:', error);
+    res.status(500).json({ success: false, error: error.message || String(error) });
   }
 });
 

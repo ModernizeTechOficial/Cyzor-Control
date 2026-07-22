@@ -3406,37 +3406,19 @@ apiRouter.get("/workspace-settings", async (req: AuthRequest, res) => {
 apiRouter.put("/workspace-settings", async (req: AuthRequest, res) => {
   try {
     const body = req.body;
+    const settings = { ...(body.settings || {}) };
+    if (settings.smtp) {
+      delete settings.smtp;
+    }
     const [updated] = await db.update(workspaces).set({
       name: body.name,
-      settings: body.settings || {},
+      settings,
       updatedAt: new Date()
     }).where(eq(workspaces.id, req.workspaceId!)).returning();
     res.json(updated);
   } catch (error) {
     console.error("Error updating workspace settings:", error);
     res.status(500).json({ error: "Failed to update workspace settings" });
-  }
-});
-
-apiRouter.post("/mail/test-smtp", async (req: AuthRequest, res) => {
-  try {
-    const { host, port, user, pass, from, to } = req.body;
-    if (!host || !port || !user || !pass || !from || !to) {
-      return res.status(400).json({ error: "Todos os campos (servidor, porta, usuário, senha, remetente, destinatário) são obrigatórios para o teste." });
-    }
-    const result = await testSmtpConnection({
-      host,
-      port: Number(port),
-      user,
-      pass,
-      from,
-      to,
-      workspaceId: req.workspaceId!
-    });
-    res.json(result);
-  } catch (err: any) {
-    console.error("Test SMTP error route:", err);
-    res.status(500).json({ success: false, error: err.message || String(err) });
   }
 });
 

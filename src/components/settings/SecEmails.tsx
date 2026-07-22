@@ -7,16 +7,17 @@ import {
 import { Toast } from './SettingsHelpers';
 
 export default function SecEmails() {
-  const { fetchWithAuth } = useAuth();
+  const { fetchWithAuth, dbUser } = useAuth();
+  const isPlatformAdmin = dbUser?.isPlatformAdmin === true;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testingSmtp, setTestingSmtp] = useState(false);
   const [sendingSample, setSendingSample] = useState(false);
-  const [activeTab, setActiveTab] = useState<'smtp' | 'templates' | 'logs'>('smtp');
+  const [activeTab, setActiveTab] = useState<'smtp' | 'templates' | 'logs'>('templates');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  // SMTP Settings
+  // SMTP Settings (admin only)
   const [smtpEnabled, setSmtpEnabled] = useState(false);
   const [smtpHost, setSmtpHost] = useState('');
   const [smtpPort, setSmtpPort] = useState(587);
@@ -24,6 +25,7 @@ export default function SecEmails() {
   const [smtpPass, setSmtpPass] = useState('');
   const [smtpFrom, setSmtpFrom] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [testRecipient, setTestRecipient] = useState('');
 
   // Email Template (Notificação de Acesso ao Projeto)
   const [templateSubject, setTemplateSubject] = useState('');
@@ -33,11 +35,25 @@ export default function SecEmails() {
   // Logs
   const [emailLogs, setEmailLogs] = useState<any[]>([]);
 
-  // Testing inputs
-  const [testRecipient, setTestRecipient] = useState('');
-
   // Loaded raw workspace object to merge correctly
   const [rawWorkspace, setRawWorkspace] = useState<any>(null);
+
+  const loadAdminSmtpConfig = async () => {
+    try {
+      const res = await fetchWithAuth('/api/admin/smtp/config');
+      if (res.ok) {
+        const config = await res.json();
+        setSmtpEnabled(config?.enabled || false);
+        setSmtpHost(config?.host || '');
+        setSmtpPort(config?.port ? Number(config.port) : 587);
+        setSmtpUser(config?.user || '');
+        setSmtpPass(config?.pass || '');
+        setSmtpFrom(config?.from || '');
+      }
+    } catch (err) {
+      console.error('Error loading admin SMTP config:', err);
+    }
+  };
 
   const loadSettings = async () => {
     try {
@@ -48,15 +64,6 @@ export default function SecEmails() {
         setRawWorkspace(data.workspace);
         const settings = data.workspace.settings || {};
 
-        // SMTP
-        const smtp = settings.smtp || {};
-        setSmtpEnabled(smtp.enabled || false);
-        setSmtpHost(smtp.host || '');
-        setSmtpPort(smtp.port ? Number(smtp.port) : 587);
-        setSmtpUser(smtp.user || '');
-        setSmtpPass(smtp.pass || '');
-        setSmtpFrom(smtp.from || '');
-
         // Templates
         const templates = settings.emailTemplates || {};
         const projNotif = templates.projectNotification || {};
@@ -66,6 +73,10 @@ export default function SecEmails() {
 
         // Logs
         setEmailLogs(settings.emailLogs || []);
+
+        if (isPlatformAdmin) {
+          await loadAdminSmtpConfig();
+        }
       }
     } catch (err) {
       console.error("Error loading email settings:", err);
@@ -77,35 +88,37 @@ export default function SecEmails() {
 
   useEffect(() => {
     loadSettings();
-  }, []);
+  }, [dbUser]);
+
+  useEffect(() => {
+    if (!isPlatformAdmin && activeTab === 'smtp') {
+      setActiveTab('templates');
+    }
+  }, [isPlatformAdmin, activeTab]);
 
   const handleSaveSmtp = async () => {
+    if (!isPlatformAdmin) return;
+
     try {
       setSaving(true);
-      const updatedSettings = {
-        ...(rawWorkspace?.settings || {}),
-        smtp: {
-          enabled: smtpEnabled,
-          host: smtpHost.trim(),
-          port: Number(smtpPort),
-          user: smtpUser.trim(),
-          pass: smtpPass,
-          from: smtpFrom.trim()
-        }
+      const payload = {
+        enabled: smtpEnabled,
+        host: smtpHost.trim(),
+        port: Number(smtpPort),
+        user: smtpUser.trim(),
+        pass: smtpPass,
+        from: smtpFrom.trim()
       };
 
-      const res = await fetchWithAuth('/api/workspace-settings', {
-        method: 'PUT',
+      const res = await fetchWithAuth('/api/admin/smtp/config', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: rawWorkspace?.name,
-          settings: updatedSettings
-        })
+        body: JSON.stringify(payload)
       });
 
       if (res.ok) {
         setToast({ message: "Configuração SMTP salva com sucesso!", type: "success" });
-        loadSettings();
+        await loadAdminSmtpConfig();
       } else {
         setToast({ message: "Erro ao salvar configuração SMTP.", type: "error" });
       }
@@ -155,13 +168,14 @@ export default function SecEmails() {
   };
 
   const handleTestSmtp = async () => {
+    if (!isPlatformAdmin) return;
     if (!testRecipient.trim()) {
       setToast({ message: "Por favor, digite um e-mail de destino para testar.", type: "error" });
       return;
     }
     try {
       setTestingSmtp(true);
-      const res = await fetchWithAuth('/api/mail/test-smtp', {
+      const res = await fetchWithAuth('/api/admin/mail/test-smtp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -177,7 +191,7 @@ export default function SecEmails() {
       const data = await res.json();
       if (res.ok && data.success) {
         setToast({ message: "E-mail de teste enviado com sucesso! Verifique a caixa de entrada.", type: "success" });
-        loadSettings(); // Reload to fetch newly logged entries
+        await loadAdminSmtpConfig();
       } else {
         setToast({ message: `Falha no teste: ${data.error || "Erro desconhecido"}`, type: "error" });
       }
@@ -291,12 +305,14 @@ export default function SecEmails() {
 
       {/* Tabs */}
       <div className="flex border-b border-[#0F172A0F] gap-2">
-        <button 
-          onClick={() => setActiveTab('smtp')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer ${activeTab === 'smtp' ? 'border-[#111111] text-[#111111]' : 'border-transparent text-[#64748B] hover:text-[#111111]'}`}
-        >
-          <Server size={14} /> Servidor SMTP
-        </button>
+        {isPlatformAdmin && (
+          <button 
+            onClick={() => setActiveTab('smtp')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer ${activeTab === 'smtp' ? 'border-[#111111] text-[#111111]' : 'border-transparent text-[#64748B] hover:text-[#111111]'}`}
+          >
+            <Server size={14} /> Servidor SMTP
+          </button>
+        )}
         <button 
           onClick={() => setActiveTab('templates')}
           className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer ${activeTab === 'templates' ? 'border-[#111111] text-[#111111]' : 'border-transparent text-[#64748B] hover:text-[#111111]'}`}
@@ -312,7 +328,7 @@ export default function SecEmails() {
       </div>
 
       {/* Content SMTP Tab */}
-      {activeTab === 'smtp' && (
+      {activeTab === 'smtp' && isPlatformAdmin && (
         <div className="flex flex-col gap-6 animate-in fade-in duration-200">
           <div className="bg-[#FAFAFA] border border-[#0F172A0F] rounded-[24px] p-6 flex flex-col gap-6">
             <div className="flex items-center justify-between border-b border-[#0F172A0F] pb-4">
@@ -434,6 +450,12 @@ export default function SecEmails() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {activeTab === 'smtp' && !isPlatformAdmin && (
+        <div className="rounded-[24px] border border-[#0F172A0F] p-6 bg-white shadow-sm">
+          <p className="text-sm font-semibold text-[#111111]">Configuração SMTP disponível apenas para administradores da plataforma.</p>
+          <p className="text-xs text-[#64748B] mt-3">Solicite a um administrador que configure o servidor SMTP global no painel de administração.</p>
         </div>
       )}
 

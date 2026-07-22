@@ -1,7 +1,19 @@
 import nodemailer from 'nodemailer';
 import { db } from './index.ts';
-import { workspaces } from './schema.ts';
+import { workspaces, platformSettings } from './schema.ts';
 import { eq } from 'drizzle-orm';
+
+async function loadPlatformSmtpConfig() {
+  try {
+    const [configRow] = await db.select().from(platformSettings).where(eq(platformSettings.key, 'smtp_config')).limit(1);
+    if (configRow) {
+      return configRow.value as any;
+    }
+  } catch (err) {
+    console.error('[Mail] Failed to load platform SMTP config:', err);
+  }
+  return null;
+}
 
 async function logEmailAction(workspaceId: number, emailLog: {
   to: string;
@@ -65,6 +77,7 @@ export async function sendProjectNotificationEmail({
   let pass = process.env.SMTP_PASS;
   let from = process.env.SMTP_FROM || '"Cyzor Control" <noreply@cyzor.com>';
 
+  let platformSmtp: any = null;
   let wsSettings: any = null;
   if (workspaceId) {
     try {
@@ -72,20 +85,27 @@ export async function sendProjectNotificationEmail({
       if (workspaceRecord && workspaceRecord.settings) {
         let settings: any = workspaceRecord.settings;
         if (typeof settings === 'string') {
-          try { settings = JSON.parse(settings); } catch (e) {}
+          try { settings = JSON.parse(settings); } catch (e) { settings = {}; }
         }
         wsSettings = settings;
-        if (settings.smtp && settings.smtp.enabled) {
-          host = settings.smtp.host || host;
-          port = settings.smtp.port ? Number(settings.smtp.port) : port;
-          user = settings.smtp.user || user;
-          pass = settings.smtp.pass || pass;
-          from = settings.smtp.from || from;
-        }
       }
     } catch (e) {
-      console.error("[Mail] Erro ao carregar SMTP do SQLite:", e);
+      console.error('[Mail] Erro ao carregar configurações do workspace para templates:', e);
     }
+  }
+
+  try {
+    platformSmtp = await loadPlatformSmtpConfig();
+  } catch (e) {
+    console.error('[Mail] Erro ao carregar SMTP global da plataforma:', e);
+  }
+
+  if (platformSmtp?.enabled) {
+    host = platformSmtp.host || host;
+    port = platformSmtp.port ? Number(platformSmtp.port) : port;
+    user = platformSmtp.user || user;
+    pass = platformSmtp.pass || pass;
+    from = platformSmtp.from || from;
   }
 
   let transporter;
