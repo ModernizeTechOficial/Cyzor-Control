@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Mail, Lock, User, Sparkles, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext.tsx';
@@ -7,6 +7,7 @@ import { useBranding } from '../hooks/useBranding.ts';
 export default function LoginView({ onLogin, onNavigate }: { onLogin: () => void, onNavigate?: (view: any) => void }) {
   const { loginWithGoogle, loginWithEmail, registerWithEmail } = useAuth();
   const { iconUrl, iconSize, appName, loginHeroUrl } = useBranding();
+  const inviteToken = useMemo(() => new URLSearchParams(window.location.search).get('inviteToken') || undefined, []);
   
   const [isSignUp, setIsSignUp] = useState(() => {
     const search = new URLSearchParams(window.location.search);
@@ -192,6 +193,11 @@ export default function LoginView({ onLogin, onNavigate }: { onLogin: () => void
           </div>
 
           <div className="w-full relative min-h-[380px]">
+            {inviteToken && (
+              <div className="mb-6 rounded-[20px] border border-blue-100 bg-blue-50 px-5 py-4 text-sm text-blue-900">
+                Convite de workspace detectado. Após entrar ou criar sua conta, você poderá retornar ao convite automaticamente.
+              </div>
+            )}
             <AnimatePresence mode="wait">
               <motion.div
                 key={isSignUp ? 'signup-form' : 'login-form'}

@@ -96,7 +96,7 @@ export default function App() {
   useEffect(() => {
     if (!loading) {
       if (user) {
-        if (currentView === 'login' && globalFilters.inviteToken) {
+        if (globalFilters.inviteToken && currentView === 'login') {
           setCurrentView('invite');
         } else if (currentView === 'landing' || currentView === 'login' || currentView === 'privacy' || currentView === 'terms') {
           if (dbUser?.isPlatformAdmin) {
@@ -111,7 +111,7 @@ export default function App() {
         }
       }
     }
-  }, [user, dbUser, loading, currentView]);
+  }, [user, dbUser, loading, currentView, globalFilters]);
 
   if (loading) {
     return (

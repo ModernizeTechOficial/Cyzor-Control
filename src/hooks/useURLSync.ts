@@ -92,14 +92,21 @@ export function useURLSync(
     
     let url = '/';
     
-    if (currentView === 'landing' || currentView === 'login' || currentView === 'privacy' || currentView === 'terms') {
-      url = `/${currentView === 'landing' ? '' : currentView}`;
+    if (currentView === 'landing') {
+      url = '/';
+    } else if (currentView === 'login') {
+      url = '/login';
+      if (globalFilters.inviteToken) {
+        url += `?inviteToken=${encodeURIComponent(globalFilters.inviteToken)}`;
+      }
+    } else if (currentView === 'privacy') {
+      url = '/privacy';
+    } else if (currentView === 'terms') {
+      url = '/terms';
     } else if (currentView.startsWith('admin')) {
       url = `/${currentView}`;
-    } else if (currentView === 'login' && globalFilters.inviteToken) {
-      url = `/login?inviteToken=${globalFilters.inviteToken}`;
     } else if (currentView === 'invite' && globalFilters.inviteToken) {
-      url = `/invite/${globalFilters.inviteToken}`;
+      url = `/invite/${encodeURIComponent(globalFilters.inviteToken)}`;
     } else {
       url = '/workspace';
       

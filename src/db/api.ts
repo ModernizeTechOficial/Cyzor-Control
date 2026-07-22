@@ -187,8 +187,12 @@ apiRouter.post('/invite/:token/accept', requireAuth, async (req: AuthRequest, re
       return res.status(404).json({ error: 'Convite inválido ou já utilizado' });
     }
 
-    if (invitation.email && invitation.email.trim() && (!req.user?.email || req.user.email !== invitation.email)) {
-      return res.status(403).json({ error: 'Faça login com o mesmo e-mail do convite para aceitar.' });
+    if (invitation.email && invitation.email.trim()) {
+      const normalizedInvitationEmail = invitation.email.trim().toLowerCase();
+      const userEmail = req.user?.email?.trim().toLowerCase();
+      if (!userEmail || userEmail !== normalizedInvitationEmail) {
+        return res.status(403).json({ error: 'Faça login com o mesmo e-mail do convite para aceitar.' });
+      }
     }
 
     if (new Date(invitation.expiresAt) < new Date()) {
