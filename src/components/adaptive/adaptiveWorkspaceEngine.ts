@@ -1,5 +1,7 @@
 import { getProfessionalEvolutionInfo } from '../../utils/professionalEvolutionCalculator';
 
+export type AdaptiveWorkspaceType = 'OWNER' | 'MANAGER' | 'EMPLOYEE' | 'PERSONAL';
+export type AdaptiveRole = 'OWNER' | 'ADMIN' | 'MANAGER' | 'MEMBER' | 'CUSTOM';
 export type AdaptivePersona = 'Executive' | 'Developer' | 'Commercial' | 'HR' | 'Financial' | 'Operations';
 export type AdaptiveMoment = 'Onboarding' | 'Sprint' | 'Financial Close' | 'Growth' | 'Execution' | 'Stability';
 export type AdaptiveContext = 'Critical' | 'Approval' | 'Meeting' | 'Delivery' | 'Routine';
@@ -41,7 +43,25 @@ export interface AdaptiveShortcut {
   view: string;
 }
 
+export interface AdaptiveWidgetDefinition {
+  id: string;
+  name: string;
+  priority: number;
+  permissions: string[];
+  workspaceAllowed: AdaptiveWorkspaceType[];
+  persona: AdaptivePersona[];
+  department?: string[];
+  position: 'hero' | 'priority' | 'pendencies' | 'agenda' | 'career' | 'team' | 'projects' | 'objectives' | 'feed' | 'insights';
+  weight: number;
+  responsive: string;
+  conditions: string[];
+}
+
 export interface AdaptiveWorkspaceProfile {
+  workspaceType: AdaptiveWorkspaceType;
+  workspaceTypeLabel: string;
+  role: AdaptiveRole;
+  department: string;
   persona: AdaptivePersona;
   moment: AdaptiveMoment;
   context: AdaptiveContext;
@@ -53,6 +73,8 @@ export interface AdaptiveWorkspaceProfile {
   agendaTimeline: AdaptiveFeedItem[];
   teamHighlights: AdaptiveFeedItem[];
   projectSummary: Array<{ label: string; value: string; status: string }>;
+  personaHighlights: Array<{ label: string; value: string; status: string }>;
+  widgetLayout: AdaptiveWidgetDefinition[];
 }
 
 const parseRecordDate = (value?: string) => {
@@ -80,8 +102,57 @@ const normalizeString = (value?: string) => {
   return (value || '').toLowerCase();
 };
 
-const determinePersona = (user: any, dbUser: any, activeWorkspace: any, tasks: any[], projects: any[], finance: any[], notifications: any[]): AdaptivePersona => {
-  const hint = normalizeString(activeWorkspace?.settings?.role || dbUser?.role || activeWorkspace?.settings?.department || dbUser?.department || user?.jobTitle || user?.displayName || '');
+const getCurrentMembership = (members: any[] = [], user: any) => {
+  const currentUid = user?.uid || user?.id;
+  const currentEmail = user?.email?.toLowerCase();
+
+  return members.find((member) => {
+    const memberUid = member?.userUid || member?.uid || member?.id;
+    const memberEmail = member?.email?.toLowerCase();
+    return memberUid === currentUid || memberEmail === currentEmail;
+  }) || null;
+};
+
+const determineWorkspaceType = (user: any, activeWorkspace: any, members: any[]): AdaptiveWorkspaceType => {
+  if (!user || !activeWorkspace) return 'PERSONAL';
+
+  const currentMembership = getCurrentMembership(members, user);
+  const roleHint = normalizeString(currentMembership?.role || activeWorkspace?.settings?.role || activeWorkspace?.settings?.workspaceRole || '');
+  const cargoHint = normalizeString(currentMembership?.cargo || activeWorkspace?.settings?.department || user?.jobTitle || '');
+
+  if (roleHint.includes('owner') || activeWorkspace?.ownerUid === user?.uid) return 'OWNER';
+  if (/admin|manager|coordenador|coordinate|lider|lead|director|executive/i.test(roleHint) || /manager|coordenador|lider|head|director|executive/i.test(cargoHint)) return 'MANAGER';
+  if (currentMembership?.role || roleHint || cargoHint) return 'EMPLOYEE';
+
+  return 'PERSONAL';
+};
+
+const determineRole = (user: any, activeWorkspace: any, members: any[]): AdaptiveRole => {
+  const currentMembership = getCurrentMembership(members, user);
+  const roleHint = normalizeString(currentMembership?.role || activeWorkspace?.settings?.role || activeWorkspace?.settings?.workspaceRole || '');
+
+  if (/owner/i.test(roleHint) || activeWorkspace?.ownerUid === user?.uid) return 'OWNER';
+  if (/admin/i.test(roleHint)) return 'ADMIN';
+  if (/manager|coordenador|lider|director|head/i.test(roleHint)) return 'MANAGER';
+  if (currentMembership || activeWorkspace) return 'MEMBER';
+  return 'CUSTOM';
+};
+
+const determineDepartment = (user: any, activeWorkspace: any, members: any[]): string => {
+  const currentMembership = getCurrentMembership(members, user);
+  const hint = normalizeString(currentMembership?.cargo || activeWorkspace?.settings?.department || user?.jobTitle || activeWorkspace?.settings?.role || '');
+
+  if (/dev|desenvolv|engenharia|software|tech|programador|engineer/i.test(hint)) return 'Engineering';
+  if (/financeir|finance|contas|receita|fluxo/i.test(hint)) return 'Finance';
+  if (/rh|human|talent|people/i.test(hint)) return 'HR';
+  if (/comercial|sales|vendas|crm|cliente|lead/i.test(hint)) return 'Commercial';
+  if (/opera|operations|operational|process/i.test(hint)) return 'Operations';
+  return currentMembership?.cargo || 'General';
+};
+
+const determinePersona = (user: any, dbUser: any, activeWorkspace: any, tasks: any[], projects: any[], finance: any[], notifications: any[], members: any[]): AdaptivePersona => {
+  const currentMembership = getCurrentMembership(members, user);
+  const hint = normalizeString(currentMembership?.cargo || activeWorkspace?.settings?.role || dbUser?.role || activeWorkspace?.settings?.department || dbUser?.department || user?.jobTitle || user?.displayName || '');
 
   if (/ceo|cio|cto|cfo|executive|presidente|president|diretor|director|admin/i.test(hint)) return 'Executive';
   if (/financeir|finance|cfo|faturamento|contas|fluxo/i.test(hint) || finance.length > 6) return 'Financial';
@@ -96,7 +167,7 @@ const determinePersona = (user: any, dbUser: any, activeWorkspace: any, tasks: a
   if (/pipeline|cliente|lead|oportunidade/.test(projectSignals)) return 'Commercial';
   if (/onboarding|treinamento|feedback/.test(projectSignals)) return 'HR';
 
-  return 'Operations';
+  return currentMembership?.cargo ? 'Operations' : 'Executive';
 };
 
 const determineMoment = (activeWorkspace: any, tasks: any[], finance: any[], agendaEvents: any[], projects: any[], notifications: any[]): AdaptiveMoment => {
@@ -246,7 +317,7 @@ const buildPriorityCard = (tasks: any[], projects: any[], members: any[]): Adapt
   };
 };
 
-const buildDailyBriefing = (user: any, tasks: any[], agendaEvents: any[], notifications: any[], projects: any[], finance: any[]): AdaptiveDailyBriefing => {
+const buildDailyBriefing = (user: any, tasks: any[], agendaEvents: any[], notifications: any[], projects: any[], finance: any[], workspaceType: AdaptiveWorkspaceType, persona: AdaptivePersona): AdaptiveDailyBriefing => {
   const greeting = `Bom dia ${user?.displayName || user?.email?.split('@')[0] || 'Colaborador'}`;
   const overdueTasks = tasks.filter((task) => !isDoneStatus(task?.status) && parseRecordDate(task?.dueDate || task?.deadline) && parseRecordDate(task?.dueDate || task?.deadline)! < new Date()).length;
   const criticalTasks = tasks.filter((task) => /alta|high|critical|crítica|critico/i.test(normalizeString(task?.priority || ''))).length;
@@ -258,14 +329,21 @@ const buildDailyBriefing = (user: any, tasks: any[], agendaEvents: any[], notifi
   const risk = projects.filter((project) => /risco|atrasad|bloquead/.test(normalizeString(project?.status))).length;
   const revenue = finance.filter((entry) => normalizeString(entry?.type || '').includes('receita')).reduce((sum, entry) => sum + Number(entry?.amount || 0), 0);
 
+  const workspaceSummaryByType: Record<AdaptiveWorkspaceType, string> = {
+    OWNER: `Você está no centro de comando da empresa. Fique atento a ${approvals} aprovações, ${risk} projetos críticos e ao balanço de ${Number(revenue || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} em movimento.`,
+    MANAGER: `Seu foco hoje é liderar execução e desempenho da equipe com ${criticalTasks} tarefas críticas e ${meetings} reuniões relevantes no calendário.`,
+    EMPLOYEE: `Hoje seu ritmo está concentrado em entregar ${criticalTasks} prioridades, manter ${meetings} compromissos e desbloquear pendências do dia.`,
+    PERSONAL: `Seu espaço pessoal está organizado para foco, objetivos e documentação com ${criticalTasks} prioridades de execução.`,
+  };
+
   return {
     greeting,
-    summary: `Hoje você tem ${criticalTasks} itens críticos, ${meetings} reuniões agendadas e ${approvals} aprovações pendentes. São ${overdueTasks} pendências atrasadas e ${risk} projetos com atenção prioritária.`,
+    summary: workspaceSummaryByType[workspaceType] || workspaceSummaryByType.EMPLOYEE,
     keyStats: [
       { label: 'Tarefas críticas', value: `${criticalTasks}` },
       { label: 'Reuniões hoje', value: `${meetings}` },
       { label: 'Aprovações', value: `${approvals}` },
-      { label: 'Receita monitorada', value: `R$ ${Number(revenue || 0).toLocaleString('pt-BR')}`, accent: true }
+      { label: persona === 'Financial' ? 'Receita monitorada' : 'XP do dia', value: persona === 'Financial' ? `R$ ${Number(revenue || 0).toLocaleString('pt-BR')}` : `${Math.max(120, overdueTasks * 40 + criticalTasks * 25)} XP`, accent: true }
     ]
   };
 };
@@ -344,18 +422,39 @@ const buildTeamHighlights = (notifications: any[], members: any[]): AdaptiveFeed
   }));
 };
 
-const buildShortcuts = (projects: any[], finance: any[], agendaEvents: any[], tasks: any[]) => {
+const buildShortcuts = (projects: any[], finance: any[], agendaEvents: any[], tasks: any[], workspaceType: AdaptiveWorkspaceType) => {
   const shortcuts: AdaptiveShortcut[] = [];
-  if (projects.length > 0) shortcuts.push({ label: 'Projetos', description: 'Acesse entregas e status de sprint.', view: 'projetos' });
-  if (finance.length > 0) shortcuts.push({ label: 'Financeiro', description: 'Ver fluxo de receitas e despesas.', view: 'financeiro' });
-  if (agendaEvents.length > 0) shortcuts.push({ label: 'Agenda', description: 'Reuniões e prazos do dia.', view: 'agenda' });
-  if (tasks.some((task) => /aprov/i.test(normalizeString(task?.title || task?.description || '')))) shortcuts.push({ label: 'Aprovações', description: 'Itens que precisam da sua decisão.', view: 'projetos' });
-  if (shortcuts.length < 4) {
-    shortcuts.push({ label: 'Career Hub', description: 'Seu desenvolvimento e ranking profissional.', view: 'career-hub' });
+
+  if (workspaceType === 'OWNER') {
+    shortcuts.push({ label: 'Business Overview', description: 'Visão executiva da companhia.', view: 'empresas' });
+    shortcuts.push({ label: 'Financeiro', description: 'Fluxo, pagamentos e caixa.', view: 'financeiro' });
+    shortcuts.push({ label: 'Projetos Estratégicos', description: 'Entregas e riscos críticos.', view: 'projetos' });
+    shortcuts.push({ label: 'Equipe', description: 'Capacidade e saúde da organização.', view: 'equipe' });
+    shortcuts.push({ label: 'Agenda Executiva', description: 'Compromissos e decisões.', view: 'agenda' });
+  } else if (workspaceType === 'MANAGER') {
+    shortcuts.push({ label: 'Equipe', description: 'Status e performance da sua área.', view: 'equipe' });
+    shortcuts.push({ label: 'Projetos', description: 'Entregas e risco da equipe.', view: 'projetos' });
+    shortcuts.push({ label: 'Agenda', description: 'Reuniões e alinhamentos.', view: 'agenda' });
+    shortcuts.push({ label: 'Career Hub', description: 'Evolução da equipe e objetivos.', view: 'career-hub' });
+    shortcuts.push({ label: 'Aprovações', description: 'Pendências de decisão.', view: 'projetos' });
+  } else if (workspaceType === 'PERSONAL') {
+    shortcuts.push({ label: 'Projetos', description: 'Organização pessoal e entregas.', view: 'projetos' });
+    shortcuts.push({ label: 'Agenda', description: 'Compromissos pessoais.', view: 'agenda' });
+    shortcuts.push({ label: 'Career Hub', description: 'Desenvolvimento individual.', view: 'career-hub' });
+    shortcuts.push({ label: 'Documentação', description: 'Base e memory do seu trabalho.', view: 'documentacao' });
+    shortcuts.push({ label: 'IA', description: 'Assistência contextual.', view: 'ia' });
+  } else {
+    shortcuts.push({ label: 'Minha Prioridade', description: 'Tarefas e foco do dia.', view: 'projetos' });
+    shortcuts.push({ label: 'Agenda', description: 'Reuniões e entregas.', view: 'agenda' });
+    shortcuts.push({ label: 'Projetos', description: 'Status das iniciativas do seu papel.', view: 'projetos' });
+    shortcuts.push({ label: 'Career Hub', description: 'Seu crescimento profissional.', view: 'career-hub' });
+    shortcuts.push({ label: 'Documentação', description: 'Artigos recentes e contexto.', view: 'documentacao' });
   }
-  if (shortcuts.length < 4) {
-    shortcuts.push({ label: 'Equipe', description: 'Ver o estado da sua equipe.', view: 'equipe' });
+
+  if (finance.length > 0 && workspaceType !== 'PERSONAL' && workspaceType !== 'EMPLOYEE') {
+    shortcuts.push({ label: 'Financeiro', description: 'Monitoramento financeiro estratégico.', view: 'financeiro' });
   }
+
   return shortcuts.slice(0, 5);
 };
 
@@ -369,6 +468,140 @@ const buildProjectSummary = (projects: any[]) => {
     { label: 'Bloqueados', value: `${blocked}`, status: 'Crítico' },
     { label: 'Concluídos recentemente', value: `${completed}`, status: 'Estável' }
   ];
+};
+
+const buildPersonaHighlights = (persona: AdaptivePersona, tasks: any[], projects: any[], finance: any[], members: any[], notifications: any[], agendaEvents: any[]) => {
+  const openTasks = tasks.filter((task) => !isDoneStatus(task?.status));
+  const blockedProjects = projects.filter((project) => /bloquead|risco|atrasad/i.test(normalizeString(project?.status))).length;
+  const activeProjects = projects.filter((project) => !isDoneStatus(project?.status)).length;
+  const approvalCount = notificationsWithType(notifications, 'approval').length;
+  const nextMeetings = agendaEvents.filter((event) => {
+    const date = parseRecordDate(event?.date);
+    if (!date) return false;
+    const now = new Date();
+    const diff = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    return diff >= 0 && diff <= 3;
+  }).length;
+  const revenue = finance.reduce((sum, item) => sum + Number(item?.amount || 0), 0);
+
+  if (persona === 'Developer') {
+    return [
+      { label: 'Tarefas abertas', value: `${openTasks.length}`, status: 'Entrega' },
+      { label: 'Riscos/bugs', value: `${openTasks.filter((task) => /bug|risco|falha|erro/i.test(normalizeString(task?.title || task?.description || ''))).length}`, status: 'Crítico' },
+      { label: 'Sprint ativa', value: `${activeProjects}`, status: 'Execução' }
+    ];
+  }
+
+  if (persona === 'Commercial') {
+    return [
+      { label: 'Pipeline', value: `${projects.length}`, status: 'Oportunidade' },
+      { label: 'Reuniões próximas', value: `${nextMeetings}`, status: 'Relacionamento' },
+      { label: 'Ações críticas', value: `${approvalCount}`, status: 'Conversão' }
+    ];
+  }
+
+  if (persona === 'HR') {
+    return [
+      { label: 'Pessoas no time', value: `${members.length}`, status: 'Capacidade' },
+      { label: 'Ações de RH', value: `${notifications.length}`, status: 'Clima' },
+      { label: 'Foco de desenvolvimento', value: `${openTasks.length}`, status: 'People' }
+    ];
+  }
+
+  if (persona === 'Financial') {
+    return [
+      { label: 'Receita monitorada', value: `R$ ${revenue.toLocaleString('pt-BR')}`, status: 'Fluxo' },
+      { label: 'Aprovações pendentes', value: `${approvalCount}`, status: 'Decisão' },
+      { label: 'Projetos bloqueados', value: `${blockedProjects}`, status: 'Risco' }
+    ];
+  }
+
+  if (persona === 'Operations') {
+    return [
+      { label: 'Projetos ativos', value: `${activeProjects}`, status: 'Operação' },
+      { label: 'Bloqueios', value: `${blockedProjects}`, status: 'Crítico' },
+      { label: 'Agenda em 3 dias', value: `${nextMeetings}`, status: 'Coordenação' }
+    ];
+  }
+
+  return [
+    { label: 'Prioridade atual', value: `${openTasks.length}`, status: 'Direção' },
+    { label: 'Projetos em execução', value: `${activeProjects}`, status: 'Estratégia' },
+    { label: 'Ações de decisão', value: `${approvalCount}`, status: 'Governança' }
+  ];
+};
+
+const buildWidgetCatalog = (workspaceType: AdaptiveWorkspaceType, persona: AdaptivePersona, department: string): AdaptiveWidgetDefinition[] => {
+  const widgetBase: AdaptiveWidgetDefinition[] = [
+    { id: 'hero', name: 'Hero Principal', priority: 100, permissions: ['all'], workspaceAllowed: ['OWNER', 'MANAGER', 'EMPLOYEE', 'PERSONAL'], persona: ['Executive', 'Developer', 'Commercial', 'HR', 'Financial', 'Operations'], position: 'hero', weight: 100, responsive: 'all', conditions: ['always'] },
+    { id: 'priority-current', name: 'Prioridade Atual', priority: 95, permissions: ['all'], workspaceAllowed: ['OWNER', 'MANAGER', 'EMPLOYEE', 'PERSONAL'], persona: ['Executive', 'Developer', 'Commercial', 'HR', 'Financial', 'Operations'], position: 'priority', weight: 95, responsive: 'lg', conditions: ['hasPriority'] },
+    { id: 'pendencies', name: 'Pendências', priority: 90, permissions: ['all'], workspaceAllowed: ['OWNER', 'MANAGER', 'EMPLOYEE', 'PERSONAL'], persona: ['Executive', 'Developer', 'Commercial', 'HR', 'Financial', 'Operations'], position: 'pendencies', weight: 90, responsive: 'md', conditions: ['hasPending'] },
+    { id: 'agenda', name: 'Agenda', priority: 85, permissions: ['all'], workspaceAllowed: ['OWNER', 'MANAGER', 'EMPLOYEE', 'PERSONAL'], persona: ['Executive', 'Developer', 'Commercial', 'HR', 'Financial', 'Operations'], position: 'agenda', weight: 85, responsive: 'md', conditions: ['hasAgenda'] },
+    { id: 'career-hub', name: 'Career Hub', priority: 80, permissions: ['all'], workspaceAllowed: ['OWNER', 'MANAGER', 'EMPLOYEE', 'PERSONAL'], persona: ['Executive', 'Developer', 'Commercial', 'HR', 'Financial', 'Operations'], position: 'career', weight: 80, responsive: 'sm', conditions: ['always'] },
+    { id: 'team', name: 'Equipe', priority: 75, permissions: ['manager', 'owner', 'admin'], workspaceAllowed: ['OWNER', 'MANAGER'], persona: ['Executive', 'HR', 'Operations'], position: 'team', weight: 75, responsive: 'lg', conditions: ['hasTeam'] },
+    { id: 'projects', name: 'Projetos', priority: 70, permissions: ['all'], workspaceAllowed: ['OWNER', 'MANAGER', 'EMPLOYEE', 'PERSONAL'], persona: ['Executive', 'Developer', 'Commercial', 'Operations'], position: 'projects', weight: 70, responsive: 'md', conditions: ['hasProjects'] },
+    { id: 'objectives', name: 'Objetivos', priority: 65, permissions: ['all'], workspaceAllowed: ['OWNER', 'MANAGER', 'EMPLOYEE', 'PERSONAL'], persona: ['Executive', 'Developer', 'Commercial', 'HR', 'Financial', 'Operations'], position: 'objectives', weight: 65, responsive: 'md', conditions: ['hasObjectives'] },
+    { id: 'feed', name: 'Feed Corporativo', priority: 60, permissions: ['all'], workspaceAllowed: ['OWNER', 'MANAGER', 'EMPLOYEE', 'PERSONAL'], persona: ['Executive', 'Developer', 'Commercial', 'HR', 'Financial', 'Operations'], position: 'feed', weight: 60, responsive: 'lg', conditions: ['hasFeed'] },
+    { id: 'insights', name: 'Insights', priority: 55, permissions: ['all'], workspaceAllowed: ['OWNER', 'MANAGER', 'EMPLOYEE', 'PERSONAL'], persona: ['Executive', 'Developer', 'Commercial', 'HR', 'Financial', 'Operations'], position: 'insights', weight: 55, responsive: 'lg', conditions: ['hasInsights'] },
+  ];
+
+  const personaLayoutByRole: Record<AdaptivePersona, AdaptiveWidgetDefinition['position'][]> = {
+    Executive: ['hero', 'priority', 'projects', 'objectives', 'feed', 'insights', 'agenda', 'team'],
+    Developer: ['hero', 'priority', 'projects', 'pendencies', 'objectives', 'feed', 'insights', 'agenda'],
+    Commercial: ['hero', 'priority', 'projects', 'objectives', 'feed', 'insights', 'agenda'],
+    HR: ['hero', 'team', 'objectives', 'career', 'feed', 'insights', 'agenda'],
+    Financial: ['hero', 'priority', 'pendencies', 'agenda', 'projects', 'feed', 'insights'],
+    Operations: ['hero', 'priority', 'projects', 'agenda', 'feed', 'insights', 'team'],
+  };
+
+  const personaSpecificRules: AdaptiveWidgetDefinition[] = [];
+
+  if (persona === 'Developer') {
+    personaSpecificRules.push(
+      { id: 'developer-sprint', name: 'Sprint', priority: 92, permissions: ['developer'], workspaceAllowed: ['EMPLOYEE'], persona: ['Developer'], position: 'projects', weight: 92, responsive: 'md', conditions: ['hasSprint'] },
+      { id: 'developer-bugs', name: 'Bugs / Riscos', priority: 88, permissions: ['developer'], workspaceAllowed: ['EMPLOYEE'], persona: ['Developer'], position: 'pendencies', weight: 88, responsive: 'md', conditions: ['hasBugs'] }
+    );
+  }
+
+  if (persona === 'Commercial') {
+    personaSpecificRules.push(
+      { id: 'commercial-pipeline', name: 'Pipeline', priority: 92, permissions: ['sales'], workspaceAllowed: ['EMPLOYEE'], persona: ['Commercial'], position: 'projects', weight: 92, responsive: 'md', conditions: ['hasPipeline'] },
+      { id: 'commercial-leads', name: 'Leads', priority: 88, permissions: ['sales'], workspaceAllowed: ['EMPLOYEE'], persona: ['Commercial'], position: 'priority', weight: 88, responsive: 'md', conditions: ['hasLeads'] }
+    );
+  }
+
+  if (persona === 'HR') {
+    personaSpecificRules.push(
+      { id: 'hr-evaluations', name: 'Avaliações', priority: 92, permissions: ['hr'], workspaceAllowed: ['EMPLOYEE'], persona: ['HR'], position: 'team', weight: 92, responsive: 'md', conditions: ['hasEvaluations'] },
+      { id: 'hr-training', name: 'Treinamentos', priority: 88, permissions: ['hr'], workspaceAllowed: ['EMPLOYEE'], persona: ['HR'], position: 'career', weight: 88, responsive: 'md', conditions: ['hasTraining'] }
+    );
+  }
+
+  if (persona === 'Financial') {
+    personaSpecificRules.push(
+      { id: 'finance-approvals', name: 'Aprovações Financeiras', priority: 92, permissions: ['finance'], workspaceAllowed: ['EMPLOYEE'], persona: ['Financial'], position: 'pendencies', weight: 92, responsive: 'md', conditions: ['hasApprovals'] },
+      { id: 'finance-payments', name: 'Pagamentos', priority: 88, permissions: ['finance'], workspaceAllowed: ['EMPLOYEE'], persona: ['Financial'], position: 'agenda', weight: 88, responsive: 'md', conditions: ['hasPayments'] }
+    );
+  }
+
+  const departmentSpecific = department.toLowerCase();
+  const allowedPositions = new Set(personaLayoutByRole[persona] || personaLayoutByRole.Executive);
+
+  const widgets = [...widgetBase, ...personaSpecificRules].filter((widget) => {
+    if (!widget.workspaceAllowed.includes(workspaceType)) return false;
+    if (!widget.persona.includes(persona)) return false;
+    if (!allowedPositions.has(widget.position)) return false;
+    if (widget.department && !widget.department.some((item) => item.toLowerCase() === departmentSpecific)) {
+      return false;
+    }
+    return true;
+  });
+
+  return widgets.sort((a, b) => {
+    const aIndex = personaLayoutByRole[persona].indexOf(a.position);
+    const bIndex = personaLayoutByRole[persona].indexOf(b.position);
+    return (aIndex === -1 ? Number.MAX_SAFE_INTEGER : aIndex) - (bIndex === -1 ? Number.MAX_SAFE_INTEGER : bIndex) || b.priority - a.priority;
+  });
 };
 
 export function buildAdaptiveWorkspaceProfile(inputs: {
@@ -385,19 +618,33 @@ export function buildAdaptiveWorkspaceProfile(inputs: {
   notifications: any[];
 }): AdaptiveWorkspaceProfile {
   const { user, dbUser, activeWorkspace, projects, tasks, finance, agendaEvents, notifications, members } = inputs;
-  const persona = determinePersona(user, dbUser, activeWorkspace, tasks, projects, finance, notifications);
+  const workspaceType = determineWorkspaceType(user, activeWorkspace, members);
+  const role = determineRole(user, activeWorkspace, members);
+  const department = determineDepartment(user, activeWorkspace, members);
+  const persona = determinePersona(user, dbUser, activeWorkspace, tasks, projects, finance, notifications, members);
   const moment = determineMoment(activeWorkspace, tasks, finance, agendaEvents, projects, notifications);
   const context = determineContext(tasks, agendaEvents, notifications);
   const priorityCard = buildPriorityCard(tasks, projects, members);
-  const dailyBriefing = buildDailyBriefing(user, tasks, agendaEvents, notifications, projects, finance);
+  const dailyBriefing = buildDailyBriefing(user, tasks, agendaEvents, notifications, projects, finance, workspaceType, persona);
   const objectives = buildObjectives(tasks, projects);
   const activityFeed = buildActivityFeed(notifications, tasks, projects);
   const agendaTimeline = buildAgendaTimeline(agendaEvents);
   const teamHighlights = buildTeamHighlights(notifications, members);
-  const shortcuts = buildShortcuts(projects, finance, agendaEvents, tasks);
+  const shortcuts = buildShortcuts(projects, finance, agendaEvents, tasks, workspaceType);
   const projectSummary = buildProjectSummary(projects);
+  const personaHighlights = buildPersonaHighlights(persona, tasks, projects, finance, members, notifications, agendaEvents);
+  const widgetLayout = buildWidgetCatalog(workspaceType, persona, department);
 
   return {
+    workspaceType,
+    workspaceTypeLabel: {
+      OWNER: 'Owner Workspace',
+      MANAGER: 'Manager Workspace',
+      EMPLOYEE: 'Employee Workspace',
+      PERSONAL: 'Personal Workspace'
+    }[workspaceType],
+    role,
+    department,
     persona,
     moment,
     context,
@@ -408,6 +655,8 @@ export function buildAdaptiveWorkspaceProfile(inputs: {
     agendaTimeline,
     teamHighlights,
     shortcuts,
-    projectSummary
+    projectSummary,
+    personaHighlights,
+    widgetLayout
   };
 }
