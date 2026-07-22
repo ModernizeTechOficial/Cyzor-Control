@@ -8,13 +8,22 @@ try {
   await pool.query(`ALTER TABLE workspace_members ADD COLUMN IF NOT EXISTS team_name text;`);
   await pool.query(`ALTER TABLE workspace_members ADD COLUMN IF NOT EXISTS permissions jsonb DEFAULT '[]'::jsonb;`);
 
-  const result = await pool.query(`
+  await pool.query(`ALTER TABLE workspace_members DROP CONSTRAINT IF EXISTS workspace_members_workspace_id_unique;`);
+  await pool.query(`DROP INDEX IF EXISTS workspace_members_workspace_id_unique;`);
+
+  await pool.query(`CREATE INDEX IF NOT EXISTS ws_members_ws_user_idx ON workspace_members (workspace_id, user_uid);`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS ws_members_user_idx ON workspace_members (user_uid);`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS workspace_members_tenant_idx ON workspace_members (tenant_id);`);
+
+  const columns = await pool.query(`
     SELECT column_name, data_type, column_default, is_nullable
     FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'workspace_members'
     ORDER BY ordinal_position
   `);
-  console.log(JSON.stringify(result.rows, null, 2));
+  const indexes = await pool.query(`SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'workspace_members';`);
+  console.log('columns', JSON.stringify(columns.rows, null, 2));
+  console.log('indexes', JSON.stringify(indexes.rows, null, 2));
 } catch (error) {
   console.error('Schema update failed:', error);
   process.exit(1);
