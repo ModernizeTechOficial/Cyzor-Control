@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
 import BottomBar from './components/BottomBar';
 import DashboardView from './components/DashboardView';
+import AdaptiveWorkspaceView from './components/AdaptiveWorkspaceView';
 import EmpresasView from './components/EmpresasView';
 import ClientesView from './components/ClientesView';
 import ProdutosView from './components/ProdutosView';
@@ -163,7 +164,7 @@ export default function App() {
             className="pt-24 lg:pt-28 px-4 sm:px-6 md:px-8 pb-28 lg:pb-12 flex flex-col gap-6 md:gap-10 w-full xl:max-w-none min-h-screen"
           >
             <ContextBanner currentView={currentView} />
-            {currentView === 'dashboard' && <DashboardView setCurrentView={setCurrentView} />}
+            {currentView === 'dashboard' && <AdaptiveWorkspaceView setCurrentView={setCurrentView} />}
             {currentView === 'roadmap' && <PlanejamentoEstrategicoView setCurrentView={setCurrentView} />}
             {currentView === 'empresas' && <EmpresasView />}
             {currentView === 'clientes' && <ClientesView />}
