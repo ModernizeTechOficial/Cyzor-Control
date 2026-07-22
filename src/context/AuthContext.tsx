@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { 
   User, 
   signInWithPopup, 
@@ -246,6 +246,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(currentUser);
       if (currentUser) {
         await syncWithCloudSQL(currentUser);
+        const params = new URLSearchParams(window.location.search);
+        const inviteToken = params.get('inviteToken');
+        if (inviteToken) {
+          try {
+            const acceptRes = await fetchWithAuth('/api/workspace/invitations/accept', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token: inviteToken })
+            });
+            if (acceptRes.ok) {
+              const accepted = await acceptRes.json();
+              if (accepted.success) {
+                window.history.replaceState({}, '', window.location.pathname);
+                window.dispatchEvent(new Event('workspaceChanged'));
+              }
+            }
+          } catch (err) {
+            console.error('Error accepting invite token:', err);
+          }
+        }
       } else {
         setToken(null);
         setDbUser(null);

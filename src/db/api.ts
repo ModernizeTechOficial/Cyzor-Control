@@ -134,6 +134,59 @@ apiRouter.get("/branding", async (req, res) => {
 
 apiRouter.use(requireAuth);
 
+apiRouter.post("/workspace/invitations/accept", async (req: AuthRequest, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: "Invitation token is required" });
+
+    const [invitation] = await db.select().from(workspaceInvitations)
+      .where(and(eq(workspaceInvitations.token, token), eq(workspaceInvitations.status, 'PENDING')))
+      .limit(1);
+
+    if (!invitation) {
+      return res.status(404).json({ error: "Convite inválido ou já utilizado" });
+    }
+
+    if (new Date(invitation.expiresAt) < new Date()) {
+      await db.update(workspaceInvitations)
+        .set({ status: 'EXPIRED' })
+        .where(eq(workspaceInvitations.id, invitation.id));
+      return res.status(400).json({ error: "O convite expirou" });
+    }
+
+    const [existingMember] = await db.select().from(workspaceMembers)
+      .where(and(eq(workspaceMembers.workspaceId, invitation.workspaceId), eq(workspaceMembers.userUid, req.user!.uid)))
+      .limit(1);
+
+    if (!existingMember) {
+      await db.insert(workspaceMembers).values({
+        tenantId: invitation.tenantId,
+        workspaceId: invitation.workspaceId,
+        userUid: req.user!.uid,
+        role: invitation.role,
+        cargo: 'Convidado'
+      });
+    }
+
+    const [updatedInvitation] = await db.update(workspaceInvitations)
+      .set({ status: 'ACCEPTED' })
+      .where(eq(workspaceInvitations.id, invitation.id))
+      .returning();
+
+    await logAction(req, 'ACCEPT_INVITE', 'workspace_invitations', invitation.id.toString(), invitation, updatedInvitation[0] || updatedInvitation);
+
+    const [userRecord] = await db.select().from(users).where(eq(users.uid, req.user!.uid)).limit(1);
+    if (userRecord && !userRecord.activeWorkspaceId) {
+      await db.update(users).set({ activeWorkspaceId: invitation.workspaceId }).where(eq(users.uid, req.user!.uid));
+    }
+
+    res.json({ success: true, workspaceId: invitation.workspaceId, accepted: true });
+  } catch (error) {
+    console.error("Error accepting invitation:", error);
+    res.status(500).json({ error: "Failed to accept invitation" });
+  }
+});
+
 apiRouter.get("/plans", async (req: AuthRequest, res) => {
   try {
     const { plans } = await import('./schema.ts');
@@ -480,11 +533,17 @@ apiRouter.delete("/workspace/members/:id", async (req: AuthRequest, res) => {
 // --- INVITATIONS ---
 apiRouter.get("/workspace/invitations", async (req: AuthRequest, res) => {
   try {
+    const { getMemberRole, WorkspaceRole } = await import("./permissions.ts");
+    const myRole = await getMemberRole(req.user!.uid, req.workspaceId!);
+    const canManageInvites = myRole === WorkspaceRole.OWNER || myRole === WorkspaceRole.ADMIN;
+    const origin = req.headers.origin || `${req.protocol}://${req.get('host')}`;
+
     const data = await db.select({
       id: workspaceInvitations.id,
       email: workspaceInvitations.email,
       role: workspaceInvitations.role,
       status: workspaceInvitations.status,
+      token: workspaceInvitations.token,
       expiresAt: workspaceInvitations.expiresAt,
       createdAt: workspaceInvitations.createdAt,
       inviterName: users.displayName
@@ -493,7 +552,14 @@ apiRouter.get("/workspace/invitations", async (req: AuthRequest, res) => {
     .leftJoin(users, eq(workspaceInvitations.inviterUid, users.uid))
     .where(eq(workspaceInvitations.workspaceId, req.workspaceId!));
     
-    res.json(data);
+    const invitations = data.map((inv) => ({
+      ...inv,
+      inviteLink: canManageInvites && inv.status === 'PENDING'
+        ? `${origin}/?inviteToken=${inv.token}`
+        : undefined
+    }));
+
+    res.json(invitations);
   } catch (error) {
     console.error("Error fetching invitations:", error);
     res.status(500).json({ error: "Failed to fetch invitations" });
@@ -503,7 +569,7 @@ apiRouter.get("/workspace/invitations", async (req: AuthRequest, res) => {
 apiRouter.post("/workspace/invitations", async (req: AuthRequest, res) => {
   try {
     const { email, role } = req.body;
-    if (!email) return res.status(400).json({ error: "Email is required" });
+    if (email === undefined || email === null) return res.status(400).json({ error: "Email is required" });
 
     // Permission check
     const { getMemberRole, WorkspaceRole } = await import("./permissions.ts");
@@ -519,18 +585,24 @@ apiRouter.post("/workspace/invitations", async (req: AuthRequest, res) => {
     const [invitation] = await db.insert(workspaceInvitations).values({
       workspaceId: req.workspaceId!,
       tenantId: req.tenantId as any,
-      email,
+      email: email || '',
       role: role || 'MEMBER',
       inviterUid: req.user!.uid,
       token,
       expiresAt
     }).returning();
 
+    const origin = req.headers.origin || `${req.protocol}://${req.get('host')}`;
+    const invitationWithLink = {
+      ...invitation,
+      inviteLink: `${origin}/?inviteToken=${token}`
+    };
+
     // In a real app, send email here
-    console.log(`Invitation token for ${email}: ${token}`);
+    console.log(`Invitation token for ${email || '[sem email]'}: ${token}`);
 
     await logAction(req, 'INVITE', 'workspace_invitations', invitation.id.toString(), null, invitation);
-    res.json(invitation);
+    res.json(invitationWithLink);
   } catch (error) {
     console.error("Error creating invitation:", error);
     res.status(500).json({ error: "Failed to create invitation" });

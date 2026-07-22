@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react';
 import { 
   Mail, 
-  Plus, 
   Send, 
   Trash2, 
   Clock, 
   AlertCircle,
-  XCircle,
   RefreshCcw,
-  CheckCircle2,
-  Calendar,
-  UserPlus
+  XCircle,
+  UserPlus,
+  Copy
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -20,6 +18,8 @@ export default function ConvitesTab() {
   const [loading, setLoading] = useState(true);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [newInvite, setNewInvite] = useState({ email: '', role: 'MEMBER' });
+  const [inviteMode, setInviteMode] = useState<'email' | 'link'>('email');
+  const [createdInvite, setCreatedInvite] = useState<any>(null);
   const [sending, setSending] = useState(false);
 
   const fetchInvitations = async () => {
@@ -41,22 +41,48 @@ export default function ConvitesTab() {
     fetchInvitations();
   }, []);
 
+  const handleCopyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      alert('Link copiado para a área de transferência!');
+    } catch (err) {
+      console.error('Falha ao copiar o link:', err);
+      alert('Não foi possível copiar o link. Tente novamente.');
+    }
+  };
+
   const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newInvite.email) return;
+    if (inviteMode === 'email' && !newInvite.email.trim()) return;
+
     try {
       setSending(true);
+      const payload: any = { role: newInvite.role };
+      if (inviteMode === 'email') payload.email = newInvite.email.trim();
+      else payload.email = '';
+
       const res = await fetchWithAuth('/api/workspace/invitations', {
         method: 'POST',
-        body: JSON.stringify(newInvite)
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       });
+
       if (res.ok) {
-        setShowInviteModal(false);
-        setNewInvite({ email: '', role: 'MEMBER' });
-        fetchInvitations();
+        const data = await res.json();
+        setCreatedInvite(data);
+
+        if (inviteMode === 'email') {
+          setShowInviteModal(false);
+          setNewInvite({ email: '', role: 'MEMBER' });
+          fetchInvitations();
+        }
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Erro ao criar convite');
       }
     } catch (err) {
       console.error(err);
+      alert('Erro ao criar convite. Tente novamente.');
     } finally {
       setSending(false);
     }
@@ -130,7 +156,7 @@ export default function ConvitesTab() {
             </div>
 
             <div className="flex flex-col gap-1 mb-6">
-              <h4 className="text-base font-bold text-[#111111] truncate" title={inv.email}>{inv.email}</h4>
+              <h4 className="text-base font-bold text-[#111111] truncate" title={inv.email || 'Convite por link'}>{inv.email || 'Convite por link'}</h4>
               <p className="text-xs text-[#64748B] font-medium flex items-center gap-1.5 uppercase tracking-wider">
                 Papel: <span className="text-[#111111] font-bold">{inv.role}</span>
               </p>
@@ -147,6 +173,18 @@ export default function ConvitesTab() {
                   <Clock size={12} /> {new Date(inv.expiresAt).toLocaleDateString()}
                 </span>
               </div>
+              {inv.inviteLink && (
+                <div className="flex items-center justify-between gap-3 text-xs font-medium py-2 px-3 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0]">
+                  <div className="truncate text-[#111111]">{inv.inviteLink}</div>
+                  <button
+                    onClick={() => handleCopyToClipboard(inv.inviteLink)}
+                    className="inline-flex items-center gap-1 text-[#111111] font-bold hover:text-black"
+                    title="Copiar link"
+                  >
+                    <Copy size={14} /> Copiar
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="mt-6 flex items-center gap-2">
@@ -159,7 +197,7 @@ export default function ConvitesTab() {
                     <Trash2 size={14} /> Cancelar
                   </button>
                   <button 
-                    onClick={() => alert(`Convite para ${inv.email} reenviado!`)}
+                    onClick={() => alert(`Convite para ${inv.email || 'link de convite'} reenviado!`)}
                     className="flex-1 py-2.5 rounded-xl bg-[#FAFAFA] text-xs font-bold text-[#111111] hover:bg-[#F1F5F9] transition-all flex items-center justify-center gap-1.5"
                   >
                     <RefreshCcw size={14} /> Reenviar
@@ -190,10 +228,32 @@ export default function ConvitesTab() {
             <form onSubmit={handleSendInvite} className="p-8 pt-6 flex flex-col gap-6">
               <div>
                 <h3 className="text-xl font-bold text-[#111111] tracking-tight">Convidar para a Equipe</h3>
-                <p className="text-sm text-[#64748B] font-medium">O novo membro receberá um e-mail com o link de acesso</p>
+                <p className="text-sm text-[#64748B] font-medium">
+                  {inviteMode === 'email'
+                    ? 'O novo membro receberá um e-mail com o link de acesso.'
+                    : 'Gerar um link de convite que pode ser compartilhado diretamente.'
+                  }
+                </p>
               </div>
 
-              <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setInviteMode('email'); setCreatedInvite(null); }}
+                  className={`py-3 rounded-2xl text-sm font-bold transition-all ${inviteMode === 'email' ? 'bg-black text-white' : 'bg-[#F8FAFC] text-[#111111] hover:bg-[#E2E8F0]'}`}
+                >
+                  Por e-mail
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setInviteMode('link'); setCreatedInvite(null); }}
+                  className={`py-3 rounded-2xl text-sm font-bold transition-all ${inviteMode === 'link' ? 'bg-black text-white' : 'bg-[#F8FAFC] text-[#111111] hover:bg-[#E2E8F0]'}`}
+                >
+                  Por link
+                </button>
+              </div>
+
+              {inviteMode === 'email' && (
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest px-1">E-mail do Convidado</label>
                   <input 
@@ -205,23 +265,23 @@ export default function ConvitesTab() {
                     className="w-full bg-[#FAFAFB] border border-[#0F172A0A] rounded-2xl p-4 text-sm font-bold focus:ring-2 focus:ring-black/5 outline-none transition-all"
                   />
                 </div>
+              )}
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest px-1">Papel / Permissões</label>
-                  <select 
-                    value={newInvite.role}
-                    onChange={(e) => setNewInvite({ ...newInvite, role: e.target.value })}
-                    className="w-full bg-[#FAFAFB] border border-[#0F172A0A] rounded-2xl p-4 text-sm font-bold focus:ring-2 focus:ring-black/5 outline-none transition-all appearance-none cursor-pointer"
-                  >
-                    <option value="MEMBER">Membro Padrão</option>
-                    <option value="ADMIN">Administrador</option>
-                    <option value="MANAGER">Gerente de Projeto</option>
-                    <option value="DEVELOPER">Desenvolvedor</option>
-                    <option value="DESIGNER">Designer</option>
-                    <option value="FINANCE">Financeiro</option>
-                    <option value="VIEWER">Apenas Leitura</option>
-                  </select>
-                </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest px-1">Papel / Permissões</label>
+                <select 
+                  value={newInvite.role}
+                  onChange={(e) => setNewInvite({ ...newInvite, role: e.target.value })}
+                  className="w-full bg-[#FAFAFB] border border-[#0F172A0A] rounded-2xl p-4 text-sm font-bold focus:ring-2 focus:ring-black/5 outline-none transition-all appearance-none cursor-pointer"
+                >
+                  <option value="MEMBER">Membro Padrão</option>
+                  <option value="ADMIN">Administrador</option>
+                  <option value="MANAGER">Gerente de Projeto</option>
+                  <option value="DEVELOPER">Desenvolvedor</option>
+                  <option value="DESIGNER">Designer</option>
+                  <option value="FINANCE">Financeiro</option>
+                  <option value="VIEWER">Apenas Leitura</option>
+                </select>
               </div>
 
               <div className="bg-amber-50 rounded-2xl p-4 flex gap-3 border border-amber-100/50">
@@ -231,12 +291,33 @@ export default function ConvitesTab() {
                 </p>
               </div>
 
+              {createdInvite?.inviteLink ? (
+                <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-3xl p-5 space-y-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-bold text-[#111111]">Link de convite criado</p>
+                      <p className="text-xs text-[#64748B]">Compartilhe este endereço com quem você deseja convidar.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyToClipboard(createdInvite.inviteLink)}
+                      className="inline-flex items-center gap-2 rounded-2xl border border-[#E2E8F0] bg-white px-4 py-2 text-xs font-bold text-[#111111] hover:bg-[#F1F5F9]"
+                    >
+                      <Copy size={14} /> Copiar link
+                    </button>
+                  </div>
+                  <div className="rounded-2xl bg-white border border-[#E2E8F0] p-4 text-xs text-[#111111] break-all">
+                    {createdInvite.inviteLink}
+                  </div>
+                </div>
+              ) : null}
+
               <button 
                 type="submit"
                 disabled={sending}
                 className="w-full py-4 rounded-2xl bg-black text-white text-sm font-bold hover:bg-neutral-800 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-black/10"
               >
-                {sending ? 'Enviando...' : 'Enviar Convite'}
+                {sending ? 'Enviando...' : inviteMode === 'email' ? 'Enviar Convite' : 'Gerar Link de Convite'}
                 {!sending && <Send size={16} />}
               </button>
             </form>
