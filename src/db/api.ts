@@ -530,6 +530,149 @@ apiRouter.delete("/workspace/members/:id", async (req: AuthRequest, res) => {
   }
 });
 
+// --- WORKSPACE TEAMS ---
+apiRouter.get("/workspace/teams", async (req: AuthRequest, res) => {
+  try {
+    const [workspace] = await db.select({ settings: workspaces.settings }).from(workspaces).where(eq(workspaces.id, req.workspaceId!)).limit(1);
+    const teams = Array.isArray(workspace?.settings?.organizationalTeams) ? workspace.settings.organizationalTeams : [];
+
+    const memberMap = new Map<string, any>();
+    const members = await db.select({
+      id: workspaceMembers.id,
+      userUid: workspaceMembers.userUid,
+      role: workspaceMembers.role,
+      cargo: workspaceMembers.cargo,
+      status: workspaceMembers.status,
+      createdAt: workspaceMembers.createdAt,
+      userName: users.displayName,
+      userEmail: users.email,
+      userPhoto: users.photoUrl,
+    })
+      .from(workspaceMembers)
+      .innerJoin(users, eq(workspaceMembers.userUid, users.uid))
+      .where(eq(workspaceMembers.workspaceId, req.workspaceId!));
+
+    members.forEach((member) => memberMap.set(String(member.id), member));
+
+    const enrichedTeams = teams.map((team: any) => {
+      const ownerMember = memberMap.get(String(team.ownerId || '')) || members.find((member) => member.userUid === team.ownerUid);
+      return {
+        ...team,
+        owner: ownerMember?.userName || team.owner || 'A definir',
+        memberIds: Array.isArray(team.memberIds) ? team.memberIds : [],
+      };
+    });
+
+    res.json(enrichedTeams);
+  } catch (error) {
+    console.error("Error fetching workspace teams:", error);
+    res.status(500).json({ error: "Failed to fetch workspace teams" });
+  }
+});
+
+apiRouter.post("/workspace/teams", async (req: AuthRequest, res) => {
+  try {
+    const { name, description, ownerId, memberIds } = req.body;
+    if (!name?.trim()) return res.status(400).json({ error: "O nome do time é obrigatório." });
+
+    const { getMemberRole, WorkspaceRole } = await import("./permissions.ts");
+    const myRole = await getMemberRole(req.user!.uid, req.workspaceId!);
+    if (myRole !== WorkspaceRole.OWNER && myRole !== WorkspaceRole.ADMIN) {
+      return res.status(403).json({ error: "Insufficient permissions" });
+    }
+
+    const [workspace] = await db.select({ settings: workspaces.settings }).from(workspaces).where(eq(workspaces.id, req.workspaceId!)).limit(1);
+    const settings = workspace?.settings || {};
+    const teams = Array.isArray(settings.organizationalTeams) ? settings.organizationalTeams : [];
+
+    const createdTeam = {
+      id: `team-${Date.now()}`,
+      name: name.trim(),
+      description: description?.trim() || 'Time criado pelo console operacional de workspaces.',
+      ownerId: ownerId || req.user!.uid,
+      memberIds: Array.isArray(memberIds) ? memberIds.map(Number).filter(Boolean) : [],
+      createdAt: new Date().toISOString(),
+    };
+
+    await db.update(workspaces)
+      .set({ settings: { ...settings, organizationalTeams: [createdTeam, ...teams] } })
+      .where(eq(workspaces.id, req.workspaceId!));
+
+    await logAction(req, 'CREATE', 'workspace_teams', createdTeam.id, null, createdTeam);
+    res.status(201).json(createdTeam);
+  } catch (error) {
+    console.error("Error creating workspace team:", error);
+    res.status(500).json({ error: "Failed to create workspace team" });
+  }
+});
+
+apiRouter.put("/workspace/teams/:id", async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { name, description, ownerId, memberIds } = req.body;
+
+    const { getMemberRole, WorkspaceRole } = await import("./permissions.ts");
+    const myRole = await getMemberRole(req.user!.uid, req.workspaceId!);
+    if (myRole !== WorkspaceRole.OWNER && myRole !== WorkspaceRole.ADMIN) {
+      return res.status(403).json({ error: "Insufficient permissions" });
+    }
+
+    const [workspace] = await db.select({ settings: workspaces.settings }).from(workspaces).where(eq(workspaces.id, req.workspaceId!)).limit(1);
+    const settings = workspace?.settings || {};
+    const teams = Array.isArray(settings.organizationalTeams) ? settings.organizationalTeams : [];
+    const targetIndex = teams.findIndex((team: any) => team.id === id);
+
+    if (targetIndex === -1) {
+      return res.status(404).json({ error: "Team not found" });
+    }
+
+    const current = teams[targetIndex];
+    const updatedTeam = {
+      ...current,
+      name: name?.trim() || current.name,
+      description: description?.trim() || current.description,
+      ownerId: ownerId ?? current.ownerId,
+      memberIds: Array.isArray(memberIds) ? memberIds.map(Number).filter(Boolean) : current.memberIds || [],
+    };
+
+    teams[targetIndex] = updatedTeam;
+    await db.update(workspaces)
+      .set({ settings: { ...settings, organizationalTeams: teams } })
+      .where(eq(workspaces.id, req.workspaceId!));
+
+    await logAction(req, 'UPDATE', 'workspace_teams', id, current, updatedTeam);
+    res.json(updatedTeam);
+  } catch (error) {
+    console.error("Error updating workspace team:", error);
+    res.status(500).json({ error: "Failed to update workspace team" });
+  }
+});
+
+apiRouter.delete("/workspace/teams/:id", async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { getMemberRole, WorkspaceRole } = await import("./permissions.ts");
+    const myRole = await getMemberRole(req.user!.uid, req.workspaceId!);
+    if (myRole !== WorkspaceRole.OWNER && myRole !== WorkspaceRole.ADMIN) {
+      return res.status(403).json({ error: "Insufficient permissions" });
+    }
+
+    const [workspace] = await db.select({ settings: workspaces.settings }).from(workspaces).where(eq(workspaces.id, req.workspaceId!)).limit(1);
+    const settings = workspace?.settings || {};
+    const teams = Array.isArray(settings.organizationalTeams) ? settings.organizationalTeams : [];
+    const filteredTeams = teams.filter((team: any) => team.id !== id);
+
+    await db.update(workspaces)
+      .set({ settings: { ...settings, organizationalTeams: filteredTeams } })
+      .where(eq(workspaces.id, req.workspaceId!));
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting workspace team:", error);
+    res.status(500).json({ error: "Failed to delete workspace team" });
+  }
+});
+
 // --- INVITATIONS ---
 apiRouter.get("/workspace/invitations", async (req: AuthRequest, res) => {
   try {

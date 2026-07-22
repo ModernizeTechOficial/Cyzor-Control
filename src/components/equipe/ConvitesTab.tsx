@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   Mail, 
   Send, 
@@ -8,7 +8,9 @@ import {
   RefreshCcw,
   XCircle,
   UserPlus,
-  Copy
+  Copy,
+  Search,
+  ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -21,6 +23,8 @@ export default function ConvitesTab() {
   const [inviteMode, setInviteMode] = useState<'email' | 'link'>('email');
   const [createdInvite, setCreatedInvite] = useState<any>(null);
   const [sending, setSending] = useState(false);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'PENDING' | 'ACCEPTED' | 'CANCELLED'>('all');
 
   const fetchInvitations = async () => {
     try {
@@ -100,6 +104,21 @@ export default function ConvitesTab() {
     }
   };
 
+  const metrics = useMemo(() => {
+    const pending = invitations.filter((inv) => inv.status === 'PENDING').length;
+    const accepted = invitations.filter((inv) => inv.status === 'ACCEPTED').length;
+    const cancelled = invitations.filter((inv) => inv.status === 'CANCELLED').length;
+    const approvalRate = invitations.length ? Math.round((accepted / invitations.length) * 100) : 0;
+
+    return { pending, accepted, cancelled, approvalRate };
+  }, [invitations]);
+
+  const filteredInvitations = invitations.filter((inv) => {
+    const matchesSearch = !search || (inv.email || 'Convite por link').toLowerCase().includes(search.toLowerCase()) || (inv.role || '').toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || inv.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
   return (
     <div className="flex flex-col gap-6 h-full relative">
       {/* Header Area */}
@@ -116,18 +135,64 @@ export default function ConvitesTab() {
         </button>
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {[
+          { label: 'Pendentes', value: metrics.pending, tone: 'bg-amber-50 text-amber-700' },
+          { label: 'Aceitos', value: metrics.accepted, tone: 'bg-emerald-50 text-emerald-700' },
+          { label: 'Cancelados', value: metrics.cancelled, tone: 'bg-rose-50 text-rose-700' },
+          { label: 'Taxa de aceitação', value: `${metrics.approvalRate}%`, tone: 'bg-slate-100 text-slate-800' },
+        ].map((card) => (
+          <div key={card.label} className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-[10px] uppercase tracking-[0.25em] text-slate-400">{card.label}</p>
+            <div className="mt-3 flex items-center justify-between">
+              <span className="text-2xl font-black text-slate-900">{card.value}</span>
+              <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.2em] ${card.tone}`}>{card.label}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-[#0F172A0A] rounded-[24px] p-4 shadow-[0_4px_20px_rgb(0,0,0,0.01)]">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#94A3B8]" size={16} />
+          <input
+            type="text"
+            placeholder="Buscar por e-mail ou papel..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full bg-[#FAFAFB] border-none rounded-xl py-2.5 pl-11 pr-4 text-sm font-medium focus:ring-2 focus:ring-black/5 transition-all outline-none text-[#111111]"
+          />
+        </div>
+
+        <div className="flex items-center gap-3">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as 'all' | 'PENDING' | 'ACCEPTED' | 'CANCELLED')}
+            className="rounded-xl bg-[#FAFAFB] border border-[#0F172A0A] px-3 py-2 text-sm font-bold text-slate-700"
+          >
+            <option value="all">Todos</option>
+            <option value="PENDING">Pendentes</option>
+            <option value="ACCEPTED">Aceitos</option>
+            <option value="CANCELLED">Cancelados</option>
+          </select>
+          <div className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700">
+            <ShieldCheck size={14} /> Governança ativa
+          </div>
+        </div>
+      </div>
+
       {/* Invitations Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {loading ? (
           <div className="col-span-full py-12 text-center text-sm text-[#64748B] font-medium">Carregando convites...</div>
-        ) : invitations.length === 0 ? (
+        ) : filteredInvitations.length === 0 ? (
           <div className="col-span-full py-24 bg-white border border-[#0F172A0A] rounded-[32px] flex flex-col items-center justify-center gap-4 shadow-[0_4px_20px_rgb(0,0,0,0.01)]">
             <div className="w-16 h-16 rounded-3xl bg-[#F8FAFC] flex items-center justify-center text-[#94A3B8]">
               <Mail size={32} />
             </div>
             <div className="text-center">
-              <h4 className="text-lg font-bold text-[#111111] tracking-tight">Nenhum convite pendente</h4>
-              <p className="text-sm text-[#64748B] font-medium">Comece convidando membros para o seu time</p>
+              <h4 className="text-lg font-bold text-[#111111] tracking-tight">Nenhum convite encontrado</h4>
+              <p className="text-sm text-[#64748B] font-medium">Ajuste os filtros ou envie um novo convite para o seu time</p>
             </div>
             <button 
               onClick={() => setShowInviteModal(true)}
@@ -136,7 +201,7 @@ export default function ConvitesTab() {
               Enviar convite agora
             </button>
           </div>
-        ) : invitations.map((inv) => (
+        ) : filteredInvitations.map((inv) => (
           <div key={inv.id} className="bg-white border border-[#0F172A0A] rounded-[28px] p-6 shadow-[0_4px_20px_rgb(0,0,0,0.01)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition-all group relative">
             <div className="flex items-center justify-between mb-6">
               <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border ${

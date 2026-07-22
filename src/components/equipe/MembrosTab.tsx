@@ -7,15 +7,21 @@ import {
   UserPlus, 
   Search,
   CheckCircle2,
-  AlertCircle,
   XCircle,
   Clock,
   X,
-  User
+  Filter,
+  Download,
+  Send,
+  Layers3,
+  Building2,
+  Briefcase,
+  SlidersHorizontal
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import ModalContainer from '../layout/ModalContainer';
 import { Vision360 } from '../common/Vision360';
+import MemberDetailsDrawer from './MemberDetailsDrawer';
 
 export default function MembrosTab() {
   const { fetchWithAuth } = useAuth();
@@ -27,6 +33,8 @@ export default function MembrosTab() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [newInvite, setNewInvite] = useState({ email: '', role: 'MEMBER' });
   const [sendingInvite, setSendingInvite] = useState(false);
+  const [selectedMembers, setSelectedMembers] = useState<number[]>([]);
+  const [filters, setFilters] = useState({ team: 'all', department: 'all', workspace: 'all', role: 'all', status: 'all' });
 
   const fetchMembers = async () => {
     try {
@@ -103,32 +111,89 @@ export default function MembrosTab() {
     }
   };
 
-  const filteredMembers = members.filter(m => 
-    m.userName?.toLowerCase().includes(search.toLowerCase()) || 
-    m.userEmail?.toLowerCase().includes(search.toLowerCase()) ||
-    m.cargo?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredMembers = members.filter((m) => {
+    const matchesSearch =
+      m.userName?.toLowerCase().includes(search.toLowerCase()) ||
+      m.userEmail?.toLowerCase().includes(search.toLowerCase()) ||
+      m.cargo?.toLowerCase().includes(search.toLowerCase());
+
+    const matchesTeam = filters.team === 'all' || (m.team || m.equipe || 'Sem equipe') === filters.team;
+    const matchesDepartment = filters.department === 'all' || (m.department || m.cargo || 'General') === filters.department;
+    const matchesWorkspace = filters.workspace === 'all' || (m.workspace || 'Workspace principal') === filters.workspace;
+    const matchesRole = filters.role === 'all' || (m.role || 'MEMBER') === filters.role;
+    const matchesStatus = filters.status === 'all' || (m.status || 'Ativo') === filters.status;
+
+    return matchesSearch && matchesTeam && matchesDepartment && matchesWorkspace && matchesRole && matchesStatus;
+  });
+
+  const teamOptions = Array.from(new Set(members.map((m) => m.team || m.equipe || 'Sem equipe')));
+  const departmentOptions = Array.from(new Set(members.map((m) => m.department || m.cargo || 'General')));
+  const workspaceOptions = Array.from(new Set(members.map((m) => m.workspace || 'Workspace principal')));
+  const roleOptions = Array.from(new Set(members.map((m) => m.role || 'MEMBER')));
 
   return (
     <div className="flex flex-col gap-6">
       {/* Table Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-[#0F172A0A] rounded-[24px] p-4 shadow-[0_4px_20px_rgb(0,0,0,0.01)]">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#94A3B8]" size={16} />
-          <input 
-            type="text" 
-            placeholder="Buscar por nome, e-mail ou cargo..." 
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-[#FAFAFB] border-none rounded-xl py-2.5 pl-11 pr-4 text-sm font-medium focus:ring-2 focus:ring-black/5 transition-all outline-none text-[#111111]"
-          />
+      <div className="flex flex-col gap-4 bg-white border border-[#0F172A0A] rounded-[24px] p-4 shadow-[0_4px_20px_rgb(0,0,0,0.01)]">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#94A3B8]" size={16} />
+            <input 
+              type="text" 
+              placeholder="Buscar por nome, e-mail ou cargo..." 
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-[#FAFAFB] border-none rounded-xl py-2.5 pl-11 pr-4 text-sm font-medium focus:ring-2 focus:ring-black/5 transition-all outline-none text-[#111111]"
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700"><SlidersHorizontal size={14} /> Filtros</button>
+            <button className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700"><Download size={14} /> Exportar</button>
+            <button className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700"><Send size={14} /> Lembrete</button>
+            <button 
+              onClick={() => setShowInviteModal(true)}
+              className="flex items-center gap-2 bg-black text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-neutral-800 transition-all shadow-sm"
+            >
+              <UserPlus size={16} /> Convidar Membro
+            </button>
+          </div>
         </div>
-        <button 
-          onClick={() => setShowInviteModal(true)}
-          className="flex items-center gap-2 bg-black text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-neutral-800 transition-all shadow-sm"
-        >
-          <UserPlus size={16} /> Convidar Membro
-        </button>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
+          <select value={filters.team} onChange={(e) => setFilters((prev) => ({ ...prev, team: e.target.value }))} className="rounded-xl bg-[#FAFAFB] border border-[#0F172A0A] px-3 py-2 text-sm font-bold text-slate-700">
+            <option value="all">Equipe</option>
+            {teamOptions.map((team) => <option key={team} value={team}>{team}</option>)}
+          </select>
+          <select value={filters.department} onChange={(e) => setFilters((prev) => ({ ...prev, department: e.target.value }))} className="rounded-xl bg-[#FAFAFB] border border-[#0F172A0A] px-3 py-2 text-sm font-bold text-slate-700">
+            <option value="all">Departamento</option>
+            {departmentOptions.map((department) => <option key={department} value={department}>{department}</option>)}
+          </select>
+          <select value={filters.workspace} onChange={(e) => setFilters((prev) => ({ ...prev, workspace: e.target.value }))} className="rounded-xl bg-[#FAFAFB] border border-[#0F172A0A] px-3 py-2 text-sm font-bold text-slate-700">
+            <option value="all">Workspace</option>
+            {workspaceOptions.map((workspace) => <option key={workspace} value={workspace}>{workspace}</option>)}
+          </select>
+          <select value={filters.role} onChange={(e) => setFilters((prev) => ({ ...prev, role: e.target.value }))} className="rounded-xl bg-[#FAFAFB] border border-[#0F172A0A] px-3 py-2 text-sm font-bold text-slate-700">
+            <option value="all">Role</option>
+            {roleOptions.map((role) => <option key={role} value={role}>{role}</option>)}
+          </select>
+          <select value={filters.status} onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value }))} className="rounded-xl bg-[#FAFAFB] border border-[#0F172A0A] px-3 py-2 text-sm font-bold text-slate-700">
+            <option value="all">Status</option>
+            <option value="Ativo">Ativo</option>
+            <option value="Inativo">Inativo</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between px-1">
+        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-slate-500">
+          <Layers3 size={14} /> Bulk actions
+        </div>
+        <div className="flex items-center gap-2">
+          <button className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700">Mover equipe</button>
+          <button className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700">Trocar gestor</button>
+          <button className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700">Alterar permissões</button>
+        </div>
       </div>
 
       {/* Members List */}
@@ -137,6 +202,12 @@ export default function MembrosTab() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-[#FAFAFB] border-b border-[#0F172A0A]">
+                <th className="px-8 py-5 text-[11px] font-bold text-[#64748B] uppercase tracking-widest">
+                  <input type="checkbox" checked={selectedMembers.length > 0 && selectedMembers.length === filteredMembers.length} onChange={() => {
+                    if (selectedMembers.length === filteredMembers.length) setSelectedMembers([]);
+                    else setSelectedMembers(filteredMembers.map((member) => member.id));
+                  }} className="h-4 w-4 rounded border-slate-300" />
+                </th>
                 <th className="px-8 py-5 text-[11px] font-bold text-[#64748B] uppercase tracking-widest">Membro</th>
                 <th className="px-8 py-5 text-[11px] font-bold text-[#64748B] uppercase tracking-widest">Cargo / Função</th>
                 <th className="px-8 py-5 text-[11px] font-bold text-[#64748B] uppercase tracking-widest">Papel</th>
@@ -160,6 +231,12 @@ export default function MembrosTab() {
                   className="hover:bg-[#FAFAFB]/50 transition-colors group cursor-pointer"
                   onClick={() => { setSelectedMemberFor360(member); setActiveModalTab('dados'); }}
                 >
+                  <td className="px-8 py-5" onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" checked={selectedMembers.includes(member.id)} onChange={(e) => {
+                      if (e.target.checked) setSelectedMembers((prev) => [...prev, member.id]);
+                      else setSelectedMembers((prev) => prev.filter((id) => id !== member.id));
+                    }} className="h-4 w-4 rounded border-slate-300" />
+                  </td>
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-xl bg-[#FAFAFB] border border-[#0F172A0A] overflow-hidden flex items-center justify-center text-[#111111] font-bold text-sm shadow-sm flex-shrink-0">
@@ -233,6 +310,8 @@ export default function MembrosTab() {
           </table>
         </div>
       </div>
+
+      <MemberDetailsDrawer member={selectedMemberFor360} isOpen={!!selectedMemberFor360} onClose={() => setSelectedMemberFor360(null)} />
 
       {/* Member 360 & Details Modal */}
       {selectedMemberFor360 && (

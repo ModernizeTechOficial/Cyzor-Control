@@ -8,41 +8,50 @@ import {
   Settings, 
   LayoutDashboard,
   Mail,
-  MoreHorizontal,
-  ChevronRight,
-  ShieldCheck,
-  Search,
-  Filter
+  Building2,
+  Briefcase,
+  Layers3,
+  Workflow,
+  Activity,
+  Sparkles
 } from 'lucide-react';
 
-import EquipeDashboard from './equipe/EquipeDashboard';
+import OverviewTab from './equipe/OverviewTab';
 import MembrosTab from './equipe/MembrosTab';
+import TeamsTab from './equipe/TeamsTab';
+import DepartmentsTab from './equipe/DepartmentsTab';
 import ConvitesTab from './equipe/ConvitesTab';
 import FuncoesTab from './equipe/FuncoesTab';
-import WorkspaceSettingsTab from './equipe/WorkspaceSettingsTab';
+import WorkspacesTab from './equipe/WorkspacesTab';
+import OrganizationTab from './equipe/OrganizationTab';
 import AuditoriaTab from './equipe/AuditoriaTab';
+import WorkspaceSettingsTab from './equipe/WorkspaceSettingsTab';
 import StandardHeader from './layout/StandardHeader';
 
-type EquipeTab = 'dashboard' | 'membros' | 'convites' | 'funcoes' | 'configuracoes' | 'auditoria';
+type EquipeTab = 'overview' | 'membros' | 'teams' | 'departments' | 'convites' | 'funcoes' | 'workspaces' | 'organization' | 'auditoria' | 'configuracoes';
 
 export default function EquipeView() {
-  const [activeTab, setActiveTab] = useState<EquipeTab>('dashboard');
+  const [activeTab, setActiveTab] = useState<EquipeTab>('overview');
 
   const tabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'membros', label: 'Membros', icon: Users },
-    { id: 'convites', label: 'Convites', icon: Mail },
-    { id: 'funcoes', label: 'Funções & Permissões', icon: Shield },
-    { id: 'auditoria', label: 'Auditoria', icon: History },
-    { id: 'configuracoes', label: 'Workspace', icon: Settings },
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'membros', label: 'Members', icon: Users },
+    { id: 'teams', label: 'Teams', icon: Users },
+    { id: 'departments', label: 'Departments', icon: Building2 },
+    { id: 'convites', label: 'Invitations', icon: Mail },
+    { id: 'funcoes', label: 'Roles & Permissions', icon: Shield },
+    { id: 'workspaces', label: 'Workspaces', icon: Layers3 },
+    { id: 'organization', label: 'Organization', icon: Workflow },
+    { id: 'auditoria', label: 'Activity', icon: Activity },
+    { id: 'configuracoes', label: 'Settings', icon: Settings },
   ];
 
   return (
     <div className="w-full mx-auto pb-12 flex flex-col gap-10 animate-in fade-in duration-500 relative px-4 sm:px-6 lg:px-10">
       {/* Header */}
       <StandardHeader 
-        title="Time & Workspace"
-        subtitle="Gerencie membros, convites, funções, permissões e auditoria do workspace em tempo real."
+        title="Teams & Workspaces"
+        subtitle="Centro operacional de gestão organizacional, com overview executivo, membros, equipes, departamentos, convites, workspaces, permissões, organização e auditoria."
       />
 
       <div className="flex flex-col gap-6">
@@ -80,10 +89,14 @@ export default function EquipeView() {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
             >
-              {activeTab === 'dashboard' && <EquipeDashboard />}
+              {activeTab === 'overview' && <OverviewTab />}
               {activeTab === 'membros' && <MembrosTab />}
+              {activeTab === 'teams' && <TeamsTab />}
+              {activeTab === 'departments' && <DepartmentsTab />}
               {activeTab === 'convites' && <ConvitesTab />}
               {activeTab === 'funcoes' && <FuncoesTab />}
+              {activeTab === 'workspaces' && <WorkspacesTab />}
+              {activeTab === 'organization' && <OrganizationTab />}
               {activeTab === 'auditoria' && <AuditoriaTab />}
               {activeTab === 'configuracoes' && <WorkspaceSettingsTab />}
             </motion.div>

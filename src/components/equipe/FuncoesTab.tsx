@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { 
   Shield, 
   Check, 
@@ -5,15 +6,17 @@ import {
   Lock, 
   Info,
   ChevronRight,
-  Eye,
   Settings,
   GitBranch,
   Package,
   DollarSign,
-  BotMessageSquare
+  BotMessageSquare,
+  Users
 } from 'lucide-react';
 
 export default function FuncoesTab() {
+  const [selectedRoleId, setSelectedRoleId] = useState('manager');
+
   const roles = [
     { 
       id: 'owner', 
@@ -67,10 +70,10 @@ export default function FuncoesTab() {
   ];
 
   const permissionList = [
-    { id: 'manage_members', label: 'Gerenciar Membros', icon: UsersIcon },
+    { id: 'manage_members', label: 'Gerenciar Membros', icon: Users },
     { id: 'create_projects', label: 'Criar Projetos', icon: GitBranch },
     { id: 'edit_projects', label: 'Editar Projetos', icon: GitBranch },
-    { id: 'delete_projects', label: 'Excluir Projetos', icon: TrashIcon },
+    { id: 'delete_projects', label: 'Excluir Projetos', icon: Lock },
     { id: 'view_finance', label: 'Visualizar Financeiro', icon: DollarSign },
     { id: 'manage_finance', label: 'Gerenciar Financeiro', icon: DollarSign },
     { id: 'manage_ai', label: 'Gerenciar IA', icon: BotMessageSquare },
@@ -78,6 +81,9 @@ export default function FuncoesTab() {
     { id: 'create_products', label: 'Criar Produtos', icon: Package },
     { id: 'publish_products', label: 'Publicar Produtos (Deploy)', icon: GitBranch }
   ];
+
+  const selectedRole = roles.find((role) => role.id === selectedRoleId) || roles[0];
+  const selectedRolePermissionSet = new Set(selectedRole.permissions);
 
   return (
     <div className="flex flex-col gap-8 h-full">
@@ -98,17 +104,20 @@ export default function FuncoesTab() {
           {roles.map((role) => (
             <button
               key={role.id}
+              onClick={() => setSelectedRoleId(role.id)}
               className={`flex flex-col gap-1 p-5 rounded-3xl border text-left transition-all ${
-                role.id === 'owner' 
+                role.id === selectedRoleId
                   ? 'bg-black border-black text-white shadow-xl shadow-black/10' 
-                  : 'bg-white border-[#0F172A0A] text-[#111111] hover:border-black/10 shadow-[0_4px_20px_rgb(0,0,0,0.01)]'
+                  : role.id === 'owner' 
+                    ? 'bg-black/90 border-black text-white/90 shadow-xl shadow-black/10' 
+                    : 'bg-white border-[#0F172A0A] text-[#111111] hover:border-black/10 shadow-[0_4px_20px_rgb(0,0,0,0.01)]'
               }`}
             >
               <div className="flex items-center justify-between mb-1">
                 <span className="text-sm font-bold tracking-tight">{role.name}</span>
-                <ChevronRight size={14} className={role.id === 'owner' ? 'text-white/40' : 'text-[#94A3B8]'} />
+                <ChevronRight size={14} className={role.id === selectedRoleId ? 'text-white/40' : role.id === 'owner' ? 'text-white/40' : 'text-[#94A3B8]'} />
               </div>
-              <p className={`text-[11px] leading-relaxed font-medium ${role.id === 'owner' ? 'text-white/60' : 'text-[#64748B]'}`}>
+              <p className={`text-[11px] leading-relaxed font-medium ${role.id === selectedRoleId || role.id === 'owner' ? 'text-white/60' : 'text-[#64748B]'}`}>
                 {role.desc}
               </p>
             </button>
@@ -122,28 +131,31 @@ export default function FuncoesTab() {
               <Shield size={24} />
             </div>
             <div>
-              <h4 className="text-xl font-bold text-[#111111] tracking-tight">Permissões de Administrador</h4>
-              <p className="text-sm text-[#64748B] font-medium italic">O papel Administrador possui acesso quase total aos recursos.</p>
+              <h4 className="text-xl font-bold text-[#111111] tracking-tight">Permissões de {selectedRole.name}</h4>
+              <p className="text-sm text-[#64748B] font-medium italic">{selectedRole.desc}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-            {permissionList.map((perm) => (
-              <div key={perm.id} className="flex items-start justify-between group">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-[#F8FAFC] flex items-center justify-center text-[#94A3B8] group-hover:bg-[#111111] group-hover:text-white transition-all">
-                    <perm.icon size={18} />
+            {permissionList.map((perm) => {
+              const allowed = selectedRolePermissionSet.has('all') || selectedRolePermissionSet.has(perm.id);
+              return (
+                <div key={perm.id} className="flex items-start justify-between group">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-[#F8FAFC] flex items-center justify-center text-[#94A3B8] group-hover:bg-[#111111] group-hover:text-white transition-all">
+                      <perm.icon size={18} />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-[#111111]">{perm.label}</span>
+                      <span className="text-[11px] text-[#64748B] font-medium uppercase tracking-widest">{allowed ? 'Acesso habilitado' : 'Sem acesso'}</span>
+                    </div>
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-[#111111]">{perm.label}</span>
-                    <span className="text-[11px] text-[#64748B] font-medium uppercase tracking-widest">Acesso Total</span>
+                  <div className={`mt-1 w-6 h-6 rounded-lg border flex items-center justify-center ${allowed ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-100 border-slate-200 text-slate-400'}`}>
+                    {allowed ? <Check size={14} strokeWidth={3} /> : <X size={14} strokeWidth={3} />}
                   </div>
                 </div>
-                <div className="mt-1 w-6 h-6 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
-                  <Check size={14} strokeWidth={3} />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="mt-12 p-6 bg-indigo-50/30 rounded-3xl border border-indigo-100/50 flex gap-4">
@@ -163,5 +175,3 @@ export default function FuncoesTab() {
   );
 }
 
-function UsersIcon(props: any) { return <Shield {...props} />; }
-function TrashIcon(props: any) { return <Lock {...props} />; }
