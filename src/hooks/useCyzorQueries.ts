@@ -168,3 +168,73 @@ export function useNotifications() {
     enabled: !!activeWorkspace,
   });
 }
+
+export function useInvitations() {
+  const { fetchWithAuth, activeWorkspace } = useAuth();
+
+  return useQuery({
+    queryKey: ['invitations', activeWorkspace?.id],
+    queryFn: async () => {
+      const res = await fetchWithAuth('/api/workspace/invitations');
+      if (!res.ok) throw new Error('Falha ao carregar convites');
+      return res.json();
+    },
+    enabled: !!activeWorkspace,
+  });
+}
+
+export function useDepartments() {
+  const { fetchWithAuth, activeWorkspace } = useAuth();
+
+  return useQuery({
+    queryKey: ['departments', activeWorkspace?.id],
+    queryFn: async () => {
+      const res = await fetchWithAuth('/api/workspace/departments');
+      if (!res.ok) throw new Error('Falha ao carregar departamentos');
+      return res.json();
+    },
+    enabled: !!activeWorkspace,
+  });
+}
+
+export function useWorkspaceTeams() {
+  const { fetchWithAuth, activeWorkspace } = useAuth();
+
+  return useQuery({
+    queryKey: ['workspace-teams', activeWorkspace?.id],
+    queryFn: async () => {
+      const res = await fetchWithAuth('/api/workspace/teams');
+      if (!res.ok) throw new Error('Falha ao carregar equipes');
+      return res.json();
+    },
+    enabled: !!activeWorkspace,
+  });
+}
+
+export function useOrganizationTree() {
+  const { fetchWithAuth, activeWorkspace } = useAuth();
+
+  return useQuery({
+    queryKey: ['organization-tree', activeWorkspace?.id],
+    queryFn: async () => {
+      const res = await fetchWithAuth('/api/workspace/organization-tree');
+      if (!res.ok) throw new Error('Falha ao carregar organograma');
+      return res.json();
+    },
+    enabled: !!activeWorkspace,
+  });
+}
+
+export function useAuditLogs() {
+  const { fetchWithAuth, activeWorkspace } = useAuth();
+
+  return useQuery({
+    queryKey: ['audit-logs', activeWorkspace?.id],
+    queryFn: async () => {
+      const res = await fetchWithAuth('/api/workspace/audit-logs');
+      if (!res.ok) throw new Error('Falha ao carregar logs de auditoria');
+      return res.json();
+    },
+    enabled: !!activeWorkspace,
+  });
+}

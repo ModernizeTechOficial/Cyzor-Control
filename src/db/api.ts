@@ -8,7 +8,7 @@ import { BusinessEventTranslator } from "../services/BusinessEventTranslator.ts"
 import { TechnicalEvent } from "../types/domainEvents.ts";
 import { MissionService } from "../services/MissionService.ts";
 import { db } from "./index.ts";
-import { companies, clients, products, projects, tasks, ideas, documents, financeEntries, sprints, milestones, aiMemories, notifications, agendaEvents, users, workspaceMembers, workspaces, flows, notes, deploys, productLicenses, workspaceInvitations, auditLogs, entityComments, entityApprovals, roadmaps, entityTemplates, timelineActivities, professionalProfiles, professionalEvolutionEvents, professionalGoals, professionalCertifications, platformSettings } from "./schema.ts";
+import { companies, clients, products, projects, tasks, ideas, documents, financeEntries, sprints, milestones, aiMemories, notifications, agendaEvents, users, workspaceMembers, workspaces, workspaceTeams, workspaceDepartments, flows, notes, deploys, productLicenses, workspaceInvitations, auditLogs, entityComments, entityApprovals, roadmaps, entityTemplates, timelineActivities, professionalProfiles, professionalEvolutionEvents, professionalGoals, professionalCertifications, platformSettings } from "./schema.ts";
 import { eq, and, desc, sql, or, inArray, gte, lte, not } from "drizzle-orm";
 import { getUserSaaSState } from "./queries.ts";
 import { hasPermission, getMemberRole, sanitizePermissionsForRole, validateRolePermissionAssignment, isWorkspaceRole, WorkspaceRole } from "./permissions.ts";
@@ -571,7 +571,14 @@ apiRouter.get("/workspace/members", async (req: AuthRequest, res) => {
       userUid: workspaceMembers.userUid,
       role: workspaceMembers.role,
       cargo: workspaceMembers.cargo,
+      department: workspaceMembers.department,
+      teamName: workspaceMembers.teamName,
+      managerUid: workspaceMembers.managerUid,
+      permissions: workspaceMembers.permissions,
       status: workspaceMembers.status,
+      onboardingCompleted: workspaceMembers.onboardingCompleted,
+      xp: workspaceMembers.xp,
+      careerLevel: workspaceMembers.careerLevel,
       createdAt: workspaceMembers.createdAt,
       userName: users.displayName,
       userEmail: users.email,
@@ -580,8 +587,25 @@ apiRouter.get("/workspace/members", async (req: AuthRequest, res) => {
     .from(workspaceMembers)
     .innerJoin(users, eq(workspaceMembers.userUid, users.uid))
     .where(eq(workspaceMembers.workspaceId, req.workspaceId!));
+
+    // Also fetch manager names where managerUid exists
+    const managerUids = Array.from(new Set(data.map(m => m.managerUid).filter(Boolean))) as string[];
+    let managerMap: Record<string, string> = {};
+    if (managerUids.length > 0) {
+      const managers = await db.select({ uid: users.uid, displayName: users.displayName, email: users.email })
+        .from(users)
+        .where(inArray(users.uid, managerUids));
+      managers.forEach(m => {
+        managerMap[m.uid] = m.displayName || m.email;
+      });
+    }
+
+    const membersWithDetails = data.map(m => ({
+      ...m,
+      managerName: m.managerUid ? managerMap[m.managerUid] || 'Gestor' : undefined
+    }));
     
-    res.json(data);
+    res.json(membersWithDetails);
   } catch (error) {
     console.error("Error fetching members:", error);
     res.status(500).json({ error: "Failed to fetch members" });
@@ -590,7 +614,7 @@ apiRouter.get("/workspace/members", async (req: AuthRequest, res) => {
 
 apiRouter.put("/workspace/members/:id", async (req: AuthRequest, res) => {
   try {
-    const { role, cargo, status } = req.body;
+    const { role, cargo, department, teamName, managerUid, permissions, status, careerLevel } = req.body;
     const memberId = Number(req.params.id);
 
     const canManageMembers = await hasPermission(req.user!.uid, req.workspaceId!, 'manage_members');
@@ -605,12 +629,17 @@ apiRouter.put("/workspace/members/:id", async (req: AuthRequest, res) => {
       .set({ 
         role: role !== undefined ? role : oldMember.role, 
         cargo: cargo !== undefined ? cargo : oldMember.cargo,
-        status: status !== undefined ? status : oldMember.status
+        department: department !== undefined ? department : oldMember.department,
+        teamName: teamName !== undefined ? teamName : oldMember.teamName,
+        managerUid: managerUid !== undefined ? managerUid : oldMember.managerUid,
+        permissions: permissions !== undefined ? permissions : oldMember.permissions,
+        status: status !== undefined ? status : oldMember.status,
+        careerLevel: careerLevel !== undefined ? careerLevel : oldMember.careerLevel,
       })
       .where(and(eq(workspaceMembers.id, memberId), eq(workspaceMembers.workspaceId, req.workspaceId!)))
       .returning();
 
-    await logAction(req, 'UPDATE', 'workspace_members', memberId.toString(), oldMember, updated);
+    await logAction(req, 'UPDATE_MEMBER_ASSIGNMENT', 'workspace_members', memberId.toString(), oldMember, updated);
     res.json(updated);
   } catch (error) {
     console.error("Error updating member:", error);
@@ -917,6 +946,183 @@ apiRouter.delete("/workspace/invitations/:id", async (req: AuthRequest, res) => 
   } catch (error) {
     console.error("Error cancelling invitation:", error);
     res.status(500).json({ error: "Failed to cancel invitation" });
+  }
+});
+
+apiRouter.post("/workspace/invitations/:id/resend", async (req: AuthRequest, res) => {
+  try {
+    const invId = Number(req.params.id);
+    const canManageMembers = await hasPermission(req.user!.uid, req.workspaceId!, 'manage_members');
+    if (!canManageMembers) return res.status(403).json({ error: "Insufficient permissions" });
+
+    const [invitation] = await db.select().from(workspaceInvitations)
+      .where(and(eq(workspaceInvitations.id, invId), eq(workspaceInvitations.workspaceId, req.workspaceId!)))
+      .limit(1);
+
+    if (!invitation) return res.status(404).json({ error: "Convite não encontrado" });
+
+    const origin = req.headers.origin || `${req.protocol}://${req.get('host')}`;
+    const inviteLink = `${origin}/invite/${invitation.token}`;
+    const [workspace] = await db.select({ name: workspaces.name }).from(workspaces).where(eq(workspaces.id, req.workspaceId!)).limit(1);
+
+    const emailResult = await sendWorkspaceInvitationEmail({
+      to: invitation.email,
+      inviterName: req.user?.displayName || 'Administrador',
+      workspaceName: workspace?.name || 'Cyzor Control',
+      inviteLink,
+      role: invitation.role,
+      teamName: invitation.teamName || undefined,
+      department: invitation.department || undefined,
+      cargo: invitation.cargo || undefined,
+      workspaceId: req.workspaceId!
+    });
+
+    await logAction(req, 'RESEND_INVITE', 'workspace_invitations', invId.toString(), null, invitation);
+    res.json({ success: true, emailSent: emailResult.success });
+  } catch (error) {
+    console.error("Error resending invitation:", error);
+    res.status(500).json({ error: "Failed to resend invitation" });
+  }
+});
+
+apiRouter.post("/workspace/invitations/:id/revoke", async (req: AuthRequest, res) => {
+  try {
+    const invId = Number(req.params.id);
+    const canManageMembers = await hasPermission(req.user!.uid, req.workspaceId!, 'manage_members');
+    if (!canManageMembers) return res.status(403).json({ error: "Insufficient permissions" });
+
+    const [revoked] = await db.update(workspaceInvitations)
+      .set({ status: 'REVOKED' })
+      .where(and(eq(workspaceInvitations.id, invId), eq(workspaceInvitations.workspaceId, req.workspaceId!)))
+      .returning();
+
+    if (revoked) {
+      await logAction(req, 'REVOKE_INVITE', 'workspace_invitations', invId.toString(), null, revoked);
+    }
+    res.json({ success: true, invitation: revoked });
+  } catch (error) {
+    console.error("Error revoking invitation:", error);
+    res.status(500).json({ error: "Failed to revoke invitation" });
+  }
+});
+
+// --- DEPARTMENTS ---
+apiRouter.get("/workspace/departments", async (req: AuthRequest, res) => {
+  try {
+    const depts = await db.select().from(workspaceDepartments).where(eq(workspaceDepartments.workspaceId, req.workspaceId!));
+    res.json(depts);
+  } catch (error) {
+    console.error("Error fetching departments:", error);
+    res.status(500).json({ error: "Failed to fetch departments" });
+  }
+});
+
+apiRouter.post("/workspace/departments", async (req: AuthRequest, res) => {
+  try {
+    const { name, description, leadUid, healthScore } = req.body;
+    if (!name?.trim()) return res.status(400).json({ error: "Nome do departamento é obrigatório" });
+
+    const canManageMembers = await hasPermission(req.user!.uid, req.workspaceId!, 'manage_members');
+    if (!canManageMembers) return res.status(403).json({ error: "Insufficient permissions" });
+
+    const [created] = await db.insert(workspaceDepartments).values({
+      tenantId: req.tenantId as any,
+      workspaceId: req.workspaceId!,
+      name: name.trim(),
+      description: description?.trim() || null,
+      leadUid: leadUid || null,
+      healthScore: Number(healthScore) || 85,
+    }).returning();
+
+    await logAction(req, 'CREATE', 'workspace_departments', created.id.toString(), null, created);
+    res.status(201).json(created);
+  } catch (error) {
+    console.error("Error creating department:", error);
+    res.status(500).json({ error: "Failed to create department" });
+  }
+});
+
+apiRouter.put("/workspace/departments/:id", async (req: AuthRequest, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { name, description, leadUid, healthScore } = req.body;
+    const canManageMembers = await hasPermission(req.user!.uid, req.workspaceId!, 'manage_members');
+    if (!canManageMembers) return res.status(403).json({ error: "Insufficient permissions" });
+
+    const [oldDept] = await db.select().from(workspaceDepartments).where(eq(workspaceDepartments.id, id)).limit(1);
+    if (!oldDept) return res.status(404).json({ error: "Department not found" });
+
+    const [updated] = await db.update(workspaceDepartments)
+      .set({
+        name: name !== undefined ? name.trim() : oldDept.name,
+        description: description !== undefined ? description : oldDept.description,
+        leadUid: leadUid !== undefined ? leadUid : oldDept.leadUid,
+        healthScore: healthScore !== undefined ? Number(healthScore) : oldDept.healthScore,
+        updatedAt: new Date()
+      })
+      .where(and(eq(workspaceDepartments.id, id), eq(workspaceDepartments.workspaceId, req.workspaceId!)))
+      .returning();
+
+    await logAction(req, 'UPDATE', 'workspace_departments', id.toString(), oldDept, updated);
+    res.json(updated);
+  } catch (error) {
+    console.error("Error updating department:", error);
+    res.status(500).json({ error: "Failed to update department" });
+  }
+});
+
+apiRouter.delete("/workspace/departments/:id", async (req: AuthRequest, res) => {
+  try {
+    const id = Number(req.params.id);
+    const canManageMembers = await hasPermission(req.user!.uid, req.workspaceId!, 'manage_members');
+    if (!canManageMembers) return res.status(403).json({ error: "Insufficient permissions" });
+
+    const [deleted] = await db.delete(workspaceDepartments)
+      .where(and(eq(workspaceDepartments.id, id), eq(workspaceDepartments.workspaceId, req.workspaceId!)))
+      .returning();
+
+    if (deleted) {
+      await logAction(req, 'DELETE', 'workspace_departments', id.toString(), deleted, null);
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting department:", error);
+    res.status(500).json({ error: "Failed to delete department" });
+  }
+});
+
+// --- ORGANIZATION TREE ---
+apiRouter.get("/workspace/organization-tree", async (req: AuthRequest, res) => {
+  try {
+    const [workspace] = await db.select({ name: workspaces.name }).from(workspaces).where(eq(workspaces.id, req.workspaceId!)).limit(1);
+    const depts = await db.select().from(workspaceDepartments).where(eq(workspaceDepartments.workspaceId, req.workspaceId!));
+    const teams = await db.select().from(workspaceTeams).where(eq(workspaceTeams.workspaceId, req.workspaceId!));
+    const members = await db.select({
+      id: workspaceMembers.id,
+      userUid: workspaceMembers.userUid,
+      role: workspaceMembers.role,
+      cargo: workspaceMembers.cargo,
+      department: workspaceMembers.department,
+      teamName: workspaceMembers.teamName,
+      managerUid: workspaceMembers.managerUid,
+      status: workspaceMembers.status,
+      userName: users.displayName,
+      userEmail: users.email,
+      userPhoto: users.photoUrl
+    })
+    .from(workspaceMembers)
+    .innerJoin(users, eq(workspaceMembers.userUid, users.uid))
+    .where(eq(workspaceMembers.workspaceId, req.workspaceId!));
+
+    res.json({
+      organizationName: workspace?.name || 'Empresa',
+      departments: depts,
+      teams: teams,
+      members: members
+    });
+  } catch (error) {
+    console.error("Error building organization tree:", error);
+    res.status(500).json({ error: "Failed to build organization tree" });
   }
 });
 

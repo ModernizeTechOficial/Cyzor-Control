@@ -15,7 +15,8 @@ import {
   Zap,
   Box,
   FileText,
-  DollarSign
+  DollarSign,
+  XCircle
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -46,7 +47,7 @@ export default function AuditoriaTab() {
 
   const getActionIcon = (action: string, table: string) => {
     if (action === 'CREATE') return <Zap size={14} className="text-emerald-500" />;
-    if (action === 'DELETE') return <XCircleIcon size={14} className="text-rose-500" />;
+    if (action === 'DELETE') return <XCircle size={14} className="text-rose-500" />;
     if (action === 'INVITE') return <User size={14} className="text-blue-500" />;
     if (table === 'finance_entries') return <DollarSign size={14} className="text-green-500" />;
     if (table === 'projects') return <Box size={14} className="text-indigo-500" />;

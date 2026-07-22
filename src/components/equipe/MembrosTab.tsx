@@ -338,7 +338,26 @@ export default function MembrosTab() {
         </div>
       </div>
 
-      <MemberDetailsDrawer member={selectedMemberFor360} isOpen={!!selectedMemberFor360} onClose={() => setSelectedMemberFor360(null)} />
+      <MemberDetailsDrawer 
+        member={selectedMemberFor360} 
+        isOpen={!!selectedMemberFor360} 
+        onClose={() => setSelectedMemberFor360(null)} 
+        onUpdateMember={async (id, updates) => {
+          try {
+            const res = await fetchWithAuth(`/api/workspace/members/${id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(updates),
+            });
+            if (res.ok) {
+              await fetchMembers();
+              setSelectedMemberFor360(null);
+            }
+          } catch (err) {
+            console.error(err);
+          }
+        }}
+      />
 
       {/* Member 360 & Details Modal */}
       {selectedMemberFor360 && (

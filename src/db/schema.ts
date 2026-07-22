@@ -96,13 +96,54 @@ export const workspaceMembers = pgTable('workspace_members', {
   cargo: text('cargo').default('Colaborador'), // Job title / function (e.g. Desenvolvedor, QA, PM)
   department: text('department'),
   teamName: text('team_name'),
+  managerUid: text('manager_uid').references(() => users.uid, { onDelete: 'set null' }),
   permissions: jsonb('permissions').default([]),
   status: text('status').default('Ativo'), // Ativo, Suspenso
+  onboardingCompleted: boolean('onboarding_completed').default(false),
+  xp: integer('xp').default(0),
+  careerLevel: text('career_level').default('Pleno'),
   createdAt: timestamp('created_at').defaultNow(),
 }, (t) => ({
   wsUserIdx: index('ws_members_ws_user_idx').on(t.workspaceId, t.userUid),
   userIdx: index('ws_members_user_idx').on(t.userUid),
   tenantIdx: index('workspace_members_tenant_idx').on(t.tenantId),
+}));
+
+// WORKSPACE TEAMS
+export const workspaceTeams = pgTable('workspace_teams', {
+  id: serial('id').primaryKey(),
+  tenantId: uuid('tenant_id').defaultRandom().notNull(),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  description: text('description'),
+  goal: text('goal'),
+  leadUid: text('lead_uid').references(() => users.uid, { onDelete: 'set null' }),
+  department: text('department'),
+  healthScore: integer('health_score').default(85),
+  careerHubAvg: real('career_hub_avg').default(80.0),
+  kpis: jsonb('kpis').default([]),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (t) => ({
+  wsIdx: index('ws_teams_ws_idx').on(t.workspaceId),
+  tenantIdx: index('ws_teams_tenant_idx').on(t.tenantId),
+}));
+
+// WORKSPACE DEPARTMENTS
+export const workspaceDepartments = pgTable('workspace_departments', {
+  id: serial('id').primaryKey(),
+  tenantId: uuid('tenant_id').defaultRandom().notNull(),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  description: text('description'),
+  leadUid: text('lead_uid').references(() => users.uid, { onDelete: 'set null' }),
+  healthScore: integer('health_score').default(85),
+  kpis: jsonb('kpis').default([]),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (t) => ({
+  wsIdx: index('ws_dept_ws_idx').on(t.workspaceId),
+  tenantIdx: index('ws_dept_tenant_idx').on(t.tenantId),
 }));
 
 // WORKSPACE INVITATIONS
@@ -115,10 +156,14 @@ export const workspaceInvitations = pgTable('workspace_invitations', {
   teamName: text('team_name'),
   department: text('department'),
   cargo: text('cargo'),
+  managerUid: text('manager_uid').references(() => users.uid, { onDelete: 'set null' }),
+  customMessage: text('custom_message'),
   permissions: jsonb('permissions').default([]),
   inviterUid: text('inviter_uid').notNull().references(() => users.uid, { onDelete: 'cascade' }),
-  status: text('status').default('PENDING'), // PENDING, ACCEPTED, REJECTED, EXPIRED, CANCELLED
+  status: text('status').default('PENDING'), // PENDING, ACCEPTED, REJECTED, EXPIRED, CANCELLED, REVOKED
   token: text('token').notNull().unique(),
+  usageLimit: integer('usage_limit').default(1),
+  usedCount: integer('used_count').default(0),
   expiresAt: timestamp('expires_at').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),

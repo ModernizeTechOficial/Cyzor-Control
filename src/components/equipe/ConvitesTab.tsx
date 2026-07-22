@@ -277,7 +277,19 @@ export default function ConvitesTab() {
                     <Trash2 size={14} /> Cancelar
                   </button>
                   <button 
-                    onClick={() => alert(`Convite para ${inv.email || 'link de convite'} reenviado!`)}
+                    onClick={async () => {
+                      try {
+                        const res = await fetchWithAuth(`/api/workspace/invitations/${inv.id}/resend`, { method: 'POST' });
+                        if (res.ok) {
+                          alert(`Convite para ${inv.email || 'este link'} reenviado com sucesso!`);
+                          fetchInvitations();
+                        } else {
+                          alert('Erro ao reenviar o convite.');
+                        }
+                      } catch (err) {
+                        alert('Erro ao reenviar o convite.');
+                      }
+                    }}
                     className="flex-1 py-2.5 rounded-xl bg-[#FAFAFA] text-xs font-bold text-[#111111] hover:bg-[#F1F5F9] transition-all flex items-center justify-center gap-1.5"
                   >
                     <RefreshCcw size={14} /> Reenviar
