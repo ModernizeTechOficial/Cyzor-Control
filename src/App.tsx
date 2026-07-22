@@ -36,6 +36,7 @@ import WelcomeModal from './components/layout/WelcomeModal';
 import { CreateWorkspaceModal } from './components/CreateWorkspaceModal';
 import { CommandPalette } from './components/common/CommandPalette';
 import ContextBanner from './components/layout/ContextBanner';
+import InviteView from './components/InviteView';
 
 import GlobalVoiceActivator from './components/GlobalVoiceActivator';
 
@@ -95,7 +96,9 @@ export default function App() {
   useEffect(() => {
     if (!loading) {
       if (user) {
-        if (currentView === 'landing' || currentView === 'login' || currentView === 'privacy' || currentView === 'terms') {
+        if (currentView === 'login' && globalFilters.inviteToken) {
+          setCurrentView('invite');
+        } else if (currentView === 'landing' || currentView === 'login' || currentView === 'privacy' || currentView === 'terms') {
           if (dbUser?.isPlatformAdmin) {
             setCurrentView('admin');
           } else {
@@ -127,6 +130,10 @@ export default function App() {
 
   if (currentView === 'login') {
     return <LoginView onLogin={() => setCurrentView('dashboard')} onNavigate={(view) => setCurrentView(view)} />;
+  }
+
+  if (currentView === 'invite') {
+    return <InviteView />;
   }
 
   if (currentView === 'privacy') {

@@ -14,6 +14,7 @@ interface GlobalFilters {
   clientId?: string | number;
   documentId?: string | number;
   ideaId?: string | number;
+  inviteToken?: string;
 }
 
 interface NavigationContextType {

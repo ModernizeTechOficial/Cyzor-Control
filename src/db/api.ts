@@ -132,6 +132,113 @@ apiRouter.get("/branding", async (req, res) => {
   }
 });
 
+apiRouter.get('/invite/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    if (!token) return res.status(400).json({ error: 'Invitation token is required' });
+
+    const [invitation] = await db.select()
+      .from(workspaceInvitations)
+      .where(and(eq(workspaceInvitations.token, token), eq(workspaceInvitations.status, 'PENDING')))
+      .limit(1);
+
+    if (!invitation) return res.status(404).json({ error: 'Convite inválido ou já utilizado' });
+
+    if (new Date(invitation.expiresAt) < new Date()) {
+      await db.update(workspaceInvitations)
+        .set({ status: 'EXPIRED' })
+        .where(eq(workspaceInvitations.id, invitation.id));
+      return res.status(410).json({ error: 'O convite expirou' });
+    }
+
+    const [workspace] = await db.select({ id: workspaces.id, name: workspaces.name }).from(workspaces).where(eq(workspaces.id, invitation.workspaceId)).limit(1);
+    if (!workspace) return res.status(404).json({ error: 'Workspace associado ao convite não encontrado' });
+
+    res.json({
+      id: invitation.id,
+      email: invitation.email,
+      role: invitation.role,
+      teamName: invitation.teamName,
+      department: invitation.department,
+      cargo: invitation.cargo,
+      workspaceId: invitation.workspaceId,
+      workspaceName: workspace.name,
+      expiresAt: invitation.expiresAt,
+      status: invitation.status,
+      inviterUid: invitation.inviterUid,
+      createdAt: invitation.createdAt,
+    });
+  } catch (error) {
+    console.error('Error fetching invite preview:', error);
+    res.status(500).json({ error: 'Failed to fetch invite preview' });
+  }
+});
+
+apiRouter.post('/invite/:token/accept', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { token } = req.params;
+    if (!token) return res.status(400).json({ error: 'Invitation token is required' });
+
+    const [invitation] = await db.select().from(workspaceInvitations)
+      .where(and(eq(workspaceInvitations.token, token), eq(workspaceInvitations.status, 'PENDING')))
+      .limit(1);
+
+    if (!invitation) {
+      return res.status(404).json({ error: 'Convite inválido ou já utilizado' });
+    }
+
+    if (invitation.email && invitation.email.trim() && (!req.user?.email || req.user.email !== invitation.email)) {
+      return res.status(403).json({ error: 'Faça login com o mesmo e-mail do convite para aceitar.' });
+    }
+
+    if (new Date(invitation.expiresAt) < new Date()) {
+      await db.update(workspaceInvitations)
+        .set({ status: 'EXPIRED' })
+        .where(eq(workspaceInvitations.id, invitation.id));
+      return res.status(410).json({ error: 'O convite expirou' });
+    }
+
+    const [workspace] = await db.select({ id: workspaces.id, name: workspaces.name }).from(workspaces).where(eq(workspaces.id, invitation.workspaceId)).limit(1);
+    if (!workspace) {
+      return res.status(404).json({ error: 'Workspace associado ao convite não encontrado' });
+    }
+
+    const [existingMembership] = await db.select().from(workspaceMembers)
+      .where(and(eq(workspaceMembers.workspaceId, invitation.workspaceId), eq(workspaceMembers.userUid, req.user!.uid)))
+      .limit(1);
+
+    if (!existingMembership) {
+      await db.insert(workspaceMembers).values({
+        tenantId: invitation.tenantId,
+        workspaceId: invitation.workspaceId,
+        userUid: req.user!.uid,
+        role: invitation.role,
+        cargo: invitation.cargo || 'Convidado',
+        department: invitation.department || 'Geral',
+        teamName: invitation.teamName || 'Equipe convidada',
+        status: 'Ativo'
+      });
+    }
+
+    const [updatedInvitation] = await db.update(workspaceInvitations)
+      .set({ status: 'ACCEPTED' })
+      .where(eq(workspaceInvitations.id, invitation.id))
+      .returning();
+
+    await logAction(req, 'ACCEPT_INVITE', 'workspace_invitations', invitation.id.toString(), invitation, updatedInvitation[0] || updatedInvitation);
+
+    const [userRecord] = await db.select().from(users).where(eq(users.uid, req.user!.uid)).limit(1);
+    if (userRecord) {
+      await db.update(users).set({ activeWorkspaceId: invitation.workspaceId }).where(eq(users.uid, req.user!.uid));
+    }
+
+    res.json({ success: true, workspaceId: invitation.workspaceId, accepted: true });
+  } catch (error) {
+    console.error('Error accepting invitation token:', error);
+    res.status(500).json({ error: 'Failed to accept invitation token' });
+  }
+});
+
 apiRouter.use(requireAuth);
 
 apiRouter.post("/workspace/invitations/accept", async (req: AuthRequest, res) => {
@@ -164,7 +271,11 @@ apiRouter.post("/workspace/invitations/accept", async (req: AuthRequest, res) =>
         workspaceId: invitation.workspaceId,
         userUid: req.user!.uid,
         role: invitation.role,
-        cargo: 'Convidado'
+        cargo: invitation.cargo || 'Convidado',
+        department: invitation.department || 'Geral',
+        teamName: invitation.teamName || 'Equipe convidada',
+        permissions: invitation.permissions || [],
+        status: 'Ativo'
       });
     }
 
@@ -534,7 +645,8 @@ apiRouter.delete("/workspace/members/:id", async (req: AuthRequest, res) => {
 apiRouter.get("/workspace/teams", async (req: AuthRequest, res) => {
   try {
     const [workspace] = await db.select({ settings: workspaces.settings }).from(workspaces).where(eq(workspaces.id, req.workspaceId!)).limit(1);
-    const teams = Array.isArray(workspace?.settings?.organizationalTeams) ? workspace.settings.organizationalTeams : [];
+    const settings = (workspace?.settings || {}) as any;
+    const teams = Array.isArray(settings.organizationalTeams) ? settings.organizationalTeams : [];
 
     const memberMap = new Map<string, any>();
     const members = await db.select({
@@ -582,7 +694,7 @@ apiRouter.post("/workspace/teams", async (req: AuthRequest, res) => {
     }
 
     const [workspace] = await db.select({ settings: workspaces.settings }).from(workspaces).where(eq(workspaces.id, req.workspaceId!)).limit(1);
-    const settings = workspace?.settings || {};
+    const settings = (workspace?.settings || {}) as any;
     const teams = Array.isArray(settings.organizationalTeams) ? settings.organizationalTeams : [];
 
     const createdTeam = {
@@ -618,7 +730,7 @@ apiRouter.put("/workspace/teams/:id", async (req: AuthRequest, res) => {
     }
 
     const [workspace] = await db.select({ settings: workspaces.settings }).from(workspaces).where(eq(workspaces.id, req.workspaceId!)).limit(1);
-    const settings = workspace?.settings || {};
+    const settings = (workspace?.settings || {}) as any;
     const teams = Array.isArray(settings.organizationalTeams) ? settings.organizationalTeams : [];
     const targetIndex = teams.findIndex((team: any) => team.id === id);
 
@@ -658,7 +770,7 @@ apiRouter.delete("/workspace/teams/:id", async (req: AuthRequest, res) => {
     }
 
     const [workspace] = await db.select({ settings: workspaces.settings }).from(workspaces).where(eq(workspaces.id, req.workspaceId!)).limit(1);
-    const settings = workspace?.settings || {};
+    const settings = (workspace?.settings || {}) as any;
     const teams = Array.isArray(settings.organizationalTeams) ? settings.organizationalTeams : [];
     const filteredTeams = teams.filter((team: any) => team.id !== id);
 
@@ -685,6 +797,10 @@ apiRouter.get("/workspace/invitations", async (req: AuthRequest, res) => {
       id: workspaceInvitations.id,
       email: workspaceInvitations.email,
       role: workspaceInvitations.role,
+      teamName: workspaceInvitations.teamName,
+      department: workspaceInvitations.department,
+      cargo: workspaceInvitations.cargo,
+      permissions: workspaceInvitations.permissions,
       status: workspaceInvitations.status,
       token: workspaceInvitations.token,
       expiresAt: workspaceInvitations.expiresAt,
@@ -698,7 +814,7 @@ apiRouter.get("/workspace/invitations", async (req: AuthRequest, res) => {
     const invitations = data.map((inv) => ({
       ...inv,
       inviteLink: canManageInvites && inv.status === 'PENDING'
-        ? `${origin}/?inviteToken=${inv.token}`
+        ? `${origin}/invite/${inv.token}`
         : undefined
     }));
 
@@ -711,8 +827,7 @@ apiRouter.get("/workspace/invitations", async (req: AuthRequest, res) => {
 
 apiRouter.post("/workspace/invitations", async (req: AuthRequest, res) => {
   try {
-    const { email, role } = req.body;
-    if (email === undefined || email === null) return res.status(400).json({ error: "Email is required" });
+    const { email, role, teamName, department, cargo, permissions } = req.body;
 
     // Permission check
     const { getMemberRole, WorkspaceRole } = await import("./permissions.ts");
@@ -730,6 +845,10 @@ apiRouter.post("/workspace/invitations", async (req: AuthRequest, res) => {
       tenantId: req.tenantId as any,
       email: email || '',
       role: role || 'MEMBER',
+      teamName: teamName || null,
+      department: department || null,
+      cargo: cargo || null,
+      permissions: Array.isArray(permissions) ? permissions : [],
       inviterUid: req.user!.uid,
       token,
       expiresAt
@@ -738,7 +857,7 @@ apiRouter.post("/workspace/invitations", async (req: AuthRequest, res) => {
     const origin = req.headers.origin || `${req.protocol}://${req.get('host')}`;
     const invitationWithLink = {
       ...invitation,
-      inviteLink: `${origin}/?inviteToken=${token}`
+      inviteLink: `${origin}/invite/${token}`
     };
 
     // In a real app, send email here

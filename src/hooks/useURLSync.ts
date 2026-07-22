@@ -18,8 +18,21 @@ export function useURLSync(
       let view: any = 'landing';
       let filters: any = {};
 
-      if (parts.length === 0) {
+      const searchParams = new URLSearchParams(window.location.search);
+      const queryInviteToken = searchParams.get('inviteToken');
+      if (queryInviteToken) {
+        if (window.location.pathname === '/login') {
+          view = 'login';
+          filters.inviteToken = queryInviteToken;
+        } else {
+          view = 'invite';
+          filters.inviteToken = queryInviteToken;
+        }
+      } else if (parts.length === 0) {
         view = 'landing';
+      } else if (parts[0] === 'invite') {
+        view = 'invite';
+        filters.inviteToken = parts[1] || undefined;
       } else if (parts[0] === 'login') {
         view = 'login';
       } else if (parts[0] === 'workspace') {
@@ -83,6 +96,10 @@ export function useURLSync(
       url = `/${currentView === 'landing' ? '' : currentView}`;
     } else if (currentView.startsWith('admin')) {
       url = `/${currentView}`;
+    } else if (currentView === 'login' && globalFilters.inviteToken) {
+      url = `/login?inviteToken=${globalFilters.inviteToken}`;
+    } else if (currentView === 'invite' && globalFilters.inviteToken) {
+      url = `/invite/${globalFilters.inviteToken}`;
     } else {
       url = '/workspace';
       

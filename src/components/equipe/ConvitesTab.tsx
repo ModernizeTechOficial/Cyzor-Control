@@ -19,7 +19,7 @@ export default function ConvitesTab() {
   const [invitations, setInvitations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [newInvite, setNewInvite] = useState({ email: '', role: 'MEMBER' });
+  const [newInvite, setNewInvite] = useState({ email: '', role: 'MEMBER', teamName: '', department: '', cargo: '', permissions: [] as string[] });
   const [inviteMode, setInviteMode] = useState<'email' | 'link'>('email');
   const [createdInvite, setCreatedInvite] = useState<any>(null);
   const [sending, setSending] = useState(false);
@@ -61,9 +61,14 @@ export default function ConvitesTab() {
 
     try {
       setSending(true);
-      const payload: any = { role: newInvite.role };
-      if (inviteMode === 'email') payload.email = newInvite.email.trim();
-      else payload.email = '';
+      const payload: any = {
+        role: newInvite.role,
+        email: newInvite.email.trim(),
+        teamName: newInvite.teamName.trim(),
+        department: newInvite.department.trim(),
+        cargo: newInvite.cargo.trim(),
+        permissions: newInvite.permissions || []
+      };
 
       const res = await fetchWithAuth('/api/workspace/invitations', {
         method: 'POST',
@@ -77,7 +82,7 @@ export default function ConvitesTab() {
 
         if (inviteMode === 'email') {
           setShowInviteModal(false);
-          setNewInvite({ email: '', role: 'MEMBER' });
+          setNewInvite({ email: '', role: 'MEMBER', teamName: '', department: '', cargo: '', permissions: [] });
           fetchInvitations();
         }
       } else {
@@ -225,6 +230,16 @@ export default function ConvitesTab() {
               <p className="text-xs text-[#64748B] font-medium flex items-center gap-1.5 uppercase tracking-wider">
                 Papel: <span className="text-[#111111] font-bold">{inv.role}</span>
               </p>
+              {(inv.teamName || inv.department || inv.cargo) && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3 text-[11px] text-[#64748B] uppercase tracking-[0.16em] font-bold">
+                  {inv.teamName ? <span>Equipe: <strong className="text-[#111111] font-semibold normal-case">{inv.teamName}</strong></span> : null}
+                  {inv.department ? <span>Departamento: <strong className="text-[#111111] font-semibold normal-case">{inv.department}</strong></span> : null}
+                  {inv.cargo ? <span>Cargo: <strong className="text-[#111111] font-semibold normal-case">{inv.cargo}</strong></span> : null}
+                </div>
+              )}
+              {inv.permissions?.length > 0 && (
+                <p className="mt-2 text-[11px] text-[#111111] font-semibold">Permissões: {Array.isArray(inv.permissions) ? inv.permissions.join(', ') : inv.permissions}</p>
+              )}
             </div>
 
             <div className="space-y-3 pt-4 border-t border-[#0F172A05]">
@@ -318,19 +333,63 @@ export default function ConvitesTab() {
                 </button>
               </div>
 
-              {inviteMode === 'email' && (
+                  <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest px-1">E-mail do Convidado</label>
+                <input 
+                  type="email" 
+                  required={inviteMode === 'email'}
+                  placeholder={inviteMode === 'email' ? 'exemplo@email.com' : 'exemplo@email.com (opcional)'}
+                  value={newInvite.email}
+                  onChange={(e) => setNewInvite({ ...newInvite, email: e.target.value })}
+                  className="w-full bg-[#FAFAFB] border border-[#0F172A0A] rounded-2xl p-4 text-sm font-bold focus:ring-2 focus:ring-black/5 outline-none transition-all"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest px-1">E-mail do Convidado</label>
-                  <input 
-                    type="email" 
-                    required
-                    placeholder="exemplo@email.com"
-                    value={newInvite.email}
-                    onChange={(e) => setNewInvite({ ...newInvite, email: e.target.value })}
+                  <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest px-1">Equipe</label>
+                  <input
+                    type="text"
+                    value={newInvite.teamName}
+                    onChange={(e) => setNewInvite({ ...newInvite, teamName: e.target.value })}
+                    placeholder="Backend, Comercial, Produto"
                     className="w-full bg-[#FAFAFB] border border-[#0F172A0A] rounded-2xl p-4 text-sm font-bold focus:ring-2 focus:ring-black/5 outline-none transition-all"
                   />
                 </div>
-              )}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest px-1">Departamento</label>
+                  <input
+                    type="text"
+                    value={newInvite.department}
+                    onChange={(e) => setNewInvite({ ...newInvite, department: e.target.value })}
+                    placeholder="Tecnologia, Financeiro, Comercial"
+                    className="w-full bg-[#FAFAFB] border border-[#0F172A0A] rounded-2xl p-4 text-sm font-bold focus:ring-2 focus:ring-black/5 outline-none transition-all"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest px-1">Cargo</label>
+                  <input
+                    type="text"
+                    value={newInvite.cargo}
+                    onChange={(e) => setNewInvite({ ...newInvite, cargo: e.target.value })}
+                    placeholder="Backend Developer, Analista Financeiro"
+                    className="w-full bg-[#FAFAFB] border border-[#0F172A0A] rounded-2xl p-4 text-sm font-bold focus:ring-2 focus:ring-black/5 outline-none transition-all"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest px-1">Permissões</label>
+                  <select
+                    value={newInvite.permissions.join(',')}
+                    onChange={(e) => setNewInvite({ ...newInvite, permissions: e.target.value.split(',').filter(Boolean) })}
+                    className="w-full bg-[#FAFAFB] border border-[#0F172A0A] rounded-2xl p-4 text-sm font-bold focus:ring-2 focus:ring-black/5 outline-none transition-all"
+                  >
+                    <option value="VIEW">VIEW</option>
+                    <option value="VIEW,EDIT">VIEW,EDIT</option>
+                    <option value="VIEW,EDIT,MANAGE">VIEW,EDIT,MANAGE</option>
+                  </select>
+                </div>
+              </div>
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest px-1">Papel / Permissões</label>

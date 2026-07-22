@@ -90,10 +90,13 @@ export const workspaces = pgTable('workspaces', {
 export const workspaceMembers = pgTable('workspace_members', {
   id: serial('id').primaryKey(),
   tenantId: uuid('tenant_id').defaultRandom().notNull(),
-  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }).unique(),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
   userUid: text('user_uid').notNull().references(() => users.uid, { onDelete: 'cascade' }),
   role: text('role').notNull().default('MEMBER'), // OWNER, ADMIN, MANAGER, DEVELOPER, DESIGNER, FINANCE, VIEWER, MEMBER
   cargo: text('cargo').default('Colaborador'), // Job title / function (e.g. Desenvolvedor, QA, PM)
+  department: text('department'),
+  teamName: text('team_name'),
+  permissions: jsonb('permissions').default([]),
   status: text('status').default('Ativo'), // Ativo, Suspenso
   createdAt: timestamp('created_at').defaultNow(),
 }, (t) => ({
@@ -109,6 +112,10 @@ export const workspaceInvitations = pgTable('workspace_invitations', {
   workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
   email: text('email').notNull(),
   role: text('role').notNull().default('MEMBER'),
+  teamName: text('team_name'),
+  department: text('department'),
+  cargo: text('cargo'),
+  permissions: jsonb('permissions').default([]),
   inviterUid: text('inviter_uid').notNull().references(() => users.uid, { onDelete: 'cascade' }),
   status: text('status').default('PENDING'), // PENDING, ACCEPTED, REJECTED, EXPIRED, CANCELLED
   token: text('token').notNull().unique(),

@@ -8,7 +8,10 @@ export default function LoginView({ onLogin, onNavigate }: { onLogin: () => void
   const { loginWithGoogle, loginWithEmail, registerWithEmail } = useAuth();
   const { iconUrl, iconSize, appName, loginHeroUrl } = useBranding();
   
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(() => {
+    const search = new URLSearchParams(window.location.search);
+    return search.get('mode') === 'signup';
+  });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
