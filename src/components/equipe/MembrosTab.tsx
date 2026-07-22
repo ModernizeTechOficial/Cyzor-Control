@@ -24,10 +24,36 @@ import { Vision360 } from '../common/Vision360';
 import MemberDetailsDrawer from './MemberDetailsDrawer';
 
 export default function MembrosTab() {
-  const { fetchWithAuth } = useAuth();
+  const { fetchWithAuth, user } = useAuth();
   const [members, setMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+
+  const rolePermissionsMap: Record<string, string[]> = {
+    OWNER: ['manage_members', 'create_projects', 'edit_projects', 'delete_projects', 'view_finance', 'manage_finance', 'manage_ai', 'manage_integrations', 'manage_settings', 'create_products', 'publish_products'],
+    ADMIN: ['manage_members', 'create_projects', 'edit_projects', 'delete_projects', 'view_finance', 'manage_finance', 'manage_ai', 'manage_integrations', 'manage_settings', 'create_products', 'publish_products'],
+    MANAGER: ['create_projects', 'edit_projects', 'view_finance', 'create_products'],
+    DEVELOPER: ['edit_projects', 'publish_products'],
+    DESIGNER: ['edit_projects'],
+    FINANCE: ['view_finance', 'manage_finance'],
+    VIEWER: [],
+    MEMBER: ['edit_projects']
+  };
+
+  const normalizePermissions = (permissions: any): string[] => {
+    if (!Array.isArray(permissions)) return [];
+    return Array.from(new Set(permissions.map((perm) => String(perm).trim()).filter(Boolean)));
+  };
+
+  const getEffectivePermissions = (role: string, permissions: any): Set<string> => {
+    const explicitPermissions = normalizePermissions(permissions);
+    return new Set([...(rolePermissionsMap[role] || []), ...explicitPermissions]);
+  };
+
+  const currentUserMember = members.find((m: any) => m.uid === user?.uid);
+  const currentUserPermissions = getEffectivePermissions(currentUserMember?.role || 'MEMBER', currentUserMember?.permissions || []);
+  const canManageMembers = currentUserPermissions.has('manage_members');
+
   const [selectedMemberFor360, setSelectedMemberFor360] = useState<any>(null);
   const [activeModalTab, setActiveModalTab] = useState<'dados' | 'visao_360'>('dados');
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -153,7 +179,8 @@ export default function MembrosTab() {
             <button className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700"><Send size={14} /> Lembrete</button>
             <button 
               onClick={() => setShowInviteModal(true)}
-              className="flex items-center gap-2 bg-black text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-neutral-800 transition-all shadow-sm"
+              disabled={!canManageMembers}
+              className="flex items-center gap-2 bg-black text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-neutral-800 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <UserPlus size={16} /> Convidar Membro
             </button>

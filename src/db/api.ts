@@ -11,6 +11,7 @@ import { db } from "./index.ts";
 import { companies, clients, products, projects, tasks, ideas, documents, financeEntries, sprints, milestones, aiMemories, notifications, agendaEvents, users, workspaceMembers, workspaces, flows, notes, deploys, productLicenses, workspaceInvitations, auditLogs, entityComments, entityApprovals, roadmaps, entityTemplates, timelineActivities, professionalProfiles, professionalEvolutionEvents, professionalGoals, professionalCertifications, platformSettings } from "./schema.ts";
 import { eq, and, desc, sql, or, inArray, gte, lte, not } from "drizzle-orm";
 import { getUserSaaSState } from "./queries.ts";
+import { hasPermission, getMemberRole, sanitizePermissionsForRole, validateRolePermissionAssignment, isWorkspaceRole, WorkspaceRole } from "./permissions.ts";
 
 const ai = new GoogleGenAI({ 
   apiKey: process.env.GEMINI_API_KEY,
@@ -270,15 +271,17 @@ apiRouter.post("/workspace/invitations/accept", async (req: AuthRequest, res) =>
       .limit(1);
 
     if (!existingMember) {
+      const acceptedRole = isWorkspaceRole(invitation.role) ? invitation.role as WorkspaceRole : WorkspaceRole.MEMBER;
+      const entryPermissions = sanitizePermissionsForRole(acceptedRole, invitation.permissions || []);
       await db.insert(workspaceMembers).values({
         tenantId: invitation.tenantId,
         workspaceId: invitation.workspaceId,
         userUid: req.user!.uid,
-        role: invitation.role,
+        role: acceptedRole,
         cargo: invitation.cargo || 'Convidado',
         department: invitation.department || 'Geral',
         teamName: invitation.teamName || 'Equipe convidada',
-        permissions: invitation.permissions || [],
+        permissions: entryPermissions,
         status: 'Ativo'
       });
     }
@@ -508,13 +511,10 @@ apiRouter.put("/workspaces/:id", async (req: AuthRequest, res) => {
     const wsId = Number(req.params.id);
     const { name, settings } = req.body;
     
-    // Check membership
-    const [membership] = await db.select()
-      .from(workspaceMembers)
-      .where(and(eq(workspaceMembers.workspaceId, wsId), eq(workspaceMembers.userUid, req.user!.uid)))
-      .limit(1);
-
-    if (!membership) return res.status(403).json({ error: "Access denied" });
+    const canManageSettings = await hasPermission(req.user!.uid, wsId, 'manage_settings');
+    if (!canManageSettings) {
+      return res.status(403).json({ error: "Access denied" });
+    }
 
     // Fetch existing workspace
     const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, wsId)).limit(1);
@@ -593,10 +593,8 @@ apiRouter.put("/workspace/members/:id", async (req: AuthRequest, res) => {
     const { role, cargo, status } = req.body;
     const memberId = Number(req.params.id);
 
-    // Permission check: only ADMIN or OWNER can manage members
-    const { getMemberRole, WorkspaceRole } = await import("./permissions.ts");
-    const myRole = await getMemberRole(req.user!.uid, req.workspaceId!);
-    if (myRole !== WorkspaceRole.OWNER && myRole !== WorkspaceRole.ADMIN) {
+    const canManageMembers = await hasPermission(req.user!.uid, req.workspaceId!, 'manage_members');
+    if (!canManageMembers) {
       return res.status(403).json({ error: "Insufficient permissions" });
     }
 
@@ -624,10 +622,8 @@ apiRouter.delete("/workspace/members/:id", async (req: AuthRequest, res) => {
   try {
     const memberId = Number(req.params.id);
 
-    // Permission check
-    const { getMemberRole, WorkspaceRole } = await import("./permissions.ts");
-    const myRole = await getMemberRole(req.user!.uid, req.workspaceId!);
-    if (myRole !== WorkspaceRole.OWNER && myRole !== WorkspaceRole.ADMIN) {
+    const canManageMembers = await hasPermission(req.user!.uid, req.workspaceId!, 'manage_members');
+    if (!canManageMembers) {
       return res.status(403).json({ error: "Insufficient permissions" });
     }
 
@@ -691,9 +687,8 @@ apiRouter.post("/workspace/teams", async (req: AuthRequest, res) => {
     const { name, description, ownerId, memberIds } = req.body;
     if (!name?.trim()) return res.status(400).json({ error: "O nome do time é obrigatório." });
 
-    const { getMemberRole, WorkspaceRole } = await import("./permissions.ts");
-    const myRole = await getMemberRole(req.user!.uid, req.workspaceId!);
-    if (myRole !== WorkspaceRole.OWNER && myRole !== WorkspaceRole.ADMIN) {
+    const canManageMembers = await hasPermission(req.user!.uid, req.workspaceId!, 'manage_members');
+    if (!canManageMembers) {
       return res.status(403).json({ error: "Insufficient permissions" });
     }
 
@@ -727,9 +722,8 @@ apiRouter.put("/workspace/teams/:id", async (req: AuthRequest, res) => {
     const { id } = req.params;
     const { name, description, ownerId, memberIds } = req.body;
 
-    const { getMemberRole, WorkspaceRole } = await import("./permissions.ts");
-    const myRole = await getMemberRole(req.user!.uid, req.workspaceId!);
-    if (myRole !== WorkspaceRole.OWNER && myRole !== WorkspaceRole.ADMIN) {
+    const canManageMembers = await hasPermission(req.user!.uid, req.workspaceId!, 'manage_members');
+    if (!canManageMembers) {
       return res.status(403).json({ error: "Insufficient permissions" });
     }
 
@@ -767,9 +761,8 @@ apiRouter.put("/workspace/teams/:id", async (req: AuthRequest, res) => {
 apiRouter.delete("/workspace/teams/:id", async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
-    const { getMemberRole, WorkspaceRole } = await import("./permissions.ts");
-    const myRole = await getMemberRole(req.user!.uid, req.workspaceId!);
-    if (myRole !== WorkspaceRole.OWNER && myRole !== WorkspaceRole.ADMIN) {
+    const canManageMembers = await hasPermission(req.user!.uid, req.workspaceId!, 'manage_members');
+    if (!canManageMembers) {
       return res.status(403).json({ error: "Insufficient permissions" });
     }
 
@@ -792,9 +785,11 @@ apiRouter.delete("/workspace/teams/:id", async (req: AuthRequest, res) => {
 // --- INVITATIONS ---
 apiRouter.get("/workspace/invitations", async (req: AuthRequest, res) => {
   try {
-    const { getMemberRole, WorkspaceRole } = await import("./permissions.ts");
-    const myRole = await getMemberRole(req.user!.uid, req.workspaceId!);
-    const canManageInvites = myRole === WorkspaceRole.OWNER || myRole === WorkspaceRole.ADMIN;
+    const canManageInvites = await hasPermission(req.user!.uid, req.workspaceId!, 'manage_members');
+    if (!canManageInvites) {
+      return res.status(403).json({ error: "Insufficient permissions" });
+    }
+
     const origin = req.headers.origin || `${req.protocol}://${req.get('host')}`;
 
     const data = await db.select({
@@ -817,9 +812,7 @@ apiRouter.get("/workspace/invitations", async (req: AuthRequest, res) => {
     
     const invitations = data.map((inv) => ({
       ...inv,
-      inviteLink: canManageInvites && inv.status === 'PENDING'
-        ? `${origin}/invite/${inv.token}`
-        : undefined
+      inviteLink: inv.status === 'PENDING' ? `${origin}/invite/${inv.token}` : undefined
     }));
 
     res.json(invitations);
@@ -837,13 +830,18 @@ apiRouter.post("/workspace/invitations", async (req: AuthRequest, res) => {
       return res.status(400).json({ error: "Email do convidado é obrigatório" });
     }
 
-    // Permission check
-    const { getMemberRole, WorkspaceRole } = await import("./permissions.ts");
-    const myRole = await getMemberRole(req.user!.uid, req.workspaceId!);
-    if (myRole !== WorkspaceRole.OWNER && myRole !== WorkspaceRole.ADMIN) {
+    const canManageMembers = await hasPermission(req.user!.uid, req.workspaceId!, 'manage_members');
+    if (!canManageMembers) {
       return res.status(403).json({ error: "Insufficient permissions" });
     }
 
+    const selectedRole = isWorkspaceRole(String(role).toUpperCase()) ? (String(role).toUpperCase() as WorkspaceRole) : WorkspaceRole.MEMBER;
+    const permissionValidation = validateRolePermissionAssignment(selectedRole, permissions);
+    if (!permissionValidation.valid) {
+      return res.status(400).json({ error: `As permissões ${permissionValidation.invalidPermissions.join(', ')} não são válidas para o cargo ${selectedRole}.` });
+    }
+
+    const sanitizedPermissions = sanitizePermissionsForRole(selectedRole, permissions);
     const token = randomUUID();
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiration
@@ -856,7 +854,7 @@ apiRouter.post("/workspace/invitations", async (req: AuthRequest, res) => {
       teamName: teamName || null,
       department: department || null,
       cargo: cargo || null,
-      permissions: Array.isArray(permissions) ? permissions : [],
+      permissions: sanitizedPermissions,
       inviterUid: req.user!.uid,
       token,
       expiresAt
@@ -902,10 +900,8 @@ apiRouter.delete("/workspace/invitations/:id", async (req: AuthRequest, res) => 
   try {
     const invId = Number(req.params.id);
 
-    // Permission check
-    const { getMemberRole, WorkspaceRole } = await import("./permissions.ts");
-    const myRole = await getMemberRole(req.user!.uid, req.workspaceId!);
-    if (myRole !== WorkspaceRole.OWNER && myRole !== WorkspaceRole.ADMIN) {
+    const canManageMembers = await hasPermission(req.user!.uid, req.workspaceId!, 'manage_members');
+    if (!canManageMembers) {
       return res.status(403).json({ error: "Insufficient permissions" });
     }
 
@@ -2969,6 +2965,7 @@ apiRouter.get("/workspace/members", async (req: AuthRequest, res) => {
       photoUrl: users.photoUrl,
       role: workspaceMembers.role,
       cargo: workspaceMembers.cargo,
+      permissions: workspaceMembers.permissions,
     })
     .from(workspaceMembers)
     .innerJoin(users, eq(workspaceMembers.userUid, users.uid))
@@ -3203,10 +3200,23 @@ apiRouter.delete("/companies/:id", async (req: AuthRequest, res) => {
 // --- WORKSPACE MEMBERS ADMIN OPTIONS ---
 apiRouter.put("/workspace/members/:userUid/role", async (req: AuthRequest, res) => {
   try {
+    const canManageMembers = await hasPermission(req.user!.uid, req.workspaceId!, 'manage_members');
+    if (!canManageMembers) {
+      return res.status(403).json({ error: "Insufficient permissions" });
+    }
+
     const { role, cargo } = req.body;
     const { userUid } = req.params;
     const updates: any = {};
-    if (role !== undefined) updates.role = role;
+
+    if (role !== undefined) {
+      const selectedRole = isWorkspaceRole(String(role).toUpperCase()) ? (String(role).toUpperCase() as WorkspaceRole) : null;
+      if (!selectedRole) {
+        return res.status(400).json({ error: "Invalid role provided." });
+      }
+      updates.role = selectedRole;
+    }
+
     if (cargo !== undefined) updates.cargo = cargo;
     
     await db.update(workspaceMembers)
@@ -3226,6 +3236,11 @@ apiRouter.put("/workspace/members/:userUid/role", async (req: AuthRequest, res) 
 
 apiRouter.delete("/workspace/members/:userUid", async (req: AuthRequest, res) => {
   try {
+    const canManageMembers = await hasPermission(req.user!.uid, req.workspaceId!, 'manage_members');
+    if (!canManageMembers) {
+      return res.status(403).json({ error: "Insufficient permissions" });
+    }
+
     const { userUid } = req.params;
     await db.delete(workspaceMembers).where(and(eq(workspaceMembers.userUid, userUid), eq(workspaceMembers.workspaceId, req.workspaceId!)));
     res.json({ success: true });
@@ -3237,11 +3252,18 @@ apiRouter.delete("/workspace/members/:userUid", async (req: AuthRequest, res) =>
 
 apiRouter.post("/workspace/members", async (req: AuthRequest, res) => {
   try {
+    const canManageMembers = await hasPermission(req.user!.uid, req.workspaceId!, 'manage_members');
+    if (!canManageMembers) {
+      return res.status(403).json({ error: "Insufficient permissions" });
+    }
+
     const { email, role, displayName, cargo, projectId } = req.body;
     if (!email) {
       return res.status(400).json({ error: "O e-mail é obrigatório." });
     }
     
+    const selectedRole = isWorkspaceRole(String(role).toUpperCase()) ? (String(role).toUpperCase() as WorkspaceRole) : WorkspaceRole.MEMBER;
+
     // Check if user exists in the system
     let usr = null;
     const [existingUsr] = await db.select().from(users).where(eq(users.email, email));

@@ -55,6 +55,39 @@ const RolePermissions: Record<WorkspaceRole, Permission[]> = {
   ]
 };
 
+const allPermissions: Permission[] = Array.from(new Set(Object.values(RolePermissions).flat()));
+
+export function isWorkspaceRole(value: string | undefined): value is WorkspaceRole {
+  if (!value) return false;
+  return Object.values(WorkspaceRole).includes(value as WorkspaceRole);
+}
+
+export function getRolePermissions(role: WorkspaceRole): Permission[] {
+  return RolePermissions[role] || [];
+}
+
+export function normalizePermissions(permissions: any): Permission[] {
+  if (!Array.isArray(permissions)) return [];
+  return Array.from(new Set(permissions
+    .map((perm) => String(perm).trim())
+    .filter((perm): perm is Permission => allPermissions.includes(perm as Permission))));
+}
+
+export function sanitizePermissionsForRole(role: WorkspaceRole, permissions: any): Permission[] {
+  const normalized = normalizePermissions(permissions);
+  const allowed = getRolePermissions(role);
+  return normalized.filter((perm) => allowed.includes(perm));
+}
+
+export function validateRolePermissionAssignment(role: WorkspaceRole, permissions: any): { valid: boolean; invalidPermissions: Permission[] } {
+  const normalized = normalizePermissions(permissions);
+  const allowed = getRolePermissions(role);
+  return {
+    valid: normalized.every((perm) => allowed.includes(perm)),
+    invalidPermissions: normalized.filter((perm) => !allowed.includes(perm))
+  };
+}
+
 export async function hasPermission(userUid: string, workspaceId: number, permission: Permission): Promise<boolean> {
   try {
     const [member] = await db.select()
@@ -68,9 +101,11 @@ export async function hasPermission(userUid: string, workspaceId: number, permis
     if (!member) return false;
 
     const userRole = member.role as WorkspaceRole;
-    const permissions = RolePermissions[userRole] || [];
+    const rolePermissions = getRolePermissions(userRole);
+    const explicitPermissions = Array.isArray(member.permissions) ? normalizePermissions(member.permissions) : [];
     
-    return permissions.includes(permission);
+    const combinedPermissions = Array.from(new Set([...rolePermissions, ...explicitPermissions]));
+    return combinedPermissions.includes(permission);
   } catch (error) {
     console.error("Error checking permission:", error);
     return false;

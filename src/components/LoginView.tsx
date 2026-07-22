@@ -11,7 +11,9 @@ export default function LoginView({ onLogin, onNavigate }: { onLogin: () => void
   
   const [isSignUp, setIsSignUp] = useState(() => {
     const search = new URLSearchParams(window.location.search);
-    return search.get('mode') === 'signup';
+    const mode = search.get('mode');
+    const inviteToken = search.get('inviteToken');
+    return mode === 'signup' || (!!inviteToken && !mode);
   });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

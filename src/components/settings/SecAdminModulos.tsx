@@ -59,6 +59,32 @@ export default function SecAdminModulos({ section }: { section: string }) {
   // Active User/Member Role to check permission boundaries
   const [userRoleInWorkspace, setUserRoleInWorkspace] = useState('MEMBER');
 
+  const rolePermissionsMap: Record<string, string[]> = {
+    OWNER: ['manage_members', 'create_projects', 'edit_projects', 'delete_projects', 'view_finance', 'manage_finance', 'manage_ai', 'manage_integrations', 'manage_settings', 'create_products', 'publish_products'],
+    ADMIN: ['manage_members', 'create_projects', 'edit_projects', 'delete_projects', 'view_finance', 'manage_finance', 'manage_ai', 'manage_integrations', 'manage_settings', 'create_products', 'publish_products'],
+    MANAGER: ['create_projects', 'edit_projects', 'view_finance', 'create_products'],
+    DEVELOPER: ['edit_projects', 'publish_products'],
+    DESIGNER: ['edit_projects'],
+    FINANCE: ['view_finance', 'manage_finance'],
+    VIEWER: [],
+    MEMBER: ['edit_projects']
+  };
+
+  const normalizePermissions = (permissions: any): string[] => {
+    if (!Array.isArray(permissions)) return [];
+    return Array.from(new Set(permissions.map((perm) => String(perm).trim()).filter(Boolean)));
+  };
+
+  const getEffectivePermissions = (role: string, permissions: any): Set<string> => {
+    const explicitPermissions = normalizePermissions(permissions);
+    return new Set([...(rolePermissionsMap[role] || []), ...explicitPermissions]);
+  };
+
+  const currentUserMember = members.find((m: any) => m.uid === user?.uid);
+  const currentUserPermissions = getEffectivePermissions(currentUserMember?.role || 'MEMBER', currentUserMember?.permissions || []);
+  const canManageMembers = currentUserPermissions.has('manage_members');
+  const canManageSettings = currentUserPermissions.has('manage_settings');
+
   // Matrix Permissions list
   const [activePermissionRole, setActivePermissionRole] = useState<string>('ADMIN');
   const [matrixPermissions, setMatrixPermissions] = useState<any>({
@@ -738,7 +764,7 @@ export default function SecAdminModulos({ section }: { section: string }) {
                       <select 
                         value={u.role}
                         onChange={(e) => handleUpdateMemberRole(u.uid, e.target.value)}
-                        disabled={u.role === 'OWNER' || userRoleInWorkspace !== 'OWNER'}
+                        disabled={u.role === 'OWNER' || !canManageMembers}
                         className="p-1 px-2 border border-[#0F172A0F] bg-white rounded-md text-xs font-bold outline-none cursor-pointer disabled:opacity-75"
                       >
                         <option value="OWNER">Proprietário (Owner)</option>
@@ -750,7 +776,7 @@ export default function SecAdminModulos({ section }: { section: string }) {
                     <td className="px-6 py-4 flex justify-end gap-2">
                       <button 
                         onClick={() => handleRemoveMember(u.uid, u.name)}
-                        disabled={u.role === 'OWNER' || userRoleInWorkspace !== 'OWNER'}
+                        disabled={u.role === 'OWNER' || !canManageMembers}
                         className="p-2 rounded-xl text-red-500 hover:bg-red-50 hover:border-red-100 border border-transparent disabled:opacity-50 transition-colors cursor-pointer"
                       >
                         <Trash2 size={16} />
@@ -802,7 +828,7 @@ export default function SecAdminModulos({ section }: { section: string }) {
                         <input 
                           type="checkbox" 
                           checked={nodeState}
-                          disabled={activePermissionRole === 'OWNER'} // Owners always have all access
+                          disabled={activePermissionRole === 'OWNER' || !canManageSettings} // Owners always have all access
                           onChange={() => togglePermissionNode(mod)}
                           className="accent-[#111111] w-4.5 h-4.5 cursor-pointer disabled:opacity-50" 
                         />

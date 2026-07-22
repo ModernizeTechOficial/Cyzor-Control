@@ -55,7 +55,7 @@ export default function InviteView() {
   const handleAcceptInvite = async () => {
     if (!inviteToken) return;
     if (!user) {
-      window.location.href = `/login?inviteToken=${encodeURIComponent(inviteToken)}`;
+      window.location.href = `/login?inviteToken=${encodeURIComponent(inviteToken)}&mode=signup`;
       return;
     }
 
