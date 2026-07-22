@@ -101,6 +101,8 @@ export async function hasPermission(userUid: string, workspaceId: number, permis
     if (!member) return false;
 
     const userRole = member.role as WorkspaceRole;
+    if (userRole === WorkspaceRole.OWNER) return true;
+
     const rolePermissions = getRolePermissions(userRole);
     const explicitPermissions = Array.isArray(member.permissions) ? normalizePermissions(member.permissions) : [];
     

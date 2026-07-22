@@ -6,6 +6,7 @@ const pool = new pg.Pool({ connectionString, ssl: false });
 try {
   await pool.query(`ALTER TABLE workspace_members ADD COLUMN IF NOT EXISTS department text;`);
   await pool.query(`ALTER TABLE workspace_members ADD COLUMN IF NOT EXISTS team_name text;`);
+  await pool.query(`ALTER TABLE workspace_members ADD COLUMN IF NOT EXISTS manager_uid text REFERENCES users(uid) ON DELETE SET NULL;`);
   await pool.query(`ALTER TABLE workspace_members ADD COLUMN IF NOT EXISTS permissions jsonb DEFAULT '[]'::jsonb;`);
 
   await pool.query(`ALTER TABLE workspace_members DROP CONSTRAINT IF EXISTS workspace_members_workspace_id_unique;`);

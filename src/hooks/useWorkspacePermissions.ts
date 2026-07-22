@@ -40,17 +40,30 @@ export const normalizePermissions = (permissions: any): Permission[] => {
 export const getEffectivePermissions = (role: string, permissions: any): Set<Permission> => {
   const normalized = normalizePermissions(permissions);
   const rolePerms = rolePermissionsMap[role as keyof typeof rolePermissionsMap] || [];
+  if (role === 'OWNER') {
+    return new Set<Permission>([...Object.values(rolePermissionsMap).flat(), ...normalized]);
+  }
   return new Set<Permission>([...rolePerms, ...normalized]);
 };
 
 export const useWorkspacePermissions = () => {
-  const { user } = useAuth();
+  const { user, dbUser, activeWorkspace } = useAuth();
   const { data: members = [], isLoading: isMembersLoading } = useMembers();
 
   const currentMember = useMemo(() => {
     if (!user || !Array.isArray(members)) return null;
-    return members.find((member: any) => member.uid === user.uid) || null;
-  }, [members, user]);
+    const found = members.find((member: any) => member.uid === user.uid) || null;
+    if (found) return found;
+    // Fallback: if the active workspace owner matches current user, treat as OWNER
+    if (activeWorkspace?.ownerUid === user.uid) {
+      return { uid: user.uid, role: 'OWNER', permissions: [] } as any;
+    }
+    // Fallback: if dbUser role is OWNER, expose as OWNER even if member record not loaded
+    if (dbUser?.role && String(dbUser.role).toUpperCase().includes('OWNER')) {
+      return { uid: user.uid, role: 'OWNER', permissions: [] } as any;
+    }
+    return null;
+  }, [members, user, activeWorkspace, dbUser]);
 
   const currentPermissions = useMemo(() => {
     if (!currentMember) return new Set<Permission>();
@@ -64,6 +77,7 @@ export const useWorkspacePermissions = () => {
     canManageFinance: currentPermissions.has('manage_finance'),
     canManageMembers: currentPermissions.has('manage_members'),
     canManageSettings: currentPermissions.has('manage_settings'),
-    isLoading: isMembersLoading
+    isLoading: isMembersLoading,
+    isOwner: currentMember?.role?.toString().toUpperCase().includes('OWNER') || false
   };
 };

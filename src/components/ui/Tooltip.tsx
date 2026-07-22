@@ -53,6 +53,15 @@ export const Tooltip: React.FC<PropsWithChildren<TooltipProps>> = ({
   // hide tooltip when not open
   if (!open) return <>{children}</>;
 
+  const transform =
+    placement === 'top'
+      ? 'translate(-50%, -100%)'
+      : placement === 'bottom'
+      ? 'translate(-50%, 0)'
+      : placement === 'left'
+      ? 'translate(-100%, -50%)'
+      : 'translate(0, -50%)';
+
   return (
     <>
       {children}
@@ -62,11 +71,11 @@ export const Tooltip: React.FC<PropsWithChildren<TooltipProps>> = ({
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.9 }}
           transition={{ duration: 0.2 }}
-          className="absolute z-20 max-w-xs p-3 bg-white/70 backdrop-blur-lg border border-white/30 rounded-lg shadow-lg"
+          className="fixed z-20 max-w-xs p-3 bg-white/70 backdrop-blur-lg border border-white/30 rounded-lg shadow-lg pointer-events-none"
           style={{
             top: coords.top,
             left: coords.left,
-            transform: "translate(-50%,-100%)",
+            transform,
           }}
           role="tooltip"
           aria-hidden={!open}

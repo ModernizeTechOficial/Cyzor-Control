@@ -50,12 +50,18 @@ export default function Sidebar({
   currentView: View,
   setCurrentView: (view: View) => void
 }) {
-  const { activeWorkspace, dbUser } = useAuth();
+  const { activeWorkspace, dbUser, user } = useAuth();
   const { canViewFinance, currentMember } = useWorkspacePermissions();
   const business = useBusinessContext();
   const { iconUrl, appName } = useBranding();
   const { badges, setGlobalFilters, globalFilters } = useNavigation();
   const currentPlan = dbUser?.currentPlan || 'free';
+
+  const isWorkspaceOwner = Boolean(
+    currentMember?.role?.toString().toUpperCase().includes('OWNER') ||
+    activeWorkspace?.ownerUid === user?.uid ||
+    dbUser?.role?.toString().toUpperCase().includes('OWNER')
+  );
 
   // Queries
   const { data: companies = [] } = useCompanies();
@@ -106,7 +112,6 @@ export default function Sidebar({
     return (
       <div className="flex flex-col px-3 relative">
         <div 
-          ref={tooltip.anchorRef}
           onMouseEnter={() => { if (isCollapsed) tooltip.openTooltip(); }}
           onMouseLeave={() => { if (isCollapsed) tooltip.closeTooltip(); }}
           onClick={(e) => {
@@ -119,11 +124,10 @@ export default function Sidebar({
               : 'text-[#71717A] hover:bg-[#F4F4F5] hover:text-[#18181B]'
           }`}
           style={!isCollapsed ? { paddingLeft: `${indent > 0 ? 16 + indent * 16 : 12}px` } : {}}
-          title={isCollapsed ? label : undefined}
           aria-label={label}
         >
           <Tooltip title={label} open={isCollapsed && tooltip.open} anchorRef={tooltip.anchorRef} placement="right">
-            <div className={`flex items-center ${isCollapsed ? 'justify-center w-full' : 'gap-3.5 overflow-hidden flex-1'}`}>
+            <div ref={tooltip.anchorRef} className={`flex items-center ${isCollapsed ? 'justify-center w-full' : 'gap-3.5 overflow-hidden flex-1'}`}>
               <Icon 
                 size={isCollapsed ? 22 : 19} 
                 strokeWidth={active ? 2.5 : 2} 
@@ -164,13 +168,6 @@ export default function Sidebar({
   const normalizedRole = String(rawRole).split(/\s|\u2022|·|•/).filter(Boolean)[0].toUpperCase();
   const modules = getSidebarModules({ role: normalizedRole, permissions: currentMember?.permissions || [] });
 
-  // debug info to help diagnose missing icons/modules
-  useEffect(() => {
-    try {
-      console.debug('Sidebar debug:', { rawRole, normalizedRole, permissions: currentMember?.permissions || [], modulesCount: modules.length });
-    } catch (e) { /* ignore */ }
-  }, [rawRole, normalizedRole, currentMember?.permissions, modules.length]);
-
   // Fallback modules for Owner (in case role resolution fails or modules list is empty)
   const defaultOwnerModules = [
     { id: 'dashboard', label: 'Dashboard' },
@@ -183,7 +180,23 @@ export default function Sidebar({
     { id: 'configuracoes', label: 'Configurações' }
   ];
 
-  const effectiveModules = modules.length > 0 ? modules : ((dbUser?.isPlatformAdmin || normalizedRole === 'OWNER') ? defaultOwnerModules : modules);
+  // Build effective modules and ensure unique ids (dedupe)
+  const sourceModules = modules.length > 0 ? modules : (isWorkspaceOwner ? defaultOwnerModules : modules);
+  const effectiveModules = Array.from(new Map(sourceModules.map((m: any) => [m.id, m])).values());
+
+  // debug info to help diagnose missing icons/modules
+  useEffect(() => {
+    try {
+      console.debug('Sidebar debug:', {
+        rawRole,
+        normalizedRole,
+        permissions: currentMember?.permissions || [],
+        modulesCount: modules.length,
+        effectiveModulesCount: effectiveModules.length,
+        isWorkspaceOwner
+      });
+    } catch (e) { /* ignore */ }
+  }, [rawRole, normalizedRole, currentMember?.permissions, modules.length, effectiveModules.length, isWorkspaceOwner]);
 
   const iconMap: Record<string, any> = {
     dashboard: LayoutDashboard,
@@ -193,10 +206,14 @@ export default function Sidebar({
     empresas: Building2,
     clientes: Users,
     ideias: Lightbulb,
+    crm: Briefcase,
+    projetos: GitBranch,
     financeiro: DollarSign,
     equipe: Users,
     ia: BotMessageSquare,
     'flow-builder': Workflow,
+    fluxos: Workflow,
+    'automações': BotMessageSquare,
     documentacao: FileText,
     keep: StickyNote,
     configuracoes: Settings,
@@ -244,8 +261,7 @@ export default function Sidebar({
           {isCollapsed ? (
             <div className="flex flex-col gap-0.5 relative">
               {/* Debug badge showing modules count when collapsed */}
-              <div className="absolute left-1 top-1 text-[10px] text-[#94A3B8]">{modules.length} modules</div>
-              {effectiveModules.map((m: any) => (
+                  {effectiveModules.map((m: any) => (
                 <NavItem
                   key={m.id}
                   icon={iconMap[m.id] || Building2}

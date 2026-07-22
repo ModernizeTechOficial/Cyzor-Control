@@ -64,11 +64,13 @@ export function getMembershipAccess(profile: MembershipProfile) {
 
       const normalizedRole = (role as string).toLowerCase();
 
+      // Owner has full module access
+      if (normalizedRole.includes('owner')) return true;
+
       // Managers do not see billing/finance by default unless granted explicit permission
       if ((normalizedRole.includes('manager') || normalizedRole.includes('admin')) && id === 'financeiro') {
         return combined.has('view_finance');
       }
-      if (normalizedRole.includes('owner') && moduleMap.owner.includes(id)) return true;
       if (normalizedRole.includes('admin') && moduleMap.owner.includes(id)) return true;
       if (normalizedRole.includes('manager') && moduleMap.manager.includes(id)) return true;
       if (normalizedRole.includes('member') || normalizedRole.includes('employee') || normalizedRole.includes('developer') || normalizedRole.includes('designer')) {
