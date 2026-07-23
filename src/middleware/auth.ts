@@ -30,6 +30,24 @@ export const requireAuth = async (
     }
     const decodedToken = await authInstance.verifyIdToken(token);
     req.user = decodedToken;
+    // Verbose debug: log essential decoded token claims (avoid logging raw token)
+    try {
+      console.log(`[Auth] Verified token for uid=${decodedToken.uid}, email=${decodedToken.email}, auth_time=${decodedToken.auth_time}`);
+      if ((decodedToken as any).firebase) {
+        // Print provider info if present
+        console.log('[Auth] firebase provider info:', (decodedToken as any).firebase.sign_in_provider);
+      }
+      // Print custom claims if any
+      const customClaims = { ...decodedToken } as any;
+      delete customClaims.iat;
+      delete customClaims.exp;
+      delete customClaims.auth_time;
+      delete customClaims.sub;
+      delete customClaims.aud;
+      console.log('[Auth] token claims snapshot:', Object.keys(customClaims));
+    } catch (e) {
+      console.warn('[Auth] Failed to log decoded token details:', e);
+    }
     next();
   } catch (error: any) {
     if (error.code === 'auth/id-token-expired') {
