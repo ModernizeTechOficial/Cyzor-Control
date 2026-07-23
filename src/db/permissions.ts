@@ -98,7 +98,18 @@ export async function hasPermission(userUid: string, workspaceId: number, permis
       ))
       .limit(1);
 
-    if (!member) return false;
+    // If no explicit membership found, allow access if the user is the workspace owner
+    if (!member) {
+      try {
+        const { workspaces } = await import('./schema.ts');
+        const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+        if (ws && ws.ownerUid === userUid) return true;
+        return false;
+      } catch (e) {
+        console.error('Error checking workspace owner fallback in hasPermission:', e);
+        return false;
+      }
+    }
 
     const userRole = member.role as WorkspaceRole;
     if (userRole === WorkspaceRole.OWNER) return true;
