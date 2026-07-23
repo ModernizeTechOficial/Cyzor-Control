@@ -643,6 +643,7 @@ apiRouter.put("/user/active-workspace", async (req: AuthRequest, res) => {
 // --- WORKSPACE MEMBERS & TEAM ---
 apiRouter.get("/workspace/members", async (req: AuthRequest, res) => {
   try {
+    console.log(`[Members] Request by user=${req.user?.uid || 'anonymous'} workspaceId=${req.workspaceId} tenantId=${req.tenantId} AuthHeader=${!!req.headers.authorization}`);
     const data = await db.select({
       id: workspaceMembers.id,
       userUid: workspaceMembers.userUid,
@@ -690,7 +691,7 @@ apiRouter.get("/workspace/members", async (req: AuthRequest, res) => {
     
     res.json(membersWithDetails);
   } catch (error) {
-    console.error("Error fetching members:", error);
+    console.error("Error fetching members:", error && (error.stack || error.message || error));
     res.status(500).json({ error: "Failed to fetch members" });
   }
 });
