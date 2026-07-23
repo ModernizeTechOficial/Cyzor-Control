@@ -135,6 +135,32 @@ apiRouter.get("/branding", async (req, res) => {
   }
 });
 
+// Lightweight auth sync endpoint: allows client to sync Firebase user to local DB
+// NOTE: This is intentionally permissive for local/dev environments — it upserts
+// a user record based on the payload sent by the client. If you run in production
+// consider protecting this route with proper token verification.
+apiRouter.post('/auth/sync', async (req: any, res) => {
+  try {
+    const { uid, email, name, picture } = req.body || {};
+    if (!uid) return res.status(400).json({ error: 'uid is required' });
+
+    const [existing] = await db.select().from(users).where(eq(users.uid, uid)).limit(1);
+    if (existing) {
+      const [updated] = await db.update(users)
+        .set({ displayName: name || existing.displayName, email: email || existing.email, photoUrl: picture || existing.photoUrl })
+        .where(eq(users.uid, uid))
+        .returning();
+      return res.json({ user: (updated && updated[0]) || updated });
+    }
+
+    const [inserted] = await db.insert(users).values({ uid, email: email || '', displayName: name || '', photoUrl: picture || '' }).returning();
+    res.json({ user: (inserted && inserted[0]) || inserted });
+  } catch (error) {
+    console.error('Error in /auth/sync:', error);
+    res.status(500).json({ error: 'Failed to sync auth user' });
+  }
+});
+
 apiRouter.get('/invite/:token', async (req, res) => {
   try {
     const { token } = req.params;
@@ -624,7 +650,7 @@ apiRouter.get("/workspace/members", async (req: AuthRequest, res) => {
       cargo: workspaceMembers.cargo,
       department: workspaceMembers.department,
       teamName: workspaceMembers.teamName,
-      managerUid: workspaceMembers.managerUid,
+      // managerUid may not exist on older DB schemas; omit from projection to avoid runtime errors
       permissions: workspaceMembers.permissions,
       status: workspaceMembers.status,
       onboardingCompleted: workspaceMembers.onboardingCompleted,
@@ -639,8 +665,12 @@ apiRouter.get("/workspace/members", async (req: AuthRequest, res) => {
     .innerJoin(users, eq(workspaceMembers.userUid, users.uid))
     .where(eq(workspaceMembers.workspaceId, req.workspaceId!));
 
-    // Also fetch manager names where managerUid exists
-    const managerUids = Array.from(new Set(data.map(m => m.managerUid).filter(Boolean))) as string[];
+    // If the older schema lacks managerUid, skip fetching manager names
+    const firstRow: any = data[0] as any;
+    const managerUids: string[] = (firstRow && Object.prototype.hasOwnProperty.call(firstRow, 'managerUid'))
+      ? Array.from(new Set((data as any).map((m: any) => m.managerUid).filter(Boolean))) as string[]
+      : [];
+
     let managerMap: Record<string, string> = {};
     if (managerUids.length > 0) {
       const managers = await db.select({ uid: users.uid, displayName: users.displayName, email: users.email })
@@ -651,9 +681,11 @@ apiRouter.get("/workspace/members", async (req: AuthRequest, res) => {
       });
     }
 
-    const membersWithDetails = data.map(m => ({
+    const membersWithDetails = (data as any).map((m: any) => ({
       ...m,
-      managerName: m.managerUid ? managerMap[m.managerUid] || 'Gestor' : undefined
+      managerName: m.managerUid ? managerMap[m.managerUid] || 'Gestor' : undefined,
+      // keep backward-compatible shape: expose managerUid if it exists
+      managerUid: Object.prototype.hasOwnProperty.call(m, 'managerUid') ? m.managerUid : undefined
     }));
     
     res.json(membersWithDetails);

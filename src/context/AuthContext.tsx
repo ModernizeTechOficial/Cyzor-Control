@@ -369,7 +369,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await signInWithEmailAndPassword(auth, email, pass);
     } catch (error) {
-      console.error('Email Sign-In failed:', error);
+      // Log detailed Firebase error info to help debug invalid-credential / 400 responses
+      try {
+        const errAny: any = error;
+        console.error('Email Sign-In failed:', {
+          message: errAny?.message,
+          code: errAny?.code,
+          customData: errAny?.customData
+        });
+      } catch (e) {
+        console.error('Email Sign-In failed (unknown error):', error);
+      }
       setLoading(false);
       throw error;
     }

@@ -48,7 +48,8 @@ export default function ClientesView() {
 
   useEffect(() => {
     if (globalFilters.clientId && clients && clients.length > 0) {
-      const p = clients.find((proj: any) => proj.id.toString() === globalFilters.clientId.toString());
+      const clientId = globalFilters.clientId!.toString();
+      const p = clients.find((proj: any) => proj.id.toString() === clientId);
       if (p) {
         setEditingClient(p);
         setIsModalOpen(true);
