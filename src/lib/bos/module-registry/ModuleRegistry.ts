@@ -1,6 +1,6 @@
-import { db } from '../../../db/index.ts';
-import { modules, resources, permissions, featureFlags, tenants, workspaces } from '../../../db/schema.ts';
-import { and, eq, sql, desc, asc } from 'drizzle-orm';
+import { db } from '../../../db/index';
+import { modules, resources, permissions, featureFlags, tenants, workspaces } from '../../../db/schema';
+import { and, or, eq, sql, desc, asc } from 'drizzle-orm';
 
 // ============================================================================
 // TYPES
@@ -19,6 +19,7 @@ export interface ModuleManifest {
   category: string;
   version: string;
   status: 'active' | 'beta' | 'deprecated';
+  isSystem?: boolean;
   dependencies: string[];
   routes: ModuleRoute[];
   menus: ModuleMenu[];
@@ -94,10 +95,18 @@ export interface ModuleDashboardConfig {
   defaultLayout: 'grid' | 'list';
 }
 
-export interface RegisteredModule extends ModuleManifest {
+export interface RegisteredModule {
   id: number;
+  slug: string;
+  name: string;
+  description?: string;
+  icon: string;
+  category: string;
+  version: string;
+  status: string;
   isSystem: boolean;
-  isActive: boolean;
+  dependencies: string[];
+  manifest: Record<string, any>;
   tenantId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -128,7 +137,6 @@ export class ModuleRegistry {
       dependencies: manifest.dependencies || [],
       manifest: manifest as any,
       tenantId,
-      workspaceId: workspaceId || null,
     }).returning();
 
     // Register resources
@@ -149,9 +157,26 @@ export class ModuleRegistry {
     }).onConflictDoNothing();
 
     // Cache
-    this.moduleCache.set(module.slug, { ...module, manifest: module.manifest as any });
+    const registeredModule: RegisteredModule = {
+      id: module.id,
+      slug: module.slug,
+      name: module.name,
+      description: module.description,
+      icon: module.icon,
+      category: module.category,
+      version: module.version,
+      status: module.status,
+      isSystem: module.isSystem,
+      dependencies: module.dependencies as string[],
+      manifest: module.manifest as any,
+      tenantId: module.tenantId,
+      createdAt: module.createdAt,
+      updatedAt: module.updatedAt,
+    };
 
-    return { ...module, manifest: module.manifest as any };
+    this.moduleCache.set(module.slug, registeredModule);
+
+    return registeredModule;
   }
 
   async unregisterModule(slug: string, tenantId: string): Promise<void> {
@@ -239,23 +264,27 @@ export class ModuleRegistry {
 
     if (!module) return null;
 
-    const registered = { ...module, manifest: module.manifest as any };
+    const registered: RegisteredModule = {
+      ...module,
+      dependencies: module.dependencies as string[],
+      manifest: module.manifest as any,
+    };
     this.moduleCache.set(cacheKey, registered);
 
     return registered;
   }
 
   async getAllModules(tenantId: string, workspaceId?: number): Promise<RegisteredModule[]> {
-    const conditions = [eq(modules.tenantId, tenantId), eq(modules.isActive, true)];
-    if (workspaceId) {
-      conditions.push(
-        or(eq(modules.workspaceId, workspaceId), eq(modules.workspaceId, null))
-      );
-    }
+    const allModules = await db
+      .select()
+      .from(modules)
+      .where(and(eq(modules.tenantId, tenantId), eq(modules.status, 'active')));
 
-    const allModules = await db.select().from(modules).where(and(...conditions));
-
-    return allModules.map((m) => ({ ...m, manifest: m.manifest as any }));
+    return allModules.map((m) => ({
+      ...m,
+      dependencies: m.dependencies as string[],
+      manifest: m.manifest as any,
+    }));
   }
 
   async getActiveModules(tenantId: string): Promise<RegisteredModule[]> {

@@ -1,6 +1,6 @@
-import { db } from '../../../db/index.ts';
-import { roles, permissions, rolePermissions, workspaceMembers, users, tenants, featureFlags, assignments } from '../../../db/schema.ts';
-import { getRolePermissions as getLegacyRolePermissions, isWorkspaceRole, WorkspaceRole } from '../../../db/permissions.ts';
+import { db } from '../../../db/index';
+import { roles, permissions, rolePermissions, workspaceMembers, users, tenants, featureFlags, assignments, modules } from '../../../db/schema';
+import { getRolePermissions as getLegacyRolePermissions, isWorkspaceRole, WorkspaceRole } from '../../../db/permissions';
 import { and, eq, sql, desc, asc } from 'drizzle-orm';
 import { LRUCache } from 'lru-cache';
 
@@ -92,7 +92,7 @@ export interface ModuleRecord {
 export class AuthorizationEngine {
   private permissionCache: LRUCache<string, { data: Set<PermissionSlug>; expires: number }>;
   private roleCache: LRUCache<string, RoleRecord | null>;
-  private moduleCache: LRUCache<string, ModuleRecord[]>;
+  private moduleCache: LRUCache<string, { data: ModuleSlug[]; expires: number }>;
   private readonly CACHE_TTL = 5 * 60 * 1000;
   private readonly CACHE_MAX = 10000;
 
@@ -306,7 +306,7 @@ export class AuthorizationEngine {
       const allModules = await db
         .select()
         .from(modules)
-        .where(eq(modules.isActive, true));
+        .where(eq(modules.status, 'active'));
 
       const accessible: ModuleSlug[] = [];
 
@@ -386,7 +386,7 @@ export class AuthorizationEngine {
       memberRole = member.role;
     } else {
       // Check workspace owner
-      const { workspaces } = await import('../../../db/schema.ts');
+      const { workspaces } = await import('../../../db/schema');
       const [workspace] = await db
         .select({ ownerUid: workspaces.ownerUid })
         .from(workspaces)
@@ -418,9 +418,9 @@ export class AuthorizationEngine {
     resourceAssignPerms.forEach((p) => assignmentPermissions.add(p));
 
     const combined = new Set<PermissionSlug>([
-      ...rolePermissions,
-      ...explicitPermissions,
-      ...assignmentPermissions,
+      ...Array.from(rolePermissions),
+      ...Array.from(explicitPermissions),
+      ...Array.from(assignmentPermissions),
     ]);
 
     return { rolePermissions, explicitPermissions, assignmentPermissions, combined };
@@ -646,7 +646,7 @@ export class AuthorizationEngine {
       if (member && member.status === 'Ativo') {
         memberRole = member.role;
       } else {
-        const { workspaces } = await import('../../../db/schema.ts');
+        const { workspaces } = await import('../../../db/schema');
         const [workspace] = await db
           .select({ ownerUid: workspaces.ownerUid })
           .from(workspaces)
@@ -680,9 +680,9 @@ export class AuthorizationEngine {
     }
 
     const combined = new Set<PermissionSlug>([
-      ...rolePermissions,
-      ...explicitPermissions,
-      ...assignmentPermissions,
+      ...Array.from(rolePermissions),
+      ...Array.from(explicitPermissions),
+      ...Array.from(assignmentPermissions),
     ]);
 
     return { rolePermissions, explicitPermissions, assignmentPermissions, combined };

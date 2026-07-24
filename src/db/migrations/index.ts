@@ -1,5 +1,6 @@
 import { registerMigration, runMigrations } from './runner';
 import { sql } from 'drizzle-orm';
+import './004-create-assignments-tables.ts';
 
 // ============================================================================
 // MIGRATION: 001-add-onboarding-fields

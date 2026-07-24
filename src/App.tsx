@@ -136,7 +136,9 @@ export default function App() {
       <div className="min-h-screen flex items-center justify-center bg-[#FAFAFA]">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-[#111111]/20 border-t-[#111111] rounded-full animate-spin" />
-          <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">Carregando seguranca...</span>
+          <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">
+            Organizando seu espaço de trabalho...
+          </span>
         </div>
       </div>
     );
@@ -176,7 +178,7 @@ export default function App() {
       </div>
 
       <Sidebar isCollapsed={isSidebarCollapsed} toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)} currentView={currentView} setCurrentView={setCurrentView} />
-      
+
       <div className={`transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-[80px]' : 'lg:ml-[260px]'} flex-1 min-w-0`}>
         <Topbar isSidebarCollapsed={isSidebarCollapsed} toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)} setCurrentView={setCurrentView} currentView={currentView} />
         <AnimatePresence mode="wait">
@@ -209,7 +211,7 @@ export default function App() {
         </AnimatePresence>
       </div>
       <BottomBar currentView={currentView} setCurrentView={setCurrentView} />
-      
+
       {user && <GlobalVoiceActivator />}
 
       {/* Floating Copilot Widget */}
@@ -250,17 +252,17 @@ export default function App() {
         <ProductTour key={restartTour} forceStart={restartTour > 0} />
       )}
 
-      <WelcomeModal 
-        isOpen={showWelcome} 
-        onClose={() => setShowWelcome(false)} 
+      <WelcomeModal
+        isOpen={showWelcome}
+        onClose={() => setShowWelcome(false)}
         onUpgrade={() => {
           setShowWelcome(false);
           setCurrentView('configuracoes');
-        }} 
+        }}
       />
       <CreateWorkspaceModal isOpen={isCreateWorkspaceModalOpen} onClose={() => setIsCreateWorkspaceModalOpen(false)} />
       <CommandPalette isOpen={isCommandPaletteOpen} onClose={() => setIsCommandPaletteOpen(false)} onNavigate={(v) => setCurrentView(v)} />
-      
+
       {isSwitchingWorkspace && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/80 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-4">
