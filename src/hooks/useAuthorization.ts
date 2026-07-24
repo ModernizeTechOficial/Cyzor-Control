@@ -1,17 +1,23 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  authorizationEngine,
-  policyEngine,
-  moduleRegistry,
-  featureFlagService,
-  AuthorizationContext,
-  PermissionSlug,
-  ResourceSlug,
-  ActionSlug,
-  ModuleSlug,
-} from '../lib/bos';
+
+export type PermissionSlug = string;
+export type ResourceSlug = string;
+export type ActionSlug = string;
+export type ModuleSlug = string;
+
+export interface AuthorizationContext {
+  userId: string;
+  tenantId: string;
+  workspaceId: number;
+  tenant?: {
+    id: string;
+    name: string;
+    slug: string;
+    plan: string;
+  };
+}
 
 // ============================================================================
 // TYPES
@@ -34,8 +40,7 @@ export interface UseAuthorizationResult {
 // ============================================================================
 
 export function useAuthorization(): UseAuthorizationResult {
-  const { user, dbUser, activeWorkspace } = useAuth();
-  const queryClient = useQueryClient();
+  const { user, dbUser, activeWorkspace, fetchWithAuth } = useAuth();
   const [loading, setLoading] = useState(false);
   const [context, setContext] = useState<AuthorizationContext | null>(null);
 
@@ -58,53 +63,59 @@ export function useAuthorization(): UseAuthorizationResult {
     }
   }, [authContext]);
 
-  // -------------------------------------------------------------------------
-  // CORE AUTHORIZATION
-  // -------------------------------------------------------------------------
+  const apiFetch = useCallback(async (path: string, init: RequestInit = {}) => {
+    if (!fetchWithAuth) {
+      throw new Error('fetchWithAuth is unavailable');
+    }
+    const response = await fetchWithAuth(path, init);
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`API error (${response.status}): ${text}`);
+    }
+    return response.json();
+  }, [fetchWithAuth]);
 
-  const can = useCallback(
-    async (permission: PermissionSlug, resourceType?: string, resourceId?: number): Promise<boolean> => {
-      if (!context) return false;
-      const result = await authorizationEngine.can(context, permission, resourceType, resourceId);
-      return result.allowed;
-    },
-    [context]
-  );
-
-  const cannot = useCallback(
-    async (permission: PermissionSlug, resourceType?: string, resourceId?: number): Promise<boolean> => {
-      if (!context) return true;
-      const result = await authorizationEngine.cannot(context, permission, resourceType, resourceId);
-      return result.allowed;
-    },
-    [context]
-  );
-
-  const hasRole = useCallback(async (role: string): Promise<boolean> => {
+  const can = useCallback(async (permission: PermissionSlug, resourceType?: string, resourceId?: number): Promise<boolean> => {
     if (!context) return false;
-    return authorizationEngine.hasRole(context, role);
-  }, [context]);
+    const query = new URLSearchParams({ permission });
+    if (resourceType) query.set('resourceType', resourceType);
+    if (resourceId !== undefined) query.set('resourceId', String(resourceId));
+    const result = await apiFetch(`/api/auth/can?${query.toString()}`);
+    return result.allowed === true;
+  }, [context, apiFetch]);
+
+  const cannot = useCallback(async (permission: PermissionSlug, resourceType?: string, resourceId?: number): Promise<boolean> => {
+    if (!context) return true;
+    const allowed = await can(permission, resourceType, resourceId);
+    return !allowed;
+  }, [context, can]);
+
+  const hasRole = useCallback(async (_role: string): Promise<boolean> => {
+    return false;
+  }, []);
 
   const hasPermission = useCallback(async (permission: PermissionSlug): Promise<boolean> => {
     if (!context) return false;
-    return authorizationEngine.hasPermission(context, permission);
-  }, [context]);
+    return can(permission);
+  }, [context, can]);
 
   const hasFeature = useCallback(async (featureKey: string): Promise<boolean> => {
     if (!context) return false;
-    return authorizationEngine.hasFeature(context, featureKey);
-  }, [context]);
+    const result = await apiFetch(`/api/auth/features/${encodeURIComponent(featureKey)}`);
+    return result.enabled === true;
+  }, [context, apiFetch]);
 
   const getEffectivePermissions = useCallback(async (): Promise<Set<PermissionSlug>> => {
     if (!context) return new Set();
-    const result = await authorizationEngine.getEffectivePermissions(context);
-    return result.combined;
-  }, [context]);
+    const result = await apiFetch('/api/auth/effective-permissions');
+    return new Set<string>(result.permissions || []);
+  }, [context, apiFetch]);
 
   const getAccessibleModules = useCallback(async (): Promise<ModuleSlug[]> => {
     if (!context) return [];
-    return authorizationEngine.getAccessibleModules(context);
-  }, [context]);
+    const result = await apiFetch('/api/auth/accessible-modules');
+    return result.modules || [];
+  }, [context, apiFetch]);
 
   return {
     can,
@@ -124,27 +135,24 @@ export function useAuthorization(): UseAuthorizationResult {
 // ============================================================================
 
 export function usePermissions() {
-  const { user, activeWorkspace } = useAuth();
+  const { user, activeWorkspace, fetchWithAuth } = useAuth();
   const { data: permissions = new Set<string>(), isLoading } = useQuery({
     queryKey: ['permissions', user?.uid, activeWorkspace?.id],
     queryFn: async () => {
       if (!user || !activeWorkspace) return new Set<string>();
-      const context = {
-        userId: user.uid,
-        tenantId: activeWorkspace.tenantId || '',
-        workspaceId: activeWorkspace.id,
-      };
-      const result = await authorizationEngine.getEffectivePermissions(context);
-      return Array.from(result.combined);
+      const response = await fetchWithAuth('/api/auth/effective-permissions');
+      const data = await response.json();
+      if (!Array.isArray(data.permissions)) return new Set<string>();
+      return new Set<string>(data.permissions);
     },
     enabled: !!user && !!activeWorkspace,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   return {
-    permissions: new Set(permissions),
+    permissions,
     isLoading,
-    hasPermission: (perm: string) => permissions.includes(perm),
+    hasPermission: (perm: string) => permissions.has(perm),
   };
 }
 
@@ -153,17 +161,14 @@ export function usePermissions() {
 // ============================================================================
 
 export function useModules() {
-  const { user, activeWorkspace } = useAuth();
+  const { user, activeWorkspace, fetchWithAuth } = useAuth();
   const { data: modules = [], isLoading } = useQuery({
     queryKey: ['modules', user?.uid, activeWorkspace?.id],
     queryFn: async () => {
       if (!user || !activeWorkspace) return [];
-      const context = {
-        userId: user.uid,
-        tenantId: activeWorkspace.tenantId || '',
-        workspaceId: activeWorkspace.id,
-      };
-      return moduleRegistry.getActiveModules(context.tenantId);
+      const response = await fetchWithAuth('/api/auth/accessible-modules');
+      const data = await response.json();
+      return Array.isArray(data.modules) ? data.modules : [];
     },
     enabled: !!user && !!activeWorkspace,
     staleTime: 30 * 60 * 1000, // 30 minutes
@@ -177,16 +182,14 @@ export function useModules() {
 // ============================================================================
 
 export function useFeature(featureKey: string) {
-  const { user, activeWorkspace } = useAuth();
+  const { user, activeWorkspace, fetchWithAuth } = useAuth();
   const { data: enabled = false, isLoading } = useQuery({
     queryKey: ['feature', featureKey, user?.uid, activeWorkspace?.id],
     queryFn: async () => {
       if (!user || !activeWorkspace) return false;
-      return featureFlagService.isEnabled(
-        featureKey,
-        activeWorkspace.tenantId,
-        activeWorkspace.id
-      );
+      const response = await fetchWithAuth(`/api/auth/features/${encodeURIComponent(featureKey)}`);
+      const data = await response.json();
+      return data.enabled === true;
     },
     enabled: !!user && !!activeWorkspace,
     staleTime: 5 * 60 * 1000,
@@ -200,18 +203,15 @@ export function useFeature(featureKey: string) {
 // ============================================================================
 
 export function usePolicy(resource: ResourceSlug, action: ActionSlug) {
-  const { user, activeWorkspace } = useAuth();
+  const { user, activeWorkspace, fetchWithAuth } = useAuth();
   const { data: allowed = false, isLoading } = useQuery({
     queryKey: ['policy', resource, action, user?.uid, activeWorkspace?.id],
     queryFn: async () => {
       if (!user || !activeWorkspace) return false;
-      const context = {
-        userId: user.uid,
-        tenantId: activeWorkspace.tenantId || '',
-        workspaceId: activeWorkspace.id,
-      };
-      const result = await policyEngine.can(context, resource, action);
-      return result.allowed;
+      const params = new URLSearchParams({ resource, action });
+      const response = await fetchWithAuth(`/api/auth/policy?${params.toString()}`);
+      const data = await response.json();
+      return data.allowed === true;
     },
     enabled: !!user && !!activeWorkspace,
     staleTime: 5 * 60 * 1000,

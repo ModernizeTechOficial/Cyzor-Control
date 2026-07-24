@@ -1,15 +1,13 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useWorkspacePermissions } from '../hooks/usePermissions';
-import { moduleRegistry } from '../lib/bos/module-registry/ModuleRegistry';
-import { authorizationEngine, AuthorizationContext } from '../lib/bos/authorization/AuthorizationEngine';
 
 // ============================================================================
 // SIDEBAR - Module-aware navigation
 // ============================================================================
 
 export default function Sidebar({ isCollapsed, toggleSidebar, currentView, setCurrentView }: any) {
-  const { user, dbUser, activeWorkspace } = useAuth();
+  const { user, dbUser, activeWorkspace, fetchWithAuth } = useAuth();
   const { canViewFinance, isLoading: permissionsLoading } = useWorkspacePermissions();
   const [modules, setModules] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -17,23 +15,19 @@ export default function Sidebar({ isCollapsed, toggleSidebar, currentView, setCu
   // Load accessible modules from Module Registry
   React.useEffect(() => {
     async function loadModules() {
-      if (!user || !activeWorkspace) return;
+      if (!user || !activeWorkspace || !fetchWithAuth) {
+        setLoading(false);
+        return;
+      }
 
       try {
-        const context: AuthorizationContext = {
-          userId: user.uid,
-          tenantId: activeWorkspace.tenantId || '',
-          workspaceId: activeWorkspace.id,
-        };
+        const response = await fetchWithAuth('/api/auth/accessible-modules');
+        if (!response.ok) {
+          throw new Error(`Failed to load modules: ${response.status}`);
+        }
 
-        const accessibleSlugs = await authorizationEngine.getAccessibleModules(context);
-        const allModules = await moduleRegistry.getAllModules(context.tenantId, context.workspaceId);
-        
-        const accessibleModules = allModules.filter((m) => 
-          accessibleSlugs.includes(m.slug) || m.isSystem
-        );
-
-        setModules(accessibleModules);
+        const data = await response.json();
+        setModules(Array.isArray(data.modules) ? data.modules : []);
       } catch (error) {
         console.error('Error loading modules:', error);
         setModules([]);
@@ -43,7 +37,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar, currentView, setCu
     }
 
     loadModules();
-  }, [user, activeWorkspace]);
+  }, [user, activeWorkspace, fetchWithAuth]);
 
   if (loading || permissionsLoading) {
     return (

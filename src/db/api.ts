@@ -13,6 +13,7 @@ import { eq, and, desc, sql, or, inArray, gte, lte, not } from "drizzle-orm";
 import { getUserSaaSState } from "./queries.ts";
 import { hasPermission, getMemberRole, sanitizePermissionsForRole, validateRolePermissionAssignment, isWorkspaceRole, WorkspaceRole } from "./permissions.ts";
 import { enforcePermission } from '../middleware/permission.ts';
+import { authorizationEngine, policyEngine, moduleRegistry, featureFlagService } from '../lib/bos/index.ts';
 
 const ai = new GoogleGenAI({ 
   apiKey: process.env.GEMINI_API_KEY,
@@ -200,6 +201,94 @@ apiRouter.get('/invite/:token', async (req, res) => {
   } catch (error) {
     console.error('Error fetching invite preview:', error);
     res.status(500).json({ error: 'Failed to fetch invite preview' });
+  }
+});
+
+apiRouter.get('/auth/effective-permissions', requireAuth, tenantMiddleware as any, async (req: AuthRequest, res) => {
+  try {
+    const context = {
+      userId: req.user!.uid,
+      tenantId: req.tenantId as string,
+      workspaceId: req.workspaceId as number,
+      tenant: req.user?.tenant ? { id: req.user.tenant.id, name: req.user.tenant.name, slug: req.user.tenant.slug, plan: req.user.tenant.plan } : undefined,
+    };
+    const result = await authorizationEngine.getEffectivePermissions(context);
+    return res.json({ permissions: Array.from(result.combined) });
+  } catch (error: any) {
+    console.error('Error fetching effective permissions:', error);
+    return res.status(500).json({ error: error.message || 'Failed to fetch effective permissions' });
+  }
+});
+
+apiRouter.get('/auth/accessible-modules', requireAuth, tenantMiddleware as any, async (req: AuthRequest, res) => {
+  try {
+    const context = {
+      userId: req.user!.uid,
+      tenantId: req.tenantId as string,
+      workspaceId: req.workspaceId as number,
+      tenant: req.user?.tenant ? { id: req.user.tenant.id, name: req.user.tenant.name, slug: req.user.tenant.slug, plan: req.user.tenant.plan } : undefined,
+    };
+
+    const accessibleSlugs = await authorizationEngine.getAccessibleModules(context);
+    const allModules = await moduleRegistry.getAllModules(context.tenantId, context.workspaceId);
+    const modules = Array.isArray(allModules)
+      ? allModules.filter((m) => accessibleSlugs.includes(m.slug) || m.isSystem)
+      : [];
+
+    return res.json({ modules });
+  } catch (error: any) {
+    console.error('Error fetching accessible modules:', error);
+    return res.status(500).json({ error: error.message || 'Failed to fetch accessible modules' });
+  }
+});
+
+apiRouter.get('/auth/features/:featureKey', requireAuth, tenantMiddleware as any, async (req: AuthRequest, res) => {
+  try {
+    const featureKey = req.params.featureKey;
+    const enabled = await featureFlagService.isEnabled(featureKey, req.tenantId as string, req.workspaceId as number);
+    return res.json({ enabled });
+  } catch (error: any) {
+    console.error('Error checking feature flag:', error);
+    return res.status(500).json({ error: error.message || 'Failed to check feature flag' });
+  }
+});
+
+apiRouter.get('/auth/can', requireAuth, tenantMiddleware as any, async (req: AuthRequest, res) => {
+  try {
+    const permission = String(req.query.permission || '');
+    if (!permission) return res.status(400).json({ error: 'Permission is required' });
+    const resourceType = typeof req.query.resourceType === 'string' ? req.query.resourceType : undefined;
+    const resourceId = req.query.resourceId !== undefined ? Number(req.query.resourceId) : undefined;
+    const context = {
+      userId: req.user!.uid,
+      tenantId: req.tenantId as string,
+      workspaceId: req.workspaceId as number,
+      tenant: req.user?.tenant ? { id: req.user.tenant.id, name: req.user.tenant.name, slug: req.user.tenant.slug, plan: req.user.tenant.plan } : undefined,
+    };
+    const result = await authorizationEngine.can(context, permission, resourceType, resourceId);
+    return res.json({ allowed: result.allowed, reason: result.reason || null, permissions: Array.from(result.permissions) });
+  } catch (error: any) {
+    console.error('Error checking permission:', error);
+    return res.status(500).json({ error: error.message || 'Failed to check permission' });
+  }
+});
+
+apiRouter.get('/auth/policy', requireAuth, tenantMiddleware as any, async (req: AuthRequest, res) => {
+  try {
+    const resource = String(req.query.resource || '');
+    const action = String(req.query.action || '');
+    if (!resource || !action) return res.status(400).json({ error: 'Resource and action are required' });
+    const context = {
+      userId: req.user!.uid,
+      tenantId: req.tenantId as string,
+      workspaceId: req.workspaceId as number,
+      tenant: req.user?.tenant ? { id: req.user.tenant.id, name: req.user.tenant.name, slug: req.user.tenant.slug, plan: req.user.tenant.plan } : undefined,
+    };
+    const result = await policyEngine.can(context, resource, action);
+    return res.json({ allowed: result.allowed, reason: result.reason || null, permissions: Array.from(result.permissions) });
+  } catch (error: any) {
+    console.error('Error checking policy:', error);
+    return res.status(500).json({ error: error.message || 'Failed to check policy' });
   }
 });
 
