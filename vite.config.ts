@@ -23,6 +23,11 @@ export default defineConfig(() => {
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
+    // Define a minimal `process.env` for browser bundles to avoid runtime errors
+    // from modules that reference `process` directly.
+    define: {
+      'process.env': {},
+    },
     preview: {
       allowedHosts: ["painel.cyzor.com.br", "ais-dev-i4ss3tthlj3yqpiykllyyt-68961966777.us-west2.run.app", "ais-pre-i4ss3tthlj3yqpiykllyyt-68961966777.us-west2.run.app", ".run.app"],
     },
