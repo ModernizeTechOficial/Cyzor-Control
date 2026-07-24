@@ -128,9 +128,11 @@ export class OnboardingService {
         };
       });
 
+      endProvisioningTrace(true);
       return result;
 
     } catch (error) {
+      endProvisioningTrace(false);
       const provisioningError = logger.createProvisioningError(
         'ensureAccount',
         'Onboarding transaction failed',
@@ -138,8 +140,6 @@ export class OnboardingService {
         { userUid: userId }
       );
       throw provisioningError;
-    } finally {
-      endProvisioningTrace(false);
     }
   }
 

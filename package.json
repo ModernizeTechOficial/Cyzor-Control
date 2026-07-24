@@ -10,6 +10,7 @@
     "preview": "npm run start",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
+    "test": "tsx ./src/db/queries.test.ts",
     "migrate": "tsx src/db/migrations/index.ts"
   },
   "dependencies": {

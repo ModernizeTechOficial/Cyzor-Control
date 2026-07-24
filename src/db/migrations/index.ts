@@ -198,6 +198,24 @@ registerMigration({
 });
 
 // ============================================================================
+// MIGRATION: 003-add-workspace-members-xp-career-level
+// ============================================================================
+// Adds xp and career_level columns to workspace_members to align with schema.ts.
+// ============================================================================
+registerMigration({
+  id: '003-add-workspace-members-xp-career-level',
+  name: 'Add workspace_members xp and career_level',
+  description: 'Adds xp and career_level columns to workspace_members for onboarding and BOS compatibility',
+  async up(db: any) {
+    await db.execute(sql`
+      ALTER TABLE "workspace_members"
+      ADD COLUMN IF NOT EXISTS "xp" integer NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS "career_level" text NOT NULL DEFAULT 'Pleno'
+    `);
+  },
+});
+
+// ============================================================================
 // EXPORT
 // ============================================================================
 

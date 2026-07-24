@@ -7,11 +7,7 @@ import { ProvisioningError } from '../lib/provisioning/ProvisioningError.ts';
 // --- SCHEMA INTROSPECTION CACHE ---
 let workspaceMembersColumnsCache: string[] | null = null;
 
-/**
- * Builds insert values for workspace_members based on actual DB columns.
- * Does NOT execute the query — caller must use tx.insert(...) or db.insert(...).
- */
-function buildWorkspaceMemberInsertValues(values: {
+export type WorkspaceMemberInsertValues = {
   workspaceId: number;
   userUid: string;
   tenantId?: string;
@@ -25,26 +21,51 @@ function buildWorkspaceMemberInsertValues(values: {
   onboardingCompleted?: boolean;
   xp?: number;
   careerLevel?: string;
-}, availableColumns: string[]) {
+};
+
+/**
+ * Builds insert values for workspace_members based on actual DB columns.
+ * Does NOT execute the query — caller must use tx.insert(...) or db.insert(...).
+ */
+export function normalizeWorkspaceMemberInput(values: any): WorkspaceMemberInsertValues {
+  return {
+    workspaceId: values.workspaceId ?? values.workspace_id,
+    userUid: values.userUid ?? values.user_uid,
+    tenantId: values.tenantId ?? values.tenant_id,
+    role: values.role,
+    cargo: values.cargo,
+    department: values.department,
+    teamName: values.teamName ?? values.team_name,
+    managerUid: values.managerUid ?? values.manager_uid,
+    permissions: values.permissions,
+    status: values.status,
+    onboardingCompleted: values.onboardingCompleted ?? values.onboarding_completed,
+    xp: values.xp,
+    careerLevel: values.careerLevel ?? values.career_level,
+  };
+}
+
+function buildWorkspaceMemberInsertValues(values: WorkspaceMemberInsertValues, availableColumns: string[]) {
   const insertValues: any = {};
+  const normalized = normalizeWorkspaceMemberInput(values);
   
-  if (availableColumns.includes('workspace_id')) insertValues.workspace_id = values.workspaceId;
-  if (availableColumns.includes('user_uid')) insertValues.user_uid = values.userUid;
-  if (availableColumns.includes('role')) insertValues.role = values.role || 'MEMBER';
-  if (availableColumns.includes('cargo')) insertValues.cargo = values.cargo || 'Colaborador';
-  if (availableColumns.includes('department')) insertValues.department = values.department || null;
-  if (availableColumns.includes('team_name')) insertValues.team_name = values.teamName || null;
-  if (availableColumns.includes('manager_uid')) insertValues.manager_uid = values.managerUid || null;
-  if (availableColumns.includes('permissions')) insertValues.permissions = values.permissions || [];
-  if (availableColumns.includes('status')) insertValues.status = values.status || 'Ativo';
+  if (availableColumns.includes('workspace_id')) insertValues.workspace_id = normalized.workspaceId;
+  if (availableColumns.includes('user_uid')) insertValues.user_uid = normalized.userUid;
+  if (availableColumns.includes('role')) insertValues.role = normalized.role || 'MEMBER';
+  if (availableColumns.includes('cargo')) insertValues.cargo = normalized.cargo || 'Colaborador';
+  if (availableColumns.includes('department')) insertValues.department = normalized.department || null;
+  if (availableColumns.includes('team_name')) insertValues.team_name = normalized.teamName || null;
+  if (availableColumns.includes('manager_uid')) insertValues.manager_uid = normalized.managerUid || null;
+  if (availableColumns.includes('permissions')) insertValues.permissions = normalized.permissions || [];
+  if (availableColumns.includes('status')) insertValues.status = normalized.status || 'Ativo';
   
-  if (availableColumns.includes('tenant_id') && values.tenantId) {
-    insertValues.tenant_id = values.tenantId;
+  if (availableColumns.includes('tenant_id') && normalized.tenantId) {
+    insertValues.tenant_id = normalized.tenantId;
   }
   
-  if (availableColumns.includes('onboarding_completed')) insertValues.onboarding_completed = values.onboardingCompleted ?? false;
-  if (availableColumns.includes('xp')) insertValues.xp = values.xp ?? 0;
-  if (availableColumns.includes('career_level')) insertValues.career_level = values.careerLevel || 'Pleno';
+  if (availableColumns.includes('onboarding_completed')) insertValues.onboarding_completed = normalized.onboardingCompleted ?? false;
+  if (availableColumns.includes('xp')) insertValues.xp = normalized.xp ?? 0;
+  if (availableColumns.includes('career_level')) insertValues.career_level = normalized.careerLevel || 'Pleno';
   
   return insertValues;
 }
@@ -325,32 +346,29 @@ export async function getOrCreateUser(
           params: { workspaceId: workspace.id, userUid: uid, tenantId: workspace.tenantId, role: 'OWNER' }
         });
 
-        const availableColumns = await getWorkspaceMembersColumns();
-        const memberValues = buildWorkspaceMemberInsertValues({
-          workspaceId: workspace.id,
-          userUid: uid,
-          tenantId: workspace.tenantId,
-          role: 'OWNER',
-          cargo: 'Proprietário',
-          department: 'Administração',
-          teamName: 'Owner',
-          status: 'Ativo',
-          permissions: [],
-          onboardingCompleted: false,
-          xp: 0,
-          careerLevel: 'Pleno',
-        }, availableColumns);
-
         let membership;
         try {
-          membership = await insertWorkspaceMemberWithAvailableColumns(tx, memberValues);
+          membership = await safeInsertWorkspaceMember({
+            workspaceId: workspace.id,
+            userUid: uid,
+            tenantId: workspace.tenantId,
+            role: 'OWNER',
+            cargo: 'Proprietário',
+            department: 'Administração',
+            teamName: 'Owner',
+            status: 'Ativo',
+            permissions: [],
+            onboardingCompleted: false,
+            xp: 0,
+            careerLevel: 'Pleno',
+          }, tx);
         } catch (error) {
           throw logger.createProvisioningError(
             'createWorkspaceMember',
             'Failed to create workspace membership',
             error,
             {
-              params: { memberValues, availableColumns },
+              params: { workspaceId: workspace.id, userUid: uid },
               workspaceId: workspace.id,
               tenantId: workspace.tenantId,
               userUid: uid,
@@ -359,7 +377,6 @@ export async function getOrCreateUser(
         }
 
         logger.info('STEP_4', 'Workspace membership created', {
-          params: { memberValues, availableColumns },
           createdIds: { membershipId: membership.id, tenantId: membership.tenantId },
           durationMs: Date.now() - step4Start
         });
@@ -376,6 +393,9 @@ export async function getOrCreateUser(
             activeTenantId: workspace.tenantId,
             updatedAt: new Date(),
           }).where(eq(users.uid, uid));
+
+          user.activeWorkspaceId = workspace.id;
+          user.activeTenantId = workspace.tenantId;
         } catch (error) {
           throw logger.createProvisioningError(
             'updateUserReferences',
