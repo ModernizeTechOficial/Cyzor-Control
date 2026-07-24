@@ -82,4 +82,4 @@ function getLegacyEffectivePermissions(role: string, permissions: any[]): Set<st
 // NEW BOS HOOKS
 // ============================================================================
 
-export { useNewPermissions as useBOSPermissions, useModules, useFeature, usePolicy } from './useAuthorization';
+export { usePermissions as useBOSPermissions, useModules, useFeature, usePolicy } from './useAuthorization';

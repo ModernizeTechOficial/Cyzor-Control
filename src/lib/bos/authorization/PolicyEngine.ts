@@ -1,5 +1,5 @@
-import { db } from '../../db/index.ts';
-import { tenants, users, workspaces, workspaceMembers, featureFlags, assignments } from '../../db/schema.ts';
+import { db } from '../../../db/index.ts';
+import { tenants, users, workspaces, workspaceMembers, featureFlags, assignments } from '../../../db/schema.ts';
 import { and, eq, sql } from 'drizzle-orm';
 import { authorizationEngine } from './AuthorizationEngine';
 

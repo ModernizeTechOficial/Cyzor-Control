@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { authorizationEngine, AuthorizationContext } from '../../lib/bos/authorization/AuthorizationEngine';
+import { authorizationEngine, AuthorizationContext } from '../lib/bos/authorization/AuthorizationEngine.ts';
 
 // ============================================================================
 // BOS AUTHORIZATION MIDDLEWARE

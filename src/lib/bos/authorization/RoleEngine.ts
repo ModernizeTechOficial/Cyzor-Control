@@ -1,5 +1,5 @@
-import { db } from '../../db/index.ts';
-import { roles, rolePermissions, tenants, workspaces, workspaceMembers, permissionAuditLog } from '../../db/schema.ts';
+import { db } from '../../../db/index.ts';
+import { roles, rolePermissions, tenants, workspaces, workspaceMembers, permissionAuditLog } from '../../../db/schema.ts';
 import { and, eq, sql, desc, asc } from 'drizzle-orm';
 import { authorizationEngine } from './AuthorizationEngine';
 
@@ -73,7 +73,7 @@ export class RoleEngine {
       workspaceId: input.workspaceId || null,
     }).returning();
 
-    await this.logPermissionChange(actorUid, 'role_created', 'role', String(role.id), null, role, ipAddress);
+    await this.logPermissionChange(actorUid, 'role_created', 'role', String(role.id), null, role, ipAddress, input.tenantId, input.workspaceId);
 
     // Invalidate caches
     authorizationEngine.invalidateAll();
@@ -107,7 +107,7 @@ export class RoleEngine {
       .where(and(eq(roles.slug, slug), eq(roles.tenantId, tenantId)))
       .returning();
 
-    await this.logPermissionChange(actorUid, 'role_updated', 'role', slug, role, updated, ipAddress);
+    await this.logPermissionChange(actorUid, 'role_updated', 'role', slug, role, updated, ipAddress, tenantId, input.workspaceId);
 
     // Invalidate caches
     authorizationEngine.invalidateAll();
@@ -142,7 +142,7 @@ export class RoleEngine {
 
     await db.delete(roles).where(and(eq(roles.slug, slug), eq(roles.tenantId, tenantId)));
 
-    await this.logPermissionChange(actorUid, 'role_deleted', 'role', slug, role, null, ipAddress);
+    await this.logPermissionChange(actorUid, 'role_deleted', 'role', slug, role, null, ipAddress, tenantId);
 
     // Invalidate caches
     authorizationEngine.invalidateAll();
@@ -227,7 +227,7 @@ export class RoleEngine {
       isInherited: inherited,
     }).returning();
 
-    await this.logPermissionChange(actorUid, 'permission_granted', 'role_permission', `${roleSlug}:${permissionSlug}`, null, rp, ipAddress);
+    await this.logPermissionChange(actorUid, 'permission_granted', 'role_permission', `${roleSlug}:${permissionSlug}`, null, rp, ipAddress, tenantId);
 
     authorizationEngine.invalidateAll();
 
@@ -265,7 +265,7 @@ export class RoleEngine {
       )
     );
 
-    await this.logPermissionChange(actorUid, 'permission_revoked', 'role_permission', `${roleSlug}:${permissionSlug}`, existing, null, ipAddress);
+    await this.logPermissionChange(actorUid, 'permission_revoked', 'role_permission', `${roleSlug}:${permissionSlug}`, existing, null, ipAddress, tenantId);
 
     authorizationEngine.invalidateAll();
 
@@ -368,15 +368,14 @@ export class RoleEngine {
     targetId: string,
     oldValue: any,
     newValue: any,
-    ipAddress?: string
+    ipAddress?: string,
+    tenantId?: string,
+    workspaceId?: number
   ) {
     try {
-      const [context] = await import('../context.ts');
-      const tenantContext = context.getTenantContextSafe();
-
       await db.insert(permissionAuditLog).values({
-        tenantId: tenantContext?.tenantId || '',
-        workspaceId: tenantContext?.tenantId ? 0 : undefined,
+        tenantId: tenantId || '',
+        workspaceId: workspaceId || null,
         actorUid,
         action,
         targetType,

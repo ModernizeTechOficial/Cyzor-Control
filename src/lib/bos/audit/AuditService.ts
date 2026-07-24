@@ -1,5 +1,5 @@
-import { db } from '../../db/index.ts';
-import { auditLogs, permissionAuditLog, users, tenants, workspaces } from '../../db/schema.ts';
+import { db } from '../../../db/index.ts';
+import { auditLogs, permissionAuditLog, users, tenants, workspaces } from '../../../db/schema.ts';
 import { and, eq, sql, desc, asc } from 'drizzle-orm';
 
 // ============================================================================

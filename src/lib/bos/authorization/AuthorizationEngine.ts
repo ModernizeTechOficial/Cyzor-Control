@@ -1,5 +1,5 @@
-import { db } from '../../db/index.ts';
-import { roles, permissions, rolePermissions, workspaceMembers, users, tenants, featureFlags, assignments } from '../../db/schema.ts';
+import { db } from '../../../db/index.ts';
+import { roles, permissions, rolePermissions, workspaceMembers, users, tenants, featureFlags, assignments } from '../../../db/schema.ts';
 import { and, eq, sql, desc, asc } from 'drizzle-orm';
 import { LRUCache } from 'lru-cache';
 
@@ -378,7 +378,7 @@ export class AuthorizationEngine {
       memberRole = member.role;
     } else {
       // Check workspace owner
-      const { workspaces } = await import('../../db/schema.ts');
+      const { workspaces } = await import('../../../db/schema.ts');
       const [workspace] = await db
         .select({ ownerUid: workspaces.ownerUid })
         .from(workspaces)
