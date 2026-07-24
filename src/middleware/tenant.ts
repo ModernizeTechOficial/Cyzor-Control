@@ -5,6 +5,7 @@ import * as schema from '../db/schema.ts';
 import { eq } from 'drizzle-orm';
 import { tenantContextStorage, TenantContextType } from '../db/context.ts';
 import { getUserSaaSState } from '../db/queries.ts';
+import { onboardingService } from '../services/OnboardingService';
 
 export interface TenantRequest extends AuthRequest {
   tenantId?: string;
@@ -13,10 +14,6 @@ export interface TenantRequest extends AuthRequest {
   company?: typeof schema.companies.$inferSelect;
 }
 
-/**
- * Resolves the active tenant for the authenticated user and runs the request
- * within the Tenant Context (AsyncLocalStorage) for automatic transparent multi-tenancy.
- */
 export const tenantMiddleware = async (
   req: TenantRequest,
   res: Response,
@@ -29,13 +26,11 @@ export const tenantMiddleware = async (
 
     const userId = req.user.uid;
 
-    // 1. Resolve active workspace ID from database
     let state = await getUserSaaSState(userId);
     let activeWorkspaceId = state?.activeWorkspace?.id;
 
     if (!activeWorkspaceId) {
       console.log(`[Tenant Middleware] No active workspace for user ${userId}. Attempting fallback...`);
-      // Fallback: Pick the first workspace the user belongs to
       const userWorkspaces = await db.select({ workspaceId: schema.workspaceMembers.workspaceId })
         .from(schema.workspaceMembers)
         .where(eq(schema.workspaceMembers.userUid, userId))
@@ -44,7 +39,6 @@ export const tenantMiddleware = async (
       if (userWorkspaces.length > 0) {
         activeWorkspaceId = userWorkspaces[0].workspaceId;
         console.log(`[Tenant Middleware] Falling back to workspace ${activeWorkspaceId} for user ${userId}`);
-        // Optionally update the user's active workspace in DB for next time
         await db.update(schema.users).set({ activeWorkspaceId }).where(eq(schema.users.uid, userId));
       } else {
         return res.status(403).json({ error: 'No active workspace resolved for this user. Please create or join a workspace first.' });
@@ -53,7 +47,6 @@ export const tenantMiddleware = async (
 
     req.workspaceId = activeWorkspaceId;
 
-    // 2. Fetch the corresponding Tenant
     const [workspace] = await db.select()
       .from(schema.workspaces)
       .where(eq(schema.workspaces.id, activeWorkspaceId))
@@ -62,7 +55,6 @@ export const tenantMiddleware = async (
     let tenantId = workspace?.tenantId;
     let tenantName = workspace?.name || 'My Tenant';
 
-    // Fetch the full tenant details if tenantId is available
     let tenant = null;
     if (tenantId) {
       const [t] = await db.select()
@@ -72,28 +64,37 @@ export const tenantMiddleware = async (
       tenant = t;
     }
 
-    // Self-healing check: If the workspace lacks a tenantId, or the tenant doesn't exist, create one dynamically!
     if (!workspace || !tenantId || !tenant) {
-      console.log(`[Tenant Middleware] Self-healing active: Workspace ${activeWorkspaceId} lacks tenant or tenant not found. Creating one...`);
+      console.log(`[Tenant Middleware] Self-healing active: Workspace ${activeWorkspaceId} lacks tenant or tenant not found. Healing...`);
       
-      const slug = `workspace-${activeWorkspaceId}-${Date.now()}`;
-      const [newTenant] = await db.insert(schema.tenants).values({
-        name: tenantName,
-        slug,
-        plan: workspace?.plan || 'Pro',
-      }).returning();
-
-      tenantId = newTenant.id;
-      tenant = newTenant;
-
-      if (workspace) {
-        await db.update(schema.workspaces)
-          .set({ tenantId })
-          .where(eq(schema.workspaces.id, activeWorkspaceId));
+      const healed = await onboardingService.healAccount(userId);
+      if (!healed) {
+        return res.status(500).json({ error: 'Failed to heal account structure' });
       }
+
+      const [healedWorkspace] = await db.select().from(schema.workspaces).where(eq(schema.workspaces.id, healed.workspaceId)).limit(1);
+      const [healedTenant] = await db.select().from(schema.tenants).where(eq(schema.tenants.id, healed.tenantId)).limit(1);
+      
+      req.workspaceId = healed.workspaceId;
+      req.tenantId = healed.tenantId;
+      req.tenant = healedTenant;
+      req.companyId = healed.companyId;
+
+      const context: TenantContextType = {
+        tenantId: healed.tenantId,
+        userId,
+        tenant: {
+          id: healedTenant.id,
+          name: healedTenant.name,
+          slug: healedTenant.slug,
+          plan: healedTenant.plan || 'Free',
+        },
+      };
+
+      tenantContextStorage.run(context, () => next());
+      return;
     }
 
-    // 3. Ensure user belongs to this tenant (Association validation)
     const [membership] = await db.select()
       .from(schema.userTenants)
       .where(
@@ -101,7 +102,6 @@ export const tenantMiddleware = async (
       )
       .limit(1);
 
-    // If membership doesn't exist, create it dynamically (auto-onboarding)
     if (!membership) {
       console.log(`[Tenant Middleware] Dynamically onboarding user ${userId} to Tenant ${tenantId}...`);
       await db.insert(schema.userTenants).values({
@@ -112,11 +112,9 @@ export const tenantMiddleware = async (
       }).onConflictDoNothing();
     }
 
-    // 4. Inject tenant and workspace details into request
     req.tenantId = tenantId;
     req.tenant = tenant;
 
-    // 4.1 Ensure a Company exists for this workspace (1:1)
     try {
       const [existingCompany] = await db.select().from(schema.companies).where(eq(schema.companies.workspaceId, activeWorkspaceId)).limit(1);
       if (!existingCompany) {
@@ -137,7 +135,6 @@ export const tenantMiddleware = async (
       console.warn('[Tenant Middleware] Error ensuring company exists for workspace:', err?.message || err);
     }
 
-    // 5. Initialize the AsyncLocalStorage Context Store
     const context: TenantContextType = {
       tenantId,
       userId,
@@ -149,8 +146,6 @@ export const tenantMiddleware = async (
       },
     };
 
-    // Wrap request execution in AsyncLocalStorage so all downstream database calls
-    // automatically access this context.
     tenantContextStorage.run(context, () => {
       next();
     });

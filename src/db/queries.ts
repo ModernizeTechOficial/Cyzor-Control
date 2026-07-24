@@ -1,6 +1,7 @@
 import { db } from './index.ts';
 import { users, workspaces, workspaceMembers, companies, products, projects, tasks, ideas, documents, financeEntries, aiHistory, flows } from './schema.ts';
 import { eq, and } from 'drizzle-orm';
+import { onboardingService } from '../services/OnboardingService';
 
 // --- USERS & WORKSPACES ---
 
@@ -11,56 +12,12 @@ export async function getOrCreateUser(
   photoUrl?: string
 ) {
   try {
-    let [user] = await db.select().from(users).where(eq(users.uid, uid));
+    const result = await onboardingService.ensureAccount(
+      { uid, email, displayName, photoUrl },
+      { segment: 'general' }
+    );
 
-    if (!user) {
-      const trialEndsAt = new Date();
-      trialEndsAt.setDate(trialEndsAt.getDate() + 14);
-
-      [user] = await db.insert(users).values({
-        uid,
-        email,
-        displayName: displayName || null,
-        photoUrl: photoUrl || null,
-        currentPlan: 'free',
-        trialEndsAt: trialEndsAt
-      }).returning();
-
-      const [workspace] = await db.insert(workspaces).values({
-        name: displayName ? `Workspace de ${displayName}` : 'Meu Workspace',
-        ownerUid: uid,
-        plan: 'free',
-      }).returning();
-
-      // Ensure a Company exists for the newly created workspace
-      try {
-        const [existingCompany] = await db.select().from(companies).where(eq(companies.workspaceId, workspace.id)).limit(1);
-        if (!existingCompany) {
-          await db.insert(companies).values({
-            workspaceId: workspace.id,
-            tenantId: workspace.tenantId || null,
-            name: `${workspace.name} Matriz`,
-            status: 'Ativo'
-          }).returning();
-        }
-      } catch (err) {
-        console.warn('Warning while creating default company for new workspace:', err?.message || err);
-      }
-      await db.insert(workspaceMembers).values({
-        workspaceId: workspace.id,
-        userUid: uid,
-        role: 'OWNER',
-      });
-
-      await db.update(users).set({ activeWorkspaceId: workspace.id }).where(eq(users.uid, uid));
-      user.activeWorkspaceId = workspace.id;
-    } else {
-      [user] = await db.update(users).set({
-        displayName: displayName || user.displayName,
-        photoUrl: photoUrl || user.photoUrl,
-        updatedAt: new Date(),
-      }).where(eq(users.uid, uid)).returning();
-    }
+    const [user] = await db.select().from(users).where(eq(users.uid, uid));
     return user;
   } catch (error: any) {
     console.error('Error in getOrCreateUser:', error);

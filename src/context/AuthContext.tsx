@@ -10,6 +10,7 @@ import {
   GoogleAuthProvider
 } from 'firebase/auth';
 import { auth, googleAuthProvider } from '../lib/firebase.ts';
+import { onboardingService } from '../services/OnboardingService';
 
 interface AuthContextType {
   user: User | null;
@@ -93,6 +94,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         const syncData = await res.json();
         setDbUser(syncData.user);
+      }
+
+      // Self-healing: ensure account structure is complete
+      try {
+        const healed = await onboardingService.healAccount(currentUser.uid);
+        if (healed) {
+          console.log('[AuthContext] Account self-healing completed', healed);
+        }
+      } catch (healError) {
+        console.warn('[AuthContext] Self-healing failed:', healError);
       }
 
       // Fetch user SaaS profile state from SQLite
