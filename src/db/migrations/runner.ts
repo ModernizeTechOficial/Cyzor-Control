@@ -35,10 +35,21 @@ export async function ensureSchemaMigrationsTable() {
   }
 }
 
+function getResultRows<T>(result: any): T[] {
+  if (!result) return [];
+  if (Array.isArray(result)) return result;
+  if (Array.isArray(result.rows)) return result.rows;
+  if (Array.isArray(result.result)) return result.result;
+  if (Array.isArray(result.rows?.rows)) return result.rows.rows;
+  if (Array.isArray(result.recordset)) return result.recordset;
+  return [];
+}
+
 export async function getAppliedMigrations(): Promise<string[]> {
   try {
     const result = await db.execute(sql`SELECT id FROM schema_migrations ORDER BY id`);
-    return result.map((row: any) => row.id);
+    const rows = getResultRows<{ id: string }>(result);
+    return rows.map((row) => row.id);
   } catch (error) {
     console.warn('[Migrations] Could not get applied migrations:', error);
     return [];
