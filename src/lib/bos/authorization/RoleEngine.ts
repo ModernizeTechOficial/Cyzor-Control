@@ -1,7 +1,7 @@
 import { db } from '../../../db/index.ts';
 import { roles, rolePermissions, tenants, workspaces, workspaceMembers, permissionAuditLog } from '../../../db/schema.ts';
 import { getRolePermissions as getLegacyRolePermissions, isWorkspaceRole, WorkspaceRole } from '../../../db/permissions.ts';
-import { and, eq, sql, desc, asc } from 'drizzle-orm';
+import { and, eq, sql, desc, asc, or } from 'drizzle-orm';
 import { authorizationEngine } from './AuthorizationEngine';
 
 // ============================================================================
@@ -32,6 +32,7 @@ export interface UpdateRoleInput {
   isActive?: boolean;
   parentRoleSlug?: string | null;
   priority?: number;
+  workspaceId?: number;
 }
 
 export interface RoleWithPermissions {

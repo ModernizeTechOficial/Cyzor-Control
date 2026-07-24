@@ -26,6 +26,9 @@ export type {
   RoleRecord,
   PermissionRecord,
   ModuleRecord,
+} from './authorization/AuthorizationEngine.js';
+
+export type {
   CreateRoleInput,
   UpdateRoleInput,
   RoleWithPermissions,

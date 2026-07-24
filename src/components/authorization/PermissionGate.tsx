@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuthorization } from '../../hooks/useAuthorization';
+import { Can } from './Can';
 
 interface PermissionGateProps {
   permission: string;

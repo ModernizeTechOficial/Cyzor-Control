@@ -54,6 +54,14 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
     return true;
   };
 
+  const handleBack = () => {
+    setCurrentStep((prev) => Math.max(1, prev - 1));
+  };
+
+  const handleNext = () => {
+    setCurrentStep((prev) => Math.min(totalSteps, prev + 1));
+  };
+
   const handleFinish = async () => {
     if (!activeWorkspace) return;
     setIsSubmitting(true);

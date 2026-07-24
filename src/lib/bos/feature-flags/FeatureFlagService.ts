@@ -1,6 +1,6 @@
 import { db } from '../../../db/index.ts';
 import { featureFlags, tenants, workspaces, users } from '../../../db/schema.ts';
-import { and, eq, sql, desc, asc } from 'drizzle-orm';
+import { and, eq, sql, desc, asc, or } from 'drizzle-orm';
 
 // ============================================================================
 // TYPES
@@ -15,7 +15,7 @@ export interface FeatureFlag {
   name: string;
   description?: string;
   isEnabled: boolean;
-  scope: FeatureFlagScope;
+  scope: FeatureFlagScope | string;
   tenantId?: string;
   workspaceId?: number;
   metadata: Record<string, any>;
@@ -28,7 +28,7 @@ export interface CreateFeatureFlagInput {
   name: string;
   description?: string;
   isEnabled?: boolean;
-  scope?: FeatureFlagScope;
+  scope?: FeatureFlagScope | string;
   tenantId?: string;
   workspaceId?: number;
   metadata?: Record<string, any>;
@@ -139,7 +139,9 @@ export class FeatureFlagService {
       );
     }
 
-    const allFlags = await db.select().from(featureFlags);
+    const allFlags = conditions.length
+      ? await db.select().from(featureFlags).where(and(...conditions))
+      : await db.select().from(featureFlags);
     return allFlags;
   }
 

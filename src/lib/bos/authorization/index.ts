@@ -17,6 +17,9 @@ export type {
   RoleRecord,
   PermissionRecord,
   ModuleRecord,
+} from './AuthorizationEngine.ts';
+
+export type {
   CreateRoleInput,
   UpdateRoleInput,
   RoleWithPermissions,

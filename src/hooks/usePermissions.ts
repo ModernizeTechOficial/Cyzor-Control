@@ -10,7 +10,7 @@ import { usePermissions as useNewPermissions, useModules, useFeature } from './u
 export function useWorkspacePermissions() {
   const { user, dbUser, activeWorkspace } = useAuth();
   const { data: members = [], isLoading: isMembersLoading } = useMembers();
-  const { permissions: bosPermissions, loading: bosLoading } = useNewPermissions();
+  const { permissions: bosPermissions, isLoading: bosLoading } = useNewPermissions();
 
   const currentMember = useMemo(() => {
     if (!user || !Array.isArray(members)) return null;

@@ -169,7 +169,7 @@ export default function Sidebar({
   const normalizedRole = String(rawRole).split(/\s|\u2022|·|•/).filter(Boolean)[0].toUpperCase();
   const legacyModules = getSidebarModules({ role: normalizedRole, permissions: currentMember?.permissions || [] });
   
-  const { data: bosModules = [], isLoading: modulesLoading } = useModules();
+  const { modules: bosModules = [], isLoading: modulesLoading } = useModules();
   
   // Prefer BOS Module Registry, fallback to legacy access control
   const registryModules = useMemo(() => {

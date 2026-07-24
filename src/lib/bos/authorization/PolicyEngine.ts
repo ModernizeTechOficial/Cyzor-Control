@@ -27,6 +27,7 @@ export interface AuthorizationContext {
 export interface PolicyResult {
   allowed: boolean;
   reason?: string;
+  permissions?: Set<PermissionSlug>;
   conditions?: Record<string, any>;
 }
 
@@ -95,6 +96,7 @@ export class PolicyEngine {
     return {
       allowed: result.allowed,
       reason: result.reason,
+      permissions: result.permissions,
       conditions: policy?.conditions,
     };
   }
