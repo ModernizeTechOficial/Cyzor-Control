@@ -3,6 +3,29 @@ import { hasPermission } from '../db/permissions';
 import { userHasAssignmentPermission } from '../db/assignments';
 import { bosAuthorize } from './bosAuthorization';
 
+function getLegacyPermissionAliases(permission: string, method: string): string[] {
+  switch (permission) {
+    case 'manage_projects':
+      if (method === 'POST') return ['create_projects'];
+      if (method === 'DELETE') return ['delete_projects'];
+      return ['edit_projects', 'create_projects', 'delete_projects'];
+    case 'manage_finance':
+      return ['manage_finance'];
+    case 'manage_members':
+      return ['manage_members'];
+    case 'manage_ai':
+      return ['manage_ai'];
+    case 'manage_integrations':
+      return ['manage_integrations'];
+    case 'manage_settings':
+      return ['manage_settings'];
+    case 'manage_workspace':
+      return ['manage_members', 'manage_settings'];
+    default:
+      return [permission];
+  }
+}
+
 export function enforcePermission(permission: string) {
   return async (req: Request & { user?: any; workspaceId?: number; tenantId?: string }, res: Response, next: NextFunction) => {
     try {
@@ -14,8 +37,8 @@ export function enforcePermission(permission: string) {
       const tenantId = (req as any).tenantId;
       if (tenantId) {
         try {
-          const bosResult = await bosAuthorize(permission)(req, res, next as any);
-          if (bosResult) return;
+          const bosResult = await bosAuthorize(permission)(req, res);
+          if (bosResult) return next();
         } catch (e) {
           // Fallback to legacy system
           console.warn('[enforcePermission] BOS engine failed, falling back to legacy:', e);
@@ -23,8 +46,11 @@ export function enforcePermission(permission: string) {
       }
 
       // Legacy: role / workspace-level permissions
-      const okRole = await hasPermission(user.uid, resolvedWorkspaceId, permission as any);
-      if (okRole) return next();
+      const legacyPermissions = Array.from(new Set([permission, ...getLegacyPermissionAliases(permission, req.method)]));
+      for (const perm of legacyPermissions) {
+        const okRole = await hasPermission(user.uid, resolvedWorkspaceId, perm as any);
+        if (okRole) return next();
+      }
 
       // Legacy: resource-scoped assignments
       const resourceType = (req as any).body?.resourceType || (req as any).params?.resourceType || (req as any).body?.entityType || null;
