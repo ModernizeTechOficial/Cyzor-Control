@@ -1109,3 +1109,183 @@ export const workspaceMissionProgress = pgTable('workspace_mission_progress', {
 }, (t) => ({
   wsMissionIdx: index('ws_mission_idx').on(t.workspaceId, t.missionId),
 }));
+
+// ============================================================================
+// BUSINESS OPERATING SYSTEM - AUTHORIZATION CORE
+// ============================================================================
+
+// ROLES - Hierarchical role system with inheritance
+export const roles = pgTable('roles', {
+  id: serial('id').primaryKey(),
+  slug: text('slug').notNull().unique(), // e.g. owner, admin, manager, member, viewer
+  name: text('name').notNull(), // e.g. Proprietário, Administrador, Gerente
+  description: text('description'),
+  color: text('color').default('#64748B'),
+  icon: text('icon').default('user'),
+  isSystem: boolean('is_system').default(false), // Cannot be deleted
+  isActive: boolean('is_active').default(true),
+  parentRoleSlug: text('parent_role_slug'), // For role inheritance
+  priority: integer('priority').default(0), // Higher = more permissions
+  tenantId: uuid('tenant_id').defaultRandom().notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  workspaceId: integer('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (t) => ({
+  slugIdx: index('roles_slug_idx').on(t.slug),
+  tenantIdx: index('roles_tenant_idx').on(t.tenantId),
+  parentIdx: index('roles_parent_idx').on(t.parentRoleSlug),
+}));
+
+// PERMISSIONS - Granular resource:action permissions
+export const permissions = pgTable('permissions', {
+  id: serial('id').primaryKey(),
+  slug: text('slug').notNull().unique(), // e.g. finance.entries.view
+  module: text('module').notNull(), // e.g. finance
+  resource: text('resource').notNull(), // e.g. entries
+  action: text('action').notNull(), // e.g. view, create, edit, delete, export, import, approve
+  description: text('description'),
+  isSystem: boolean('is_system').default(false),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => ({
+  slugIdx: index('permissions_slug_idx').on(t.slug),
+  moduleIdx: index('permissions_module_idx').on(t.module),
+  resourceIdx: index('permissions_resource_idx').on(t.resource),
+}));
+
+// ROLE_PERMISSIONS - Many-to-many between roles and permissions
+export const rolePermissions = pgTable('role_permissions', {
+  id: serial('id').primaryKey(),
+  roleSlug: text('role_slug').notNull().references(() => roles.slug, { onDelete: 'cascade' }),
+  permissionSlug: text('permission_slug').notNull().references(() => permissions.slug, { onDelete: 'cascade' }),
+  tenantId: uuid('tenant_id').defaultRandom().notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  workspaceId: integer('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
+  isInherited: boolean('is_inherited').default(false), // True if inherited from parent role
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => ({
+  rolePermIdx: index('role_permissions_role_idx').on(t.roleSlug, t.permissionSlug),
+  tenantIdx: index('role_permissions_tenant_idx').on(t.tenantId),
+}));
+
+// MODULE REGISTRY - Auto-discovered modules
+export const modules = pgTable('modules', {
+  id: serial('id').primaryKey(),
+  slug: text('slug').notNull().unique(), // e.g. finance, crm, projects
+  name: text('name').notNull(),
+  description: text('description'),
+  icon: text('icon').default('box'),
+  category: text('category').default('general'), // general, business, productivity, ai, etc.
+  version: text('version').default('1.0.0'),
+  status: text('status').default('active'), // active, beta, deprecated
+  isSystem: boolean('is_system').default(false),
+  dependencies: jsonb('dependencies').default([]), // Array of module slugs
+  manifest: jsonb('manifest').default({}), // Full module manifest (routes, widgets, actions, etc.)
+  tenantId: uuid('tenant_id').defaultRandom().notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (t) => ({
+  slugIdx: index('modules_slug_idx').on(t.slug),
+  tenantIdx: index('modules_tenant_idx').on(t.tenantId),
+}));
+
+// RESOURCES - Module-specific resources
+export const resources = pgTable('resources', {
+  id: serial('id').primaryKey(),
+  slug: text('slug').notNull(), // e.g. finance.entries
+  moduleSlug: text('module_slug').notNull().references(() => modules.slug, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  description: text('description'),
+  tableName: text('table_name'), // Database table name for this resource
+  isActive: boolean('is_active').default(true),
+  tenantId: uuid('tenant_id').defaultRandom().notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (t) => ({
+  slugIdx: index('resources_slug_idx').on(t.slug),
+  moduleIdx: index('resources_module_idx').on(t.moduleSlug),
+  tenantIdx: index('resources_tenant_idx').on(t.tenantId),
+}));
+
+// ACTIONS - Standard actions available on resources
+export const actions = pgTable('actions', {
+  id: serial('id').primaryKey(),
+  slug: text('slug').notNull().unique(), // e.g. view, create, edit, delete, export, import, approve
+  name: text('name').notNull(), // e.g. Visualizar, Criar, Editar, Excluir
+  description: text('description'),
+  isSystem: boolean('is_system').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// FEATURE FLAGS - Module/feature enablement per tenant/workspace
+export const featureFlags = pgTable('feature_flags', {
+  id: serial('id').primaryKey(),
+  key: text('key').notNull(), // e.g. finance_module_enabled
+  name: text('name').notNull(),
+  description: text('description'),
+  isEnabled: boolean('is_enabled').default(false),
+  scope: text('scope').default('workspace'), // platform, tenant, workspace
+  tenantId: uuid('tenant_id').references(() => tenants.id, { onDelete: 'cascade' }),
+  workspaceId: integer('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
+  metadata: jsonb('metadata').default({}),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (t) => ({
+  keyScopeIdx: index('feature_flags_key_scope_idx').on(t.key, t.scope),
+  tenantIdx: index('feature_flags_tenant_idx').on(t.tenantId),
+  workspaceIdx: index('feature_flags_workspace_idx').on(t.workspaceId),
+}));
+
+// PERMISSION AUDIT LOG - Track permission changes
+export const permissionAuditLog = pgTable('permission_audit_log', {
+  id: serial('id').primaryKey(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  workspaceId: integer('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
+  actorUid: text('actor_uid').notNull().references(() => users.uid, { onDelete: 'set null' }),
+  action: text('action').notNull(), // role_created, role_updated, permission_granted, permission_revoked, etc.
+  targetType: text('target_type').notNull(), // role, permission, user, module
+  targetId: text('target_id').notNull(),
+  oldValue: jsonb('old_value'),
+  newValue: jsonb('new_value'),
+  ipAddress: text('ip_address'),
+  userAgent: text('user_agent'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (t) => ({
+  tenantIdx: index('perm_audit_tenant_idx').on(t.tenantId),
+  targetIdx: index('perm_audit_target_idx').on(t.targetType, t.targetId),
+  actorIdx: index('perm_audit_actor_idx').on(t.actorUid),
+}));
+
+// RELATIONS
+export const rolesRelations = relations(roles, ({ one, many }) => ({
+  parentRole: one(roles, { fields: [roles.parentRoleSlug], references: [roles.slug] }),
+  childRoles: many(roles),
+  rolePermissions: many(rolePermissions),
+}));
+
+export const permissionsRelations = relations(permissions, ({ many }) => ({
+  rolePermissions: many(rolePermissions),
+}));
+
+export const rolePermissionsRelations = relations(rolePermissions, ({ one }) => ({
+  role: one(roles, { fields: [rolePermissions.roleSlug], references: [roles.slug] }),
+  permission: one(permissions, { fields: [rolePermissions.permissionSlug], references: [permissions.slug] }),
+}));
+
+export const modulesRelations = relations(modules, ({ many }) => ({
+  resources: many(resources),
+}));
+
+export const resourcesRelations = relations(resources, ({ one }) => ({
+  module: one(modules, { fields: [resources.moduleSlug], references: [modules.slug] }),
+}));
+
+export const featureFlagsRelations = relations(featureFlags, ({ one }) => ({
+  tenant: one(tenants, { fields: [featureFlags.tenantId], references: [tenants.id] }),
+  workspace: one(workspaces, { fields: [featureFlags.workspaceId], references: [workspaces.id] }),
+}));
+
+export const permissionAuditLogRelations = relations(permissionAuditLog, ({ one }) => ({
+  tenant: one(tenants, { fields: [permissionAuditLog.tenantId], references: [tenants.id] }),
+  actor: one(users, { fields: [permissionAuditLog.actorUid], references: [users.uid] }),
+}));
+

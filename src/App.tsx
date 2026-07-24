@@ -28,7 +28,7 @@ import { View } from './types';
 import { useURLSync } from './hooks/useURLSync';
 import { useNavigation } from './context/NavigationContext';
 import { useAuth } from './context/AuthContext.tsx';
-import { useWorkspacePermissions } from './hooks/useWorkspacePermissions';
+import { useWorkspacePermissions } from './hooks/usePermissions';
 import { Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import HomeIntelligence from './components/home/HomeIntelligence';
