@@ -114,6 +114,21 @@ export async function getOrCreateUser(
         plan: 'free',
       }).returning();
 
+      // Ensure we have the generated tenantId from the inserted workspace.
+      // Some drivers/clients may not populate default-generated columns on the
+      // returned insert object, so fetch the workspace row explicitly if
+      // `tenantId` is missing.
+      if (!workspace.tenantId) {
+        try {
+          const refreshed = await db.select().from(workspaces).where(eq(workspaces.id, workspace.id)).limit(1);
+          if (refreshed && refreshed[0]) {
+            workspace.tenantId = refreshed[0].tenantId;
+          }
+        } catch (err) {
+          console.warn('Could not refresh workspace to read tenantId:', err?.message || err);
+        }
+      }
+
       try {
         const [existingCompany] = await db.select().from(companies).where(eq(companies.workspaceId, workspace.id)).limit(1);
         if (!existingCompany) {
