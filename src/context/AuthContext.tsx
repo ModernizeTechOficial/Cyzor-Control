@@ -88,33 +88,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         })
       });
       
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`Backend synchronization failed: ${errText}`);
-      } else {
-        const syncData = await res.json();
-        setDbUser(syncData.user);
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Backend synchronization failed: ${errText}`);
+  } else {
+    const syncData = await res.json();
+    setDbUser(syncData.user);
+  }
+
+  const stateRes = await fetch('/api/auth/state', {
+    headers: { 'Authorization': `Bearer ${idToken}` },
+  });
+
+  if (stateRes.ok) {
+    const data = await stateRes.json();
+    if (data?.state) {
+      const { user, activeWorkspace } = data.state;
+      setActiveWorkspace(activeWorkspace);
+      if (user?.currentPlan) {
+        localStorage.setItem('saas_current_plan', user.currentPlan);
       }
-
-      // Account self-healing is performed server-side during /api/auth/sync
-
-      // Fetch user SaaS profile state from SQLite
-      const stateRes = await fetch('/api/auth/state', {
-        headers: {
-          'Authorization': `Bearer ${idToken}`
-        }
-      });
-
-      if (stateRes.ok) {
-        const data = await stateRes.json();
-        if (data && data.state) {
-          const { user, activeWorkspace } = data.state;
-          setActiveWorkspace(activeWorkspace);
-          if (user?.currentPlan) {
-            localStorage.setItem('saas_current_plan', user.currentPlan);
-          }
-        }
-      }
+    }
+  }
 
       // Fetch all workspaces
       const workRes = await fetch('/api/workspaces', {

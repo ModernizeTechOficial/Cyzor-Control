@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useBranding } from '../hooks/useBranding.ts';
 
-export default function LoginView({ onLogin, onNavigate }: { onLogin: () => void, onNavigate?: (view: any) => void }) {
+export default function LoginView({ onLogin, onNavigate }: { onLogin: () => void, onNavigate?: (view: string) => void }) {
   const { loginWithGoogle, loginWithEmail, registerWithEmail } = useAuth();
   const { iconUrl, iconSize, appName, loginHeroUrl } = useBranding();
   const inviteToken = useMemo(() => new URLSearchParams(window.location.search).get('inviteToken') || undefined, []);

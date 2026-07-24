@@ -108,11 +108,15 @@ export async function getOrCreateUser(
         trialEndsAt: trialEndsAt
       }).returning();
 
-      const [workspace] = await db.insert(workspaces).values({
-        name: displayName ? `Workspace de ${displayName}` : 'Meu Workspace',
-        ownerUid: uid,
-        plan: 'free',
-      }).returning();
+  const [workspace] = await db.insert(workspaces).values({
+    name: displayName ? `Workspace de ${displayName}` : 'Meu Workspace',
+    ownerUid: uid,
+    plan: 'free',
+    settings: {
+      onboardingCompleted: false,
+      createdAt: new Date().toISOString(),
+    },
+  }).returning();
 
       // Ensure we have the generated tenantId from the inserted workspace.
       // Some drivers/clients may not populate default-generated columns on the

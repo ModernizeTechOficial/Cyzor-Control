@@ -24,6 +24,7 @@ import VisualSystemsStudioView from './modules/VisualSystemsStudio/VisualSystems
 import AdminLayout from './modules/admin/AdminLayout';
 import EquipeView from './components/EquipeView';
 import PlanejamentoEstrategicoView from './components/PlanejamentoEstrategicoView';
+import OnboardingWizard from './components/OnboardingWizard';
 import { View } from './types';
 import { useURLSync } from './hooks/useURLSync';
 import { useNavigation } from './context/NavigationContext';
@@ -44,7 +45,7 @@ import GlobalVoiceActivator from './components/GlobalVoiceActivator';
 export default function App() {
   const { user, dbUser, loading, activeWorkspace, isSwitchingWorkspace, isCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen } = useAuth();
   const { canViewFinance, isLoading: permissionsLoading } = useWorkspacePermissions();
-  const [currentView, setCurrentView] = useState<View | 'admin'>('landing');
+  const [currentView, setCurrentView] = useState<View | 'admin' | 'onboarding'>('landing');
   const { globalFilters, setGlobalFilters } = useNavigation();
   useURLSync(currentView, setCurrentView, globalFilters, setGlobalFilters);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
@@ -95,25 +96,28 @@ export default function App() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!loading) {
-      if (user) {
-        if (globalFilters.inviteToken && currentView === 'login') {
-          setCurrentView('invite');
-        } else if (currentView === 'landing' || currentView === 'login' || currentView === 'privacy' || currentView === 'terms') {
-          if (dbUser?.isPlatformAdmin) {
-            setCurrentView('admin');
-          } else {
-            setCurrentView('dashboard');
-          }
-        }
-      } else {
-        if (currentView !== 'landing' && currentView !== 'login' && currentView !== 'privacy' && currentView !== 'terms') {
-          setCurrentView('landing');
-        }
+useEffect(() => {
+  if (!loading) {
+    if (user && !dbUser?.isPlatformAdmin) {
+      const needsOnboarding = activeWorkspace?.settings?.onboardingCompleted === false;
+      if (
+        currentView === 'landing' ||
+        currentView === 'login' ||
+        currentView === 'privacy' ||
+        currentView === 'terms'
+      ) {
+        setCurrentView(needsOnboarding ? 'onboarding' : 'dashboard');
+      }
+      if (currentView === 'dashboard' && needsOnboarding && globalFilters.inviteToken) {
+        setCurrentView('onboarding');
+      }
+    } else if (!user) {
+      if (currentView !== 'landing' && currentView !== 'login' && currentView !== 'privacy' && currentView !== 'terms') {
+        setCurrentView('landing');
       }
     }
-  }, [user, dbUser, loading, currentView, globalFilters]);
+  }
+}, [user, dbUser, loading, currentView, globalFilters, activeWorkspace]);
 
   useEffect(() => {
     if (!loading && !permissionsLoading && currentView === 'financeiro' && !canViewFinance) {
