@@ -1,5 +1,6 @@
 import { db } from '../../../db/index.ts';
 import { roles, rolePermissions, tenants, workspaces, workspaceMembers, permissionAuditLog } from '../../../db/schema.ts';
+import { getRolePermissions as getLegacyRolePermissions, isWorkspaceRole, WorkspaceRole } from '../../../db/permissions.ts';
 import { and, eq, sql, desc, asc } from 'drizzle-orm';
 import { authorizationEngine } from './AuthorizationEngine';
 
@@ -277,18 +278,29 @@ export class RoleEngine {
     tenantId: string,
     inherited: boolean = false
   ): Promise<PermissionSlug[]> {
-    const perms = await db
-      .select({ permissionSlug: rolePermissions.permissionSlug })
-      .from(rolePermissions)
-      .where(
-        and(
-          eq(rolePermissions.roleSlug, roleSlug),
-          eq(rolePermissions.tenantId, tenantId),
-          eq(rolePermissions.isInherited, inherited)
-        )
-      );
+    try {
+      const perms = await db
+        .select({ permissionSlug: rolePermissions.permissionSlug })
+        .from(rolePermissions)
+        .where(
+          and(
+            eq(rolePermissions.roleSlug, roleSlug),
+            eq(rolePermissions.tenantId, tenantId),
+            eq(rolePermissions.isInherited, inherited)
+          )
+        );
 
-    return perms.map((p) => p.permissionSlug);
+      return perms.map((p) => p.permissionSlug);
+    } catch (error: any) {
+      const message = String(error?.message || error);
+      if (error?.code === '42P01' || /relation "role_permissions" does not exist/i.test(message)) {
+        console.warn('[RoleEngine] role_permissions table missing, falling back to legacy role permissions');
+        return isWorkspaceRole(roleSlug)
+          ? getLegacyRolePermissions(roleSlug as WorkspaceRole)
+          : [];
+      }
+      throw error;
+    }
   }
 
   async getRoleHierarchy(tenantId: string): Promise<Map<string, string[]>> {

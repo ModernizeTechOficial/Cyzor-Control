@@ -1,5 +1,6 @@
 import { db } from '../../../db/index.ts';
 import { roles, permissions, rolePermissions, workspaceMembers, users, tenants, featureFlags, assignments } from '../../../db/schema.ts';
+import { getRolePermissions as getLegacyRolePermissions, isWorkspaceRole, WorkspaceRole } from '../../../db/permissions.ts';
 import { and, eq, sql, desc, asc } from 'drizzle-orm';
 import { LRUCache } from 'lru-cache';
 
@@ -425,29 +426,49 @@ export class AuthorizationEngine {
     const perms = new Set<PermissionSlug>();
 
     // Get direct role permissions from new system
-    const directPerms = await db
-      .select({ permissionSlug: rolePermissions.permissionSlug })
-      .from(rolePermissions)
-      .where(
-        and(
-          eq(rolePermissions.roleSlug, roleSlug),
-          eq(rolePermissions.tenantId, tenantId),
-          eq(rolePermissions.isInherited, false)
-        )
-      );
+    try {
+      const directPerms = await db
+        .select({ permissionSlug: rolePermissions.permissionSlug })
+        .from(rolePermissions)
+        .where(
+          and(
+            eq(rolePermissions.roleSlug, roleSlug),
+            eq(rolePermissions.tenantId, tenantId),
+            eq(rolePermissions.isInherited, false)
+          )
+        );
 
-    directPerms.forEach((p) => perms.add(p.permissionSlug));
+      directPerms.forEach((p) => perms.add(p.permissionSlug));
+    } catch (error: any) {
+      const message = String(error?.message || error);
+      if (error?.code === '42P01' || /relation "role_permissions" does not exist/i.test(message)) {
+        console.warn('[AuthorizationEngine] role_permissions table missing, falling back to legacy role permissions');
+        if (isWorkspaceRole(roleSlug)) {
+          getLegacyRolePermissions(roleSlug as WorkspaceRole).forEach((permission) => perms.add(permission));
+        }
+      } else {
+        throw error;
+      }
+    }
 
-    // Get parent role and inherit permissions
-    const [role] = await db
-      .select({ parentRoleSlug: roles.parentRoleSlug })
-      .from(roles)
-      .where(eq(roles.slug, roleSlug))
-      .limit(1);
+    try {
+      const [role] = await db
+        .select({ parentRoleSlug: roles.parentRoleSlug })
+        .from(roles)
+        .where(eq(roles.slug, roleSlug))
+        .limit(1);
 
-    if (role?.parentRoleSlug) {
-      const parentPerms = await this.resolveRolePermissions(role.parentRoleSlug, tenantId);
-      parentPerms.forEach((p) => perms.add(p));
+      if (role?.parentRoleSlug) {
+        const parentPerms = await this.resolveRolePermissions(role.parentRoleSlug, tenantId);
+        parentPerms.forEach((p) => perms.add(p));
+      }
+    } catch (error: any) {
+      const message = String(error?.message || error);
+      if (error?.code === '42P01' || /relation "roles" does not exist/i.test(message)) {
+        console.warn('[AuthorizationEngine] roles table missing, skipping role inheritance fallback');
+      } else {
+        throw error;
+      }
     }
 
     return Array.from(perms);

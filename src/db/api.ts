@@ -362,6 +362,7 @@ apiRouter.post('/invite/:token/accept', requireAuth, async (req: AuthRequest, re
 });
 
 apiRouter.use(requireAuth);
+apiRouter.use(tenantMiddleware as any);
 
 apiRouter.post("/workspace/invitations/accept", async (req: AuthRequest, res) => {
   try {
@@ -2606,104 +2607,13 @@ apiRouter.post("/activities", async (req: AuthRequest, res) => {
 });
 
 // --- FINANCE ---
-apiRouter.get("/finance", enforcePermission('view_finance'), async (req: AuthRequest, res) => {
+apiRouter.get("/finance", requireAuth, tenantMiddleware as any, enforcePermission('view_finance'), async (req: AuthRequest, res) => {
   try {
     const data = await db.select().from(financeEntries).where(eq(financeEntries.workspaceId, req.workspaceId!));
     res.json(data);
   } catch (error) {
     console.error("Error fetching finance entries:", error);
     res.status(500).json({ error: "Failed to fetch finance entries" });
-  }
-});
-apiRouter.post("/finance", async (req: AuthRequest, res) => {
-  try {
-    const canManageFinance = await hasPermission(req.user!.uid, req.workspaceId!, 'manage_finance');
-    if (!canManageFinance) {
-      return res.status(403).json({ error: "Access denied to manage finance" });
-    }
-    const { description, amount, type, category, date, companyId, projectId, status, isRecurrent, dueDate, paymentDate } = req.body;
-    const data = await db.insert(financeEntries).values({ 
-        workspaceId: req.workspaceId!,
-        description,
-        amount: amount.toString(),
-        type,
-        category,
-        date: new Date(date),
-        companyId: companyId ? Number(companyId) : null,
-        projectId: projectId ? Number(projectId) : null,
-        status,
-        isRecurrent: !!isRecurrent,
-        dueDate: dueDate ? new Date(dueDate) : null,
-        paymentDate: paymentDate ? new Date(paymentDate) : null
-    }).returning();
-
-    try {
-      const typeLabel = type === 'receita' ? 'Receita' : 'Despesa';
-      await db.insert(notifications).values({
-        tenantId: req.tenantId as any,
-        workspaceId: req.workspaceId!,
-        title: `Nova ${typeLabel} Registrada`,
-        description: `${typeLabel} "${description}" no valor de R$ ${Number(amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} foi lançada.`,
-        type: type === 'receita' ? 'success' : 'warning'
-      });
-    } catch (e) {
-      console.error("Error creating finance notification:", e);
-    }
-
-    res.json(data[0]);
-  } catch (error) {
-    console.error("Error in POST /finance:", error);
-    res.status(500).json({ error: "Failed to create finance entry" });
-  }
-});
-
-apiRouter.put("/finance/:id", async (req: AuthRequest, res) => {
-  const entryId = Number(req.params.id);
-  const { description, amount, type, category, date, companyId, projectId, status, isRecurrent, dueDate, paymentDate } = req.body;
-  try {
-      const canManageFinance = await hasPermission(req.user!.uid, req.workspaceId!, 'manage_finance');
-      if (!canManageFinance) {
-        return res.status(403).json({ error: "Access denied to manage finance" });
-      }
-      const existing = await db.select().from(financeEntries)
-        .where(and(eq(financeEntries.id, entryId), eq(financeEntries.workspaceId, req.workspaceId!)));
-      
-      if (existing.length === 0) {
-        return res.status(403).json({ error: "Finance entry not found or not in workspace" });
-      }
-
-      const updateValues: any = {
-          description,
-          amount: amount.toString(),
-          type,
-          category,
-          date: date ? new Date(date) : null,
-          companyId: companyId ? Number(companyId) : null,
-          projectId: projectId ? Number(projectId) : null,
-          status,
-          isRecurrent: !!isRecurrent,
-          dueDate: dueDate ? new Date(dueDate) : null,
-          paymentDate: paymentDate ? new Date(paymentDate) : null,
-          updatedAt: new Date()
-      };
-
-      const data = await db.update(financeEntries).set(updateValues).where(eq(financeEntries.id, entryId)).returning();
-      
-      if (status === 'PAID') {
-          const technicalEvent: TechnicalEvent = { 
-              type: 'INVOICE_PAID', 
-              payload: { financeEntryId: entryId, workspaceId: req.workspaceId!, userUid: req.user?.uid || undefined, tenantId: req.tenantId } 
-          };
-          const businessEvent = BusinessEventTranslator.translate(technicalEvent);
-          if (businessEvent) {
-              await BESIntegrationService.processBusinessEvent(businessEvent);
-          }
-      }
-      
-      res.json(data[0]);
-  } catch (error) {
-      console.error("Error updating finance entry:", error);
-      res.status(500).json({ error: "Failed to update finance entry" });
   }
 });
 
