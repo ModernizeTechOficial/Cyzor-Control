@@ -86,7 +86,7 @@ class ProvisioningLogger {
 
   error(step: string, message: string, error: unknown, extra?: Partial<Omit<StepLog, 'step' | 'level' | 'message' | 'timestamp'>>) {
     const err = error instanceof Error ? error : new Error(String(error));
-    const constraint = (err as any).code === '23514' ? (err as any).constraintName : undefined;
+    const constraint = (err as any).constraint || (err as any).constraintName || (err as any).code;
     const entry: StepLog = {
       step,
       level: 'ERROR',
@@ -106,6 +106,7 @@ class ProvisioningLogger {
       sql: extra?.sql,
       dbResponse: extra?.dbResponse,
       createdIds: extra?.createdIds,
+      constraint: extra?.constraint,
     });
 
     const err = error instanceof Error ? error : new Error(String(error));
@@ -114,7 +115,7 @@ class ProvisioningLogger {
       stage,
       reason,
       sql: extra?.sql,
-      constraint: (err as any).code === '23514' ? (err as any).constraintName : extra?.constraint,
+      constraint: extra?.constraint || (err as any).constraint || (err as any).constraintName || (err as any).code,
       workspaceId: extra?.workspaceId,
       tenantId: extra?.tenantId,
       userUid: extra?.userUid,

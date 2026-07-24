@@ -208,7 +208,7 @@ export class OnboardingService {
       ).limit(1);
 
       if (!membership) {
-        const [newMembership] = await safeInsertWorkspaceMember({
+        const newMembership = await safeInsertWorkspaceMember({
           workspaceId: workspace.id,
           userUid: userId,
           role: 'OWNER',
@@ -226,7 +226,7 @@ export class OnboardingService {
             userId,
             action: 'MEMBERSHIP_HEALED',
             tableName: 'workspace_members',
-            recordId: String(newMembership[0].id),
+            recordId: String(newMembership.id),
           });
         } catch {}
 
@@ -235,7 +235,7 @@ export class OnboardingService {
           workspaceId,
           companyId: company.id,
           userId,
-          membershipId: newMembership[0].id,
+          membershipId: newMembership.id,
           isNewTenant: false,
           isNewWorkspace: false,
           isNewCompany: false,
@@ -384,7 +384,7 @@ export class OnboardingService {
 
     if (existing) return existing;
 
-    const [membership] = await tx.insert(schema.workspaceMembers).values({
+    const membership = await safeInsertWorkspaceMember({
       tenantId,
       workspaceId,
       userUid: userId,
@@ -397,7 +397,7 @@ export class OnboardingService {
       onboardingCompleted: false,
       xp: 0,
       careerLevel: 'Pleno',
-    }).returning();
+    }, tx);
 
     return membership;
   }

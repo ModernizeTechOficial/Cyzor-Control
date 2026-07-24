@@ -28,23 +28,23 @@ function buildWorkspaceMemberInsertValues(values: {
 }, availableColumns: string[]) {
   const insertValues: any = {};
   
-  if (availableColumns.includes('workspace_id')) insertValues.workspaceId = values.workspaceId;
-  if (availableColumns.includes('user_uid')) insertValues.userUid = values.userUid;
+  if (availableColumns.includes('workspace_id')) insertValues.workspace_id = values.workspaceId;
+  if (availableColumns.includes('user_uid')) insertValues.user_uid = values.userUid;
   if (availableColumns.includes('role')) insertValues.role = values.role || 'MEMBER';
   if (availableColumns.includes('cargo')) insertValues.cargo = values.cargo || 'Colaborador';
   if (availableColumns.includes('department')) insertValues.department = values.department || null;
-  if (availableColumns.includes('team_name')) insertValues.teamName = values.teamName || null;
-  if (availableColumns.includes('manager_uid')) insertValues.managerUid = values.managerUid || null;
+  if (availableColumns.includes('team_name')) insertValues.team_name = values.teamName || null;
+  if (availableColumns.includes('manager_uid')) insertValues.manager_uid = values.managerUid || null;
   if (availableColumns.includes('permissions')) insertValues.permissions = values.permissions || [];
   if (availableColumns.includes('status')) insertValues.status = values.status || 'Ativo';
   
   if (availableColumns.includes('tenant_id') && values.tenantId) {
-    insertValues.tenantId = values.tenantId;
+    insertValues.tenant_id = values.tenantId;
   }
   
-  if (availableColumns.includes('onboarding_completed')) insertValues.onboardingCompleted = values.onboardingCompleted ?? false;
+  if (availableColumns.includes('onboarding_completed')) insertValues.onboarding_completed = values.onboardingCompleted ?? false;
   if (availableColumns.includes('xp')) insertValues.xp = values.xp ?? 0;
-  if (availableColumns.includes('career_level')) insertValues.careerLevel = values.careerLevel || 'Pleno';
+  if (availableColumns.includes('career_level')) insertValues.career_level = values.careerLevel || 'Pleno';
   
   return insertValues;
 }
@@ -77,9 +77,15 @@ async function getWorkspaceMembersColumns(): Promise<string[]> {
 
 /**
  * Inserts into workspace_members using only columns that exist in the actual database.
- * WARNING: Do NOT use inside db.transaction() — use buildWorkspaceMemberInsertValues + tx.execute instead.
+ * Can be used inside a transaction when passing `tx`.
  */
-async function safeInsertWorkspaceMember(values: {
+function buildSqlValue(value: any) {
+  if (value === null || value === undefined) return sql`NULL`;
+  if (typeof value === 'object') return sql`${JSON.stringify(value)}::jsonb`;
+  return sql`${value}`;
+}
+
+async function insertWorkspaceMemberWithAvailableColumns(tx: any, values: {
   workspaceId: number;
   userUid: string;
   tenantId?: string;
@@ -96,7 +102,49 @@ async function safeInsertWorkspaceMember(values: {
 }) {
   const availableColumns = await getWorkspaceMembersColumns();
   const insertValues = buildWorkspaceMemberInsertValues(values, availableColumns);
-  return await db.insert(workspaceMembers).values(insertValues).returning();
+
+  const columns = Object.keys(insertValues);
+  if (columns.length === 0) {
+    throw new Error('No valid workspace_members columns available for insert');
+  }
+
+  const columnIdentifiers = columns.map((column) => sql.identifier(column));
+  const valueParameters = columns.map((column) => buildSqlValue(insertValues[column]));
+
+  const insertSql = sql`
+    INSERT INTO workspace_members (${sql.join(columnIdentifiers, sql`, `)})
+    VALUES (${sql.join(valueParameters, sql`, `)})
+    RETURNING
+      id,
+      tenant_id AS "tenantId",
+      workspace_id AS "workspaceId",
+      user_uid AS "userUid",
+      role
+  `;
+
+  const result = await tx.execute(insertSql);
+  return result.rows[0];
+}
+
+export async function safeInsertWorkspaceMember(
+  values: {
+    workspaceId: number;
+    userUid: string;
+    tenantId?: string;
+    role?: string;
+    cargo?: string;
+    department?: string;
+    teamName?: string;
+    managerUid?: string;
+    permissions?: any;
+    status?: string;
+    onboardingCompleted?: boolean;
+    xp?: number;
+    careerLevel?: string;
+  },
+  tx?: any
+) {
+  return await insertWorkspaceMemberWithAvailableColumns(tx || db, values);
 }
 
 // --- USERS & WORKSPACES ---
@@ -177,12 +225,25 @@ export async function getOrCreateUser(
           params: { slug: tenantSlug, name: `${displayName || email}'s Organization` }
         });
 
-        const [tenant] = await tx.insert(tenants).values({
-          name: `${displayName || email}'s Organization`,
-          slug: tenantSlug,
-          plan: 'Pro',
-          status: 'Active',
-        }).returning();
+        let tenant;
+        try {
+          [tenant] = await tx.insert(tenants).values({
+            name: `${displayName || email}'s Organization`,
+            slug: tenantSlug,
+            plan: 'Pro',
+            status: 'Active',
+          }).returning();
+        } catch (error) {
+          throw logger.createProvisioningError(
+            'createTenant',
+            'Failed to create tenant',
+            error,
+            {
+              params: { slug: tenantSlug, name: `${displayName || email}'s Organization`, plan: 'Pro', status: 'Active' },
+              reason: 'Tenant creation SQL failed',
+            }
+          );
+        }
 
         logger.info('STEP_2A', 'Tenant created', { 
           createdIds: { tenantId: tenant.id, slug: tenant.slug },
@@ -195,16 +256,30 @@ export async function getOrCreateUser(
           params: { tenantId: tenant.id, name: displayName ? `Workspace de ${displayName}` : 'Meu Workspace', ownerUid: uid }
         });
 
-        const [insertedWorkspace] = await tx.insert(workspaces).values({
-          tenantId: tenant.id,
-          name: displayName ? `Workspace de ${displayName}` : 'Meu Workspace',
-          ownerUid: uid,
-          plan: 'free',
-          settings: {
-            onboardingCompleted: false,
-            createdAt: new Date().toISOString(),
-          },
-        }).returning();
+        let insertedWorkspace;
+        try {
+          [insertedWorkspace] = await tx.insert(workspaces).values({
+            tenantId: tenant.id,
+            name: displayName ? `Workspace de ${displayName}` : 'Meu Workspace',
+            ownerUid: uid,
+            plan: 'free',
+            settings: {
+              onboardingCompleted: false,
+              createdAt: new Date().toISOString(),
+            },
+          }).returning();
+        } catch (error) {
+          throw logger.createProvisioningError(
+            'createWorkspace',
+            'Failed to create workspace',
+            error,
+            {
+              params: { tenantId: tenant.id, name: displayName ? `Workspace de ${displayName}` : 'Meu Workspace', ownerUid: uid, plan: 'free' },
+              workspaceId: undefined,
+              tenantId: tenant.id,
+            }
+          );
+        }
 
         workspace = insertedWorkspace;
         logger.info('STEP_2B', 'Workspace created', { 
@@ -218,12 +293,26 @@ export async function getOrCreateUser(
           params: { workspaceId: workspace.id, tenantId: workspace.tenantId, name: `${workspace.name} Matriz` }
         });
 
-        const [company] = await tx.insert(companies).values({
-          workspaceId: workspace.id,
-          tenantId: workspace.tenantId,
-          name: `${workspace.name} Matriz`,
-          status: 'Ativo'
-        }).returning();
+        let company;
+        try {
+          [company] = await tx.insert(companies).values({
+            workspaceId: workspace.id,
+            tenantId: workspace.tenantId,
+            name: `${workspace.name} Matriz`,
+            status: 'Ativo'
+          }).returning();
+        } catch (error) {
+          throw logger.createProvisioningError(
+            'createCompany',
+            'Failed to create company',
+            error,
+            {
+              params: { workspaceId: workspace.id, tenantId: workspace.tenantId, name: `${workspace.name} Matriz`, status: 'Ativo' },
+              workspaceId: workspace.id,
+              tenantId: workspace.tenantId,
+            }
+          );
+        }
 
         logger.info('STEP_3', 'Company created', { 
           createdIds: { companyId: company.id, tenantId: company.tenantId },
@@ -252,20 +341,27 @@ export async function getOrCreateUser(
           careerLevel: 'Pleno',
         }, availableColumns);
 
-        const memberColumns = Object.keys(memberValues);
-        const memberValuesArray = Object.values(memberValues);
-        const placeholders = memberValuesArray.map((val) => {
-          if (val === null || val === undefined) return 'NULL';
-          if (typeof val === 'number') return String(val);
-          return `'${String(val).replace(/'/g, "''")}'`;
-        }).join(', ');
-        const memberSql = `INSERT INTO workspace_members (${memberColumns.join(', ')}) VALUES (${placeholders}) RETURNING id, tenant_id, workspace_id, user_uid, role`;
-        const memberResult = await tx.execute(sql.raw(memberSql));
-        const [membership] = memberResult.rows;
+        let membership;
+        try {
+          membership = await insertWorkspaceMemberWithAvailableColumns(tx, memberValues);
+        } catch (error) {
+          throw logger.createProvisioningError(
+            'createWorkspaceMember',
+            'Failed to create workspace membership',
+            error,
+            {
+              params: { memberValues, availableColumns },
+              workspaceId: workspace.id,
+              tenantId: workspace.tenantId,
+              userUid: uid,
+            }
+          );
+        }
 
-        logger.info('STEP_4', 'Workspace membership created', { 
-          createdIds: { membershipId: membership.id, tenantId: membership.tenant_id },
-          durationMs: Date.now() - step4Start 
+        logger.info('STEP_4', 'Workspace membership created', {
+          params: { memberValues, availableColumns },
+          createdIds: { membershipId: membership.id, tenantId: membership.tenantId },
+          durationMs: Date.now() - step4Start
         });
 
         // Step 5: Update user active references
@@ -274,11 +370,25 @@ export async function getOrCreateUser(
           params: { userId: user.id, activeWorkspaceId: workspace.id, activeTenantId: workspace.tenantId }
         });
 
-        await tx.update(users).set({ 
-          activeWorkspaceId: workspace.id,
-          activeTenantId: workspace.tenantId,
-          updatedAt: new Date(),
-        }).where(eq(users.uid, uid));
+        try {
+          await tx.update(users).set({ 
+            activeWorkspaceId: workspace.id,
+            activeTenantId: workspace.tenantId,
+            updatedAt: new Date(),
+          }).where(eq(users.uid, uid));
+        } catch (error) {
+          throw logger.createProvisioningError(
+            'updateUserReferences',
+            'Failed to update user active references',
+            error,
+            {
+              params: { userId: user.id, activeWorkspaceId: workspace.id, activeTenantId: workspace.tenantId },
+              workspaceId: workspace.id,
+              tenantId: workspace.tenantId,
+              userUid: uid,
+            }
+          );
+        }
 
         logger.info('STEP_5', 'User references updated', { 
           durationMs: Date.now() - step5Start 
@@ -316,6 +426,9 @@ export async function getOrCreateUser(
 
   } catch (error) {
     endProvisioningTrace(false);
+    if (error instanceof ProvisioningError) {
+      throw error;
+    }
     const provisioningError = logger.createProvisioningError(
       'getOrCreateUser',
       'Provisioning transaction failed',
@@ -346,8 +459,6 @@ export async function getUserWorkspaces(uid: string) {
 }
 
 export const getWorkspacesWithMembership = getUserWorkspaces;
-
-export { safeInsertWorkspaceMember };
 
 export async function updateUserActiveWorkspace(uid: string, workspaceId: number) {
   const member = await db.select().from(workspaceMembers).where(and(eq(workspaceMembers.userUid, uid), eq(workspaceMembers.workspaceId, workspaceId)));
