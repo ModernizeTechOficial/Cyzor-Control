@@ -10,7 +10,7 @@ import {
   GoogleAuthProvider
 } from 'firebase/auth';
 import { auth, googleAuthProvider } from '../lib/firebase.ts';
-// onboardingService is server-only; do not import in client bundle
+import { ProvisioningState, ProvisioningStatus } from '../lib/provisioning/StateMachine.ts';
 
 interface AuthContextType {
   user: User | null;
@@ -30,6 +30,7 @@ interface AuthContextType {
   googleDriveToken: string | null;
   googleTasksToken: string | null;
   googleKeepToken: string | null;
+  provisioningStatus: ProvisioningStatus;
   loginWithGoogle: () => Promise<void>;
   loginWithEmail: (email: string, pass: string) => Promise<void>;
   registerWithEmail: (email: string, pass: string, name: string) => Promise<void>;
@@ -62,17 +63,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
   const [isCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen] = useState(false);
   const [globalBranding, setGlobalBranding] = useState<any>(null);
+  const [provisioningStatus, setProvisioningStatus] = useState<ProvisioningStatus>({
+    state: ProvisioningState.AUTHENTICATED,
+  });
   
   const [googleCalendarToken, setGoogleCalendarToken] = useState<string | null>(null);
   const [googleDriveToken, setGoogleDriveToken] = useState<string | null>(null);
   const [googleTasksToken, setGoogleTasksToken] = useState<string | null>(null);
   const [googleKeepToken, setGoogleKeepToken] = useState<string | null>(null);
 
-  // Sync profile details to Local Database
+  const setProvisioningState = (state: ProvisioningState, extra?: Partial<ProvisioningStatus>) => {
+    setProvisioningStatus(prev => ({ ...prev, state, ...extra }));
+  };
+
   const syncWithCloudSQL = async (currentUser: User) => {
     try {
       const idToken = await currentUser.getIdToken(true);
       setToken(idToken);
+
+      setProvisioningState(ProvisioningState.PROVISIONING);
 
       const res = await fetch('/api/auth/sync', {
         method: 'POST',
@@ -88,30 +97,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         })
       });
       
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Backend synchronization failed: ${errText}`);
-  } else {
-    const syncData = await res.json();
-    setDbUser(syncData.user);
-  }
-
-  const stateRes = await fetch('/api/auth/state', {
-    headers: { 'Authorization': `Bearer ${idToken}` },
-  });
-
-  if (stateRes.ok) {
-    const data = await stateRes.json();
-    if (data?.state) {
-      const { user, activeWorkspace } = data.state;
-      setActiveWorkspace(activeWorkspace);
-      if (user?.currentPlan) {
-        localStorage.setItem('saas_current_plan', user.currentPlan);
+      if (!res.ok) {
+        const errText = await res.json();
+        const error = errText as any;
+        setProvisioningState(ProvisioningState.ERROR, {
+          error: {
+            stage: error?.context?.stage || 'auth_sync',
+            reason: error?.context?.reason || error?.error || 'Backend synchronization failed',
+            sql: error?.context?.sql,
+            constraint: error?.context?.constraint,
+            stack: error?.context?.stack,
+          }
+        });
+        throw new Error(`Backend synchronization failed: ${error?.context?.reason || errText}`);
+      } else {
+        const syncData = await res.json();
+        setDbUser(syncData.user);
       }
-    }
-  }
 
-      // Fetch all workspaces
+      const stateRes = await fetch('/api/auth/state', {
+        headers: { 'Authorization': `Bearer ${idToken}` },
+      });
+
+      if (stateRes.ok) {
+        const data = await stateRes.json();
+        if (data?.state) {
+          const { user, activeWorkspace } = data.state;
+          setActiveWorkspace(activeWorkspace);
+          if (user?.currentPlan) {
+            localStorage.setItem('saas_current_plan', user.currentPlan);
+          }
+        }
+      }
+
       const workRes = await fetch('/api/workspaces', {
         headers: { 'Authorization': `Bearer ${idToken}` }
       });
@@ -119,7 +137,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const wdata = await workRes.json();
         setWorkspaces(wdata.workspaces || []);
         
-        // Find current user profile from DB to check tourCompleted
         const userRes = await fetch('/api/user/profile', {
           headers: { 'Authorization': `Bearer ${idToken}` }
         });
@@ -135,11 +152,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
       
-      // Notify listeners in UI
       window.dispatchEvent(new Event('workspaceChanged'));
-      
+
+      const needsSetup = activeWorkspace?.settings?.onboardingCompleted === false;
+      if (needsSetup) {
+        setProvisioningState(ProvisioningState.SETUP_REQUIRED);
+      } else if (!tourCompleted) {
+        setProvisioningState(ProvisioningState.TOUR_REQUIRED);
+      } else {
+        setProvisioningState(ProvisioningState.READY);
+      }
+
     } catch (err) {
       console.error('Error syncing user details with Local Database backend:', err);
+      if (provisioningStatus.state !== ProvisioningState.ERROR) {
+        setProvisioningState(ProvisioningState.ERROR, {
+          error: {
+            stage: 'syncWithCloudSQL',
+            reason: err instanceof Error ? err.message : String(err),
+            stack: err instanceof Error ? err.stack : undefined,
+          }
+        });
+      }
     }
   };
 
@@ -151,10 +185,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
     let idToken = token;
     
-    // If we don't have a token, try to get one
     if (!idToken && user) {
-        idToken = await user.getIdToken();
-        setToken(idToken);
+      idToken = await user.getIdToken();
+      setToken(idToken);
     }
 
     const headers: any = {
@@ -166,7 +199,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     let response = await fetch(url, { ...options, headers });
 
-    // If unauthorized, token might be expired. Refresh and retry once.
     if (response.status === 401 && user) {
       console.log("Token expired. Refreshing...");
       const newToken = await user.getIdToken(true);
@@ -179,7 +211,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       response = await fetch(url, { ...options, headers: retryHeaders });
     }
 
-    // Safety net: check if response is HTML
     const originalJson = response.json.bind(response);
     response.json = async () => {
       const contentType = response.headers.get("content-type");
@@ -211,7 +242,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) {
         const data = await res.json();
         if (data.state?.activeWorkspace) {
-           setActiveWorkspace(data.state.activeWorkspace);
+          setActiveWorkspace(data.state.activeWorkspace);
         }
         if (plan) localStorage.setItem('saas_current_plan', plan);
         window.dispatchEvent(new Event('workspaceChanged'));
@@ -240,6 +271,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (tourCompleted && provisioningStatus.state === ProvisioningState.TOUR_REQUIRED) {
+      setProvisioningState(ProvisioningState.READY);
+    }
+  }, [tourCompleted, provisioningStatus.state]);
+
+  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
@@ -249,6 +286,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setDbUser(null);
         setActiveWorkspace(null);
         setWorkspaces([]);
+        setProvisioningState(ProvisioningState.AUTHENTICATED);
       }
       setLoading(false);
     });
@@ -256,7 +294,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return unsubscribe;
   }, []);
 
-  // Periodic token refresh (every 30 minutes)
   useEffect(() => {
     if (!user) return;
     const interval = setInterval(async () => {
@@ -296,9 +333,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const credential = GoogleAuthProvider.credentialFromResult(result);
       if (credential?.accessToken) {
         setGoogleCalendarToken(credential.accessToken);
-        setGoogleDriveToken(credential.accessToken); // Share token since scopes are unified
-        setGoogleTasksToken(credential.accessToken);  // Share token since scopes are unified
-        setGoogleKeepToken(credential.accessToken);   // Share token since scopes are unified
+        setGoogleDriveToken(credential.accessToken);
+        setGoogleTasksToken(credential.accessToken);
+        setGoogleKeepToken(credential.accessToken);
         return credential.accessToken;
       }
       return null;
@@ -314,9 +351,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const credential = GoogleAuthProvider.credentialFromResult(result);
       if (credential?.accessToken) {
         setGoogleDriveToken(credential.accessToken);
-        setGoogleCalendarToken(credential.accessToken); // Share token since scopes are unified
-        setGoogleTasksToken(credential.accessToken);   // Share token since scopes are unified
-        setGoogleKeepToken(credential.accessToken);    // Share token since scopes are unified
+        setGoogleCalendarToken(credential.accessToken);
+        setGoogleTasksToken(credential.accessToken);
+        setGoogleKeepToken(credential.accessToken);
         return credential.accessToken;
       }
       return null;
@@ -332,9 +369,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const credential = GoogleAuthProvider.credentialFromResult(result);
       if (credential?.accessToken) {
         setGoogleTasksToken(credential.accessToken);
-        setGoogleCalendarToken(credential.accessToken); // Share
-        setGoogleDriveToken(credential.accessToken);    // Share
-        setGoogleKeepToken(credential.accessToken);     // Share
+        setGoogleCalendarToken(credential.accessToken);
+        setGoogleDriveToken(credential.accessToken);
+        setGoogleKeepToken(credential.accessToken);
         return credential.accessToken;
       }
       return null;
@@ -350,9 +387,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const credential = GoogleAuthProvider.credentialFromResult(result);
       if (credential?.accessToken) {
         setGoogleKeepToken(credential.accessToken);
-        setGoogleCalendarToken(credential.accessToken); // Share
-        setGoogleDriveToken(credential.accessToken);    // Share
-        setGoogleTasksToken(credential.accessToken);    // Share
+        setGoogleCalendarToken(credential.accessToken);
+        setGoogleDriveToken(credential.accessToken);
+        setGoogleTasksToken(credential.accessToken);
         return credential.accessToken;
       }
       return null;
@@ -367,7 +404,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await signInWithEmailAndPassword(auth, email, pass);
     } catch (error) {
-      // Log detailed Firebase error info to help debug invalid-credential / 400 responses
       try {
         const errAny: any = error;
         console.error('Email Sign-In failed:', {
@@ -411,6 +447,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem('saas_current_plan');
       sessionStorage.removeItem('welcome_modal_shown');
       window.dispatchEvent(new Event('workspaceChanged'));
+      setProvisioningState(ProvisioningState.AUTHENTICATED);
     } catch (error) {
       console.error('Sign-Out failed:', error);
     } finally {
@@ -453,6 +490,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       googleDriveToken,
       googleTasksToken,
       googleKeepToken,
+      provisioningStatus,
       loginWithGoogle,
       loginWithEmail,
       registerWithEmail,

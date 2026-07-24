@@ -10,6 +10,7 @@ import { adminRouter } from "./src/db/admin.ts";
 import { AIController } from "./src/ai/controllers/AIController.ts";
 import aiConfigRouter from "./src/ai/routes/aiConfigRouter.ts";
 import { runAllMigrations } from "./src/db/migrations";
+import { ProvisioningError } from "./src/lib/provisioning/ProvisioningError.ts";
 
 import { stripeRouter, stripeWebhookRouter } from "./src/routes/stripe.ts";
 
@@ -115,8 +116,16 @@ async function startServer() {
       const userRecord = await getOrCreateUser(uid, email || "", name, picture);
       res.json({ status: "success", user: userRecord });
     } catch (error: any) {
-      console.error("Error in /api/auth/sync route:", error);
-      res.status(500).json({ error: error.message || "Internal server error" });
+      if (error instanceof ProvisioningError) {
+        console.error("[ProvisioningError] /api/auth/sync failed:", error.context);
+        res.status(422).json({ 
+          error: "Provisioning failed",
+          context: error.context 
+        });
+      } else {
+        console.error("Error in /api/auth/sync route:", error);
+        res.status(500).json({ error: error.message || "Internal server error" });
+      }
     }
   });
 

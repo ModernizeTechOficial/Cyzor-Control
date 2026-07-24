@@ -6,10 +6,7 @@ import { roleEngine } from '../lib/bos/authorization/RoleEngine';
 import { moduleRegistry } from '../lib/bos/module-registry/ModuleRegistry';
 import { featureFlagService } from '../lib/bos/feature-flags/FeatureFlagService';
 import { auditService } from '../lib/bos/audit/AuditService';
-
-// ============================================================================
-// TYPES
-// ============================================================================
+import { startProvisioningTrace, getProvisioningLogger, endProvisioningTrace } from '../lib/provisioning/ProvisioningLogger.ts';
 
 export type BusinessSegment = 'saas' | 'services' | 'ecommerce' | 'general';
 export type BusinessStage = 'idea' | 'validation' | 'development' | 'launch' | 'growth' | 'mature';
@@ -35,15 +32,7 @@ export interface OnboardingResult {
   isNewUser: boolean;
 }
 
-// ============================================================================
-// ONBOARDING SERVICE - Centralized, idempotent, self-healing
-// ============================================================================
-
 export class OnboardingService {
-  // -------------------------------------------------------------------------
-  // MAIN ENTRY POINT
-  // -------------------------------------------------------------------------
-
   async ensureAccount(
     firebaseUser: { uid: string; email: string; displayName?: string; photoUrl?: string },
     companyData?: Partial<OnboardingCompanyInput>
@@ -51,65 +40,111 @@ export class OnboardingService {
     const userId = firebaseUser.uid;
     const email = firebaseUser.email || '';
     const displayName = firebaseUser.displayName || email.split('@')[0] || 'Usuário';
+    const logger = startProvisioningTrace(userId);
+    const startTime = Date.now();
 
-    // 1. Ensure user exists
-    const user = await this.ensureUser(userId, email, displayName, firebaseUser.photoUrl);
+    try {
+      logger.info('ENSURE_ACCOUNT', 'Starting onboarding flow', {
+        params: { userId, email, displayName, companyData }
+      });
 
-    // 2. Ensure tenant exists
-    const { tenant, isNewTenant } = await this.ensureTenant(userId, displayName);
+      const result = await db.transaction(async (tx) => {
+        const step1Start = Date.now();
+        const user = await this.ensureUser(tx, userId, email, displayName, firebaseUser.photoUrl);
+        logger.info('STEP_1', 'User ensured', { 
+          createdIds: { userId: user.id, uid: user.uid },
+          params: { isNew: user.createdAt > new Date(Date.now() - 60000) },
+          durationMs: Date.now() - step1Start 
+        });
 
-    // 3. Ensure workspace exists (1:1 with tenant initially)
-    const { workspace, isNewWorkspace } = await this.ensurePrimaryWorkspace(tenant.id, userId, displayName);
+        const step2Start = Date.now();
+        const { tenant, isNewTenant } = await this.ensureTenant(tx, userId, displayName);
+        logger.info('STEP_2', 'Tenant ensured', { 
+          createdIds: { tenantId: tenant.id },
+          params: { isNew: isNewTenant },
+          durationMs: Date.now() - step2Start 
+        });
 
-    // 4. Ensure company exists
-    const companyName = companyData?.name || `${displayName}'s Company`;
-    const { company, isNewCompany } = await this.ensureCompany(tenant.id, workspace.id, companyName, companyData);
+        const step3Start = Date.now();
+        const { workspace, isNewWorkspace } = await this.ensurePrimaryWorkspace(tx, tenant.id, userId, displayName);
+        logger.info('STEP_3', 'Workspace ensured', { 
+          createdIds: { workspaceId: workspace.id, tenantId: workspace.tenantId },
+          params: { isNew: isNewWorkspace },
+          durationMs: Date.now() - step3Start 
+        });
 
-    // 5. Ensure membership exists
-    const membership = await this.ensureOwnership(tenant.id, workspace.id, userId);
+        const step4Start = Date.now();
+        const companyName = companyData?.name || `${displayName}'s Company`;
+        const { company, isNewCompany } = await this.ensureCompany(tx, tenant.id, workspace.id, companyName, companyData);
+        logger.info('STEP_4', 'Company ensured', { 
+          createdIds: { companyId: company.id },
+          params: { isNew: isNewCompany },
+          durationMs: Date.now() - step4Start 
+        });
 
-    // 6. Ensure active references are set
-    await this.ensureActiveReferences(userId, tenant.id, workspace.id, company.id);
+        const step5Start = Date.now();
+        const membership = await this.ensureOwnership(tx, tenant.id, workspace.id, userId);
+        logger.info('STEP_5', 'Ownership ensured', { 
+          createdIds: { membershipId: membership.id },
+          durationMs: Date.now() - step5Start 
+        });
 
-    // 7. Seed BOS roles and modules (idempotent)
-    await this.seedBosResources(tenant.id, workspace.id);
+        const step6Start = Date.now();
+        await this.ensureActiveReferences(tx, userId, tenant.id, workspace.id, company.id);
+        logger.info('STEP_6', 'Active references ensured', { 
+          durationMs: Date.now() - step6Start 
+        });
 
-    // 8. Initialize workspace missions (idempotent)
-    await this.initializeWorkspaceMissions(workspace.id);
+        await auditService.logEntityChange({
+          tenantId: tenant.id,
+          workspaceId: workspace.id,
+          userId,
+          action: 'ONBOARDING_COMPLETED',
+          tableName: 'workspaces',
+          recordId: String(workspace.id),
+          newValues: { tenantId: tenant.id, workspaceId: workspace.id, companyId: company.id, segment: companyData?.segment },
+        });
 
-    // 9. Apply segment template if new workspace
-    if (isNewWorkspace && companyData?.segment) {
-      await this.applySegmentTemplate(workspace.id, tenant.id, companyData.segment);
+        logger.info('ONBOARDING_COMPLETE', 'Onboarding completed successfully', {
+          createdIds: { 
+            tenantId: tenant.id, 
+            workspaceId: workspace.id, 
+            companyId: company.id,
+            membershipId: membership.id 
+          },
+          durationMs: Date.now() - startTime
+        });
+
+        return {
+          tenantId: tenant.id,
+          workspaceId: workspace.id,
+          companyId: company.id,
+          userId,
+          membershipId: membership.id,
+          isNewTenant,
+          isNewWorkspace,
+          isNewCompany,
+          isNewUser: user.createdAt > new Date(Date.now() - 60000),
+        };
+      });
+
+      return result;
+
+    } catch (error) {
+      const provisioningError = logger.createProvisioningError(
+        'ensureAccount',
+        'Onboarding transaction failed',
+        error,
+        { userUid: userId }
+      );
+      throw provisioningError;
+    } finally {
+      endProvisioningTrace(false);
     }
-
-    await auditService.logEntityChange({
-      tenantId: tenant.id,
-      workspaceId: workspace.id,
-      userId,
-      action: 'ONBOARDING_COMPLETED',
-      tableName: 'workspaces',
-      recordId: String(workspace.id),
-      newValues: { tenantId: tenant.id, workspaceId: workspace.id, companyId: company.id, segment: companyData?.segment },
-    });
-
-    return {
-      tenantId: tenant.id,
-      workspaceId: workspace.id,
-      companyId: company.id,
-      userId,
-      membershipId: membership.id,
-      isNewTenant,
-      isNewWorkspace,
-      isNewCompany,
-      isNewUser: user.createdAt > new Date(Date.now() - 60000), // created within last minute
-    };
   }
 
-  // -------------------------------------------------------------------------
-  // SELF-HEALING
-  // -------------------------------------------------------------------------
-
   async healAccount(userId: string): Promise<OnboardingResult | null> {
+    const logger = startProvisioningTrace(userId);
     try {
       const [userRecord] = await db.select().from(schema.users).where(eq(schema.users.uid, userId)).limit(1);
       if (!userRecord) return null;
@@ -232,54 +267,44 @@ export class OnboardingService {
         isNewUser: false,
       };
     } catch (error) {
-      console.error('[OnboardingService] Error healing account:', error);
+      logger.error('HEAL_ACCOUNT', 'Error healing account', error);
       return null;
     }
   }
 
-  // -------------------------------------------------------------------------
-  // USER
-  // -------------------------------------------------------------------------
-
-  private async ensureUser(uid: string, email: string, displayName: string, photoUrl?: string) {
-    const [existing] = await db.select().from(schema.users).where(eq(schema.users.uid, uid)).limit(1);
+  private async ensureUser(tx: any, uid: string, email: string, displayName: string, photoUrl?: string) {
+    const [existing] = await tx.select().from(schema.users).where(eq(schema.users.uid, uid)).limit(1);
     
     if (existing) {
-      await db.update(schema.users)
+      await tx.update(schema.users)
         .set({ displayName, email, photoUrl: photoUrl || existing.photoUrl, updatedAt: new Date() })
         .where(eq(schema.users.uid, uid));
       return existing;
     }
 
-    const [user] = await db.insert(schema.users).values({
+    const [user] = await tx.insert(schema.users).values({
       uid,
       email,
       displayName,
       photoUrl,
       currentPlan: 'free',
-      trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days trial
+      trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
       settings: {},
     }).returning();
 
     return user;
   }
 
-  // -------------------------------------------------------------------------
-  // TENANT
-  // -------------------------------------------------------------------------
-
-  private async ensureTenant(userId: string, displayName: string): Promise<{ tenant: any; isNewTenant: boolean }> {
-    // Check if user already has a tenant
-    const [userTenant] = await db.select().from(schema.userTenants).where(eq(schema.userTenants.userId, userId)).limit(1);
+  private async ensureTenant(tx: any, userId: string, displayName: string): Promise<{ tenant: any; isNewTenant: boolean }> {
+    const [userTenant] = await tx.select().from(schema.userTenants).where(eq(schema.userTenants.userId, userId)).limit(1);
     
     if (userTenant) {
-      const [tenant] = await db.select().from(schema.tenants).where(eq(schema.tenants.id, userTenant.tenantId)).limit(1);
+      const [tenant] = await tx.select().from(schema.tenants).where(eq(schema.tenants.id, userTenant.tenantId)).limit(1);
       if (tenant) return { tenant, isNewTenant: false };
     }
 
-    // Create new tenant
     const slug = `tenant-${userId.toLowerCase()}-${Date.now()}`;
-    const [tenant] = await db.insert(schema.tenants).values({
+    const [tenant] = await tx.insert(schema.tenants).values({
       name: `${displayName}'s Organization`,
       slug,
       plan: 'Pro',
@@ -289,20 +314,14 @@ export class OnboardingService {
     return { tenant, isNewTenant: true };
   }
 
-  // -------------------------------------------------------------------------
-  // WORKSPACE
-  // -------------------------------------------------------------------------
-
-  private async ensurePrimaryWorkspace(tenantId: string, userId: string, displayName: string): Promise<{ workspace: any; isNewWorkspace: boolean }> {
-    // Check if tenant already has a primary workspace
-    const [existing] = await db.select().from(schema.workspaces).where(eq(schema.workspaces.tenantId, tenantId)).limit(1);
+  private async ensurePrimaryWorkspace(tx: any, tenantId: string, userId: string, displayName: string): Promise<{ workspace: any; isNewWorkspace: boolean }> {
+    const [existing] = await tx.select().from(schema.workspaces).where(eq(schema.workspaces.tenantId, tenantId)).limit(1);
     
     if (existing) {
       return { workspace: existing, isNewWorkspace: false };
     }
 
-    // Create primary workspace
-    const [workspace] = await db.insert(schema.workspaces).values({
+    const [workspace] = await tx.insert(schema.workspaces).values({
       tenantId,
       name: `${displayName}'s Workspace`,
       ownerUid: userId,
@@ -317,23 +336,14 @@ export class OnboardingService {
     return { workspace, isNewWorkspace: true };
   }
 
-  // -------------------------------------------------------------------------
-  // COMPANY
-  // -------------------------------------------------------------------------
-
-  private async ensureCompany(
-    tenantId: string,
-    workspaceId: number,
-    name: string,
-    data?: Partial<OnboardingCompanyInput>
-  ): Promise<{ company: any; isNewCompany: boolean }> {
-    const [existing] = await db.select().from(schema.companies).where(eq(schema.companies.workspaceId, workspaceId)).limit(1);
+  private async ensureCompany(tx: any, tenantId: string, workspaceId: number, name: string, data?: Partial<OnboardingCompanyInput>): Promise<{ company: any; isNewCompany: boolean }> {
+    const [existing] = await tx.select().from(schema.companies).where(eq(schema.companies.workspaceId, workspaceId)).limit(1);
     
     if (existing) {
       return { company: existing, isNewCompany: false };
     }
 
-    const [company] = await db.insert(schema.companies).values({
+    const [company] = await tx.insert(schema.companies).values({
       tenantId,
       workspaceId,
       name: data?.name || `${name} Matriz`,
@@ -345,21 +355,22 @@ export class OnboardingService {
     return { company, isNewCompany: true };
   }
 
-  // -------------------------------------------------------------------------
-  // MEMBERSHIP
-  // -------------------------------------------------------------------------
-
-  private async ensureOwnership(tenantId: string, workspaceId: number, userId: string) {
+  private async ensureOwnership(tx: any, tenantId: string, workspaceId: number, userId: string) {
     let existing: any = null;
     try {
-      [existing] = await db.select().from(schema.workspaceMembers).where(
+      [existing] = await tx.select().from(schema.workspaceMembers).where(
         and(eq(schema.workspaceMembers.workspaceId, workspaceId), eq(schema.workspaceMembers.userUid, userId))
       ).limit(1);
     } catch (err: any) {
-      // If the DB is missing newer columns (e.g. onboarding_completed), fall back to a safer minimal select
       if (err && (err.code === '42703' || String(err.message || '').includes('onboarding_completed'))) {
         try {
-          [existing] = await db.select({ id: schema.workspaceMembers.id, tenantId: schema.workspaceMembers.tenantId, workspaceId: schema.workspaceMembers.workspaceId, userUid: schema.workspaceMembers.userUid, role: schema.workspaceMembers.role }).from(schema.workspaceMembers).where(
+          [existing] = await tx.select({ 
+            id: schema.workspaceMembers.id, 
+            tenantId: schema.workspaceMembers.tenantId, 
+            workspaceId: schema.workspaceMembers.workspaceId, 
+            userUid: schema.workspaceMembers.userUid, 
+            role: schema.workspaceMembers.role 
+          }).from(schema.workspaceMembers).where(
             and(eq(schema.workspaceMembers.workspaceId, workspaceId), eq(schema.workspaceMembers.userUid, userId))
           ).limit(1);
         } catch (err2) {
@@ -373,7 +384,7 @@ export class OnboardingService {
 
     if (existing) return existing;
 
-    const [membership] = await db.insert(schema.workspaceMembers).values({
+    const [membership] = await tx.insert(schema.workspaceMembers).values({
       tenantId,
       workspaceId,
       userUid: userId,
@@ -391,12 +402,8 @@ export class OnboardingService {
     return membership;
   }
 
-  // -------------------------------------------------------------------------
-  // ACTIVE REFERENCES
-  // -------------------------------------------------------------------------
-
-  private async ensureActiveReferences(userId: string, tenantId: string, workspaceId: number, companyId: number) {
-    await db.update(schema.users)
+  private async ensureActiveReferences(tx: any, userId: string, tenantId: string, workspaceId: number, companyId: number) {
+    await tx.update(schema.users)
       .set({
         activeWorkspaceId: workspaceId,
         activeTenantId: tenantId,
@@ -404,13 +411,12 @@ export class OnboardingService {
       })
       .where(eq(schema.users.uid, userId));
 
-    // Ensure userTenants association
-    const [userTenant] = await db.select().from(schema.userTenants).where(
+    const [userTenant] = await tx.select().from(schema.userTenants).where(
       and(eq(schema.userTenants.userId, userId), eq(schema.userTenants.tenantId, tenantId))
     ).limit(1);
 
     if (!userTenant) {
-      await db.insert(schema.userTenants).values({
+      await tx.insert(schema.userTenants).values({
         userId,
         tenantId,
         role: 'OWNER',
@@ -419,21 +425,18 @@ export class OnboardingService {
     }
   }
 
-  // -------------------------------------------------------------------------
-  // BOS RESOURCES
-  // -------------------------------------------------------------------------
-
   private async seedBosResources(tenantId: string, workspaceId: number) {
+    const logger = getProvisioningLogger();
     try {
       await roleEngine.seedSystemRoles(tenantId);
     } catch (error) {
-      console.warn('[OnboardingService] Could not seed BOS roles:', error);
+      logger?.warn('SEED_BOS_ROLES', 'Could not seed BOS roles', { params: { error: error instanceof Error ? error.message : String(error) } });
     }
 
     try {
       await moduleRegistry.registerBuiltinModules(tenantId);
     } catch (error) {
-      console.warn('[OnboardingService] Could not seed BOS modules:', error);
+      logger?.warn('SEED_BOS_MODULES', 'Could not seed BOS modules', { params: { error: error instanceof Error ? error.message : String(error) } });
     }
 
     try {
@@ -443,7 +446,6 @@ export class OnboardingService {
         workspaceId,
       };
       
-      // Seed default feature flags
       await featureFlagService.createFlag({
         key: 'finance_module_enabled',
         name: 'Financeiro habilitado',
@@ -471,66 +473,53 @@ export class OnboardingService {
         tenantId,
       });
     } catch (error) {
-      console.warn('[OnboardingService] Could not seed feature flags:', error);
+      logger?.warn('SEED_FEATURE_FLAGS', 'Could not seed feature flags', { params: { error: error instanceof Error ? error.message : String(error) } });
     }
 
-    // Invalidate caches
     authorizationEngine.invalidateAll();
   }
 
-  // -------------------------------------------------------------------------
-  // MISSIONS
-  // -------------------------------------------------------------------------
-
   private async initializeWorkspaceMissions(workspaceId: number) {
+    const logger = getProvisioningLogger();
     try {
       const { MissionService } = await import('../services/MissionService.ts');
       await MissionService.initializeWorkspaceMissions(workspaceId);
     } catch (error) {
-      console.warn('[OnboardingService] Could not initialize missions:', error);
+      logger?.warn('INIT_MISSIONS', 'Could not initialize missions', { params: { error: error instanceof Error ? error.message : String(error) } });
     }
   }
 
-  // -------------------------------------------------------------------------
-  // TEMPLATES
-  // -------------------------------------------------------------------------
-
   private async applySegmentTemplate(workspaceId: number, tenantId: string, segment: BusinessSegment) {
+    const logger = getProvisioningLogger();
     try {
       const { WorkspaceTemplateService } = await import('../services/WorkspaceTemplateService.ts');
       await WorkspaceTemplateService.applyTemplate(workspaceId, segment, tenantId);
     } catch (error) {
-      console.warn('[OnboardingService] Could not apply segment template:', error);
+      logger?.warn('APPLY_TEMPLATE', 'Could not apply segment template', { params: { error: error instanceof Error ? error.message : String(error) } });
     }
   }
 
-  // -------------------------------------------------------------------------
-  // SETUP COMPLETION
-  // -------------------------------------------------------------------------
-
   async completeSetup(workspaceId: number, userId: string, setupData?: { businessType?: string; stage?: string }) {
-    await db.update(schema.workspaces)
-      .set({
-        settings: {
-          onboardingCompleted: true,
-          businessType: setupData?.businessType || 'general',
-          stage: setupData?.stage || 'growth',
-          completedAt: new Date().toISOString(),
-        },
-        updatedAt: new Date(),
-      })
-      .where(eq(schema.workspaces.id, workspaceId));
+    await db.transaction(async (tx) => {
+      await tx.update(schema.workspaces)
+        .set({
+          settings: {
+            onboardingCompleted: true,
+            businessType: setupData?.businessType || 'general',
+            stage: setupData?.stage || 'growth',
+            completedAt: new Date().toISOString(),
+          },
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.workspaces.id, workspaceId));
 
-    await db.update(schema.workspaceMembers)
-      .set({ onboardingCompleted: true })
-      .where(and(eq(schema.workspaceMembers.workspaceId, workspaceId), eq(schema.workspaceMembers.userUid, userId)));
+      await tx.update(schema.workspaceMembers)
+        .set({ onboardingCompleted: true })
+        .where(and(eq(schema.workspaceMembers.workspaceId, workspaceId), eq(schema.workspaceMembers.userUid, userId)));
+    });
 
     authorizationEngine.invalidateAll();
   }
 }
-
-// ============================================================================
-// SINGLETON
-// ============================================================================
 
 export const onboardingService = new OnboardingService();

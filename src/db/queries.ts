@@ -1,21 +1,18 @@
 import { db } from './index.ts';
-import { users, workspaces, workspaceMembers, companies, products, projects, tasks, ideas, documents, financeEntries, aiHistory, flows } from './schema.ts';
+import { users, workspaces, workspaceMembers, companies, tenants, products, projects, tasks, ideas, documents, financeEntries, aiHistory, flows } from './schema.ts';
 import { eq, and, sql } from 'drizzle-orm';
+import { startProvisioningTrace, getProvisioningLogger, endProvisioningTrace } from '../lib/provisioning/ProvisioningLogger.ts';
+import { ProvisioningError } from '../lib/provisioning/ProvisioningError.ts';
 
 // --- SCHEMA INTROSPECTION CACHE ---
 let workspaceMembersColumnsCache: string[] | null = null;
 
-/**
- * Dynamically discovers which columns actually exist in the workspace_members table.
- * This makes the code resilient to schema drift (old/new database versions).
- */
 async function getWorkspaceMembersColumns(): Promise<string[]> {
   if (workspaceMembersColumnsCache !== null) {
     return workspaceMembersColumnsCache;
   }
 
   try {
-    // Query information_schema to get actual column names
     const result = await db.execute(
       sql`
         SELECT column_name 
@@ -31,15 +28,11 @@ async function getWorkspaceMembersColumns(): Promise<string[]> {
     return columns;
   } catch (error) {
     console.warn('[SchemaAdapter] Failed to introspect schema, using minimal fallback:', error);
-    // Fallback to minimal set that definitely exists in both old and new schemas
     workspaceMembersColumnsCache = ['id', 'tenant_id', 'workspace_id', 'user_uid', 'role', 'cargo', 'department', 'team_name', 'manager_uid', 'permissions', 'status', 'created_at'];
     return workspaceMembersColumnsCache;
   }
 }
 
-/**
- * Inserts into workspace_members using only columns that exist in the actual database.
- */
 async function safeInsertWorkspaceMember(values: {
   workspaceId: number;
   userUid: string;
@@ -57,10 +50,8 @@ async function safeInsertWorkspaceMember(values: {
 }) {
   const availableColumns = await getWorkspaceMembersColumns();
   
-  // Build insert with only available columns
   const insertValues: any = {};
   
-  // Always safe columns
   if (availableColumns.includes('workspace_id')) insertValues.workspaceId = values.workspaceId;
   if (availableColumns.includes('user_uid')) insertValues.userUid = values.userUid;
   if (availableColumns.includes('role')) insertValues.role = values.role || 'MEMBER';
@@ -71,12 +62,10 @@ async function safeInsertWorkspaceMember(values: {
   if (availableColumns.includes('permissions')) insertValues.permissions = values.permissions || [];
   if (availableColumns.includes('status')) insertValues.status = values.status || 'Ativo';
   
-  // tenant_id (usually NOT NULL with default, but we provide if available)
   if (availableColumns.includes('tenant_id') && values.tenantId) {
     insertValues.tenantId = values.tenantId;
   }
   
-  // New schema columns (may not exist)
   if (availableColumns.includes('onboarding_completed')) insertValues.onboardingCompleted = values.onboardingCompleted ?? false;
   if (availableColumns.includes('xp')) insertValues.xp = values.xp ?? 0;
   if (availableColumns.includes('career_level')) insertValues.careerLevel = values.careerLevel || 'Pleno';
@@ -92,83 +81,214 @@ export async function getOrCreateUser(
   displayName?: string,
   photoUrl?: string
 ) {
+  const logger = startProvisioningTrace(uid);
+  const startTime = Date.now();
+
   try {
-    let [user] = await db.select().from(users).where(eq(users.uid, uid));
+    logger.info('GET_OR_CREATE_USER', 'Starting provisioning flow', {
+      params: { uid, email, displayName, photoUrl }
+    });
 
-    if (!user) {
-      const trialEndsAt = new Date();
-      trialEndsAt.setDate(trialEndsAt.getDate() + 14);
-
-      [user] = await db.insert(users).values({
-        uid,
-        email,
-        displayName: displayName || null,
-        photoUrl: photoUrl || null,
-        currentPlan: 'free',
-        trialEndsAt: trialEndsAt
-      }).returning();
-
-  const [workspace] = await db.insert(workspaces).values({
-    name: displayName ? `Workspace de ${displayName}` : 'Meu Workspace',
-    ownerUid: uid,
-    plan: 'free',
-    settings: {
-      onboardingCompleted: false,
-      createdAt: new Date().toISOString(),
-    },
-  }).returning();
-
-      // Ensure we have the generated tenantId from the inserted workspace.
-      // Some drivers/clients may not populate default-generated columns on the
-      // returned insert object, so fetch the workspace row explicitly if
-      // `tenantId` is missing.
-      if (!workspace.tenantId) {
-        try {
-          const refreshed = await db.select().from(workspaces).where(eq(workspaces.id, workspace.id)).limit(1);
-          if (refreshed && refreshed[0]) {
-            workspace.tenantId = refreshed[0].tenantId;
-          }
-        } catch (err) {
-          console.warn('Could not refresh workspace to read tenantId:', err?.message || err);
-        }
-      }
-
-      try {
-        const [existingCompany] = await db.select().from(companies).where(eq(companies.workspaceId, workspace.id)).limit(1);
-        if (!existingCompany) {
-          await db.insert(companies).values({
-            workspaceId: workspace.id,
-            tenantId: workspace.tenantId || null,
-            name: `${workspace.name} Matriz`,
-            status: 'Ativo'
-          }).returning();
-        }
-      } catch (err) {
-        console.warn('Warning while creating default company for new workspace:', err?.message || err);
-      }
-
-      await safeInsertWorkspaceMember({
-        workspaceId: workspace.id,
-        userUid: uid,
-        role: 'OWNER',
-        tenantId: workspace.tenantId,
+    const result = await db.transaction(async (tx) => {
+      // Step 1: Ensure user exists
+      const step1Start = Date.now();
+      logger.info('STEP_1', 'Ensuring user exists', {
+        params: { uid, email, displayName, photoUrl }
       });
 
-      await db.update(users).set({ activeWorkspaceId: workspace.id }).where(eq(users.uid, uid));
-      user.activeWorkspaceId = workspace.id;
-    } else {
-      [user] = await db.update(users).set({
-        displayName: displayName || user.displayName,
-        photoUrl: photoUrl || user.photoUrl,
-        updatedAt: new Date(),
-      }).where(eq(users.uid, uid)).returning();
-    }
-    return user;
-  } catch (error: any) {
-    console.error('Error in getOrCreateUser:', error);
-    throw new Error('Failed to get or create user in database: ' + (error.message || String(error)));
+      const [existingUser] = await tx.select().from(users).where(eq(users.uid, uid));
+
+      let user;
+      if (existingUser) {
+        await tx.update(users).set({
+          displayName: displayName || existingUser.displayName,
+          photoUrl: photoUrl || existingUser.photoUrl,
+          updatedAt: new Date(),
+        }).where(eq(users.uid, uid));
+        
+        const [updatedUser] = await tx.select().from(users).where(eq(users.uid, uid));
+        user = updatedUser || existingUser;
+        logger.info('STEP_1', 'User already exists', { createdIds: { userId: user.id, uid: user.uid } });
+      } else {
+        const trialEndsAt = new Date();
+        trialEndsAt.setDate(trialEndsAt.getDate() + 14);
+
+        const [insertedUser] = await tx.insert(users).values({
+          uid,
+          email,
+          displayName: displayName || null,
+          photoUrl: photoUrl || null,
+          currentPlan: 'free',
+          trialEndsAt,
+          settings: {},
+        }).returning();
+
+        user = insertedUser;
+        logger.info('STEP_1', 'User created', { 
+          createdIds: { userId: user.id, uid: user.uid },
+          durationMs: Date.now() - step1Start 
+        });
+      }
+
+      // Step 2: Ensure workspace exists
+      let workspace = null;
+      if (user.activeWorkspaceId) {
+        const [existingWs] = await tx.select().from(workspaces).where(eq(workspaces.id, user.activeWorkspaceId));
+        if (existingWs) {
+          workspace = existingWs;
+          logger.info('STEP_2', 'Active workspace already exists', { 
+            createdIds: { workspaceId: workspace.id, tenantId: workspace.tenantId }
+          });
+        }
+      }
+
+      if (!workspace) {
+        const step2Start = Date.now();
+
+        // Create tenant with deterministic slug
+        const tenantSlug = `tenant-${uid.toLowerCase()}-${Date.now()}`;
+        logger.info('STEP_2A', 'Creating tenant', {
+          params: { slug: tenantSlug, name: `${displayName || email}'s Organization` }
+        });
+
+        const [tenant] = await tx.insert(tenants).values({
+          name: `${displayName || email}'s Organization`,
+          slug: tenantSlug,
+          plan: 'Pro',
+          status: 'Active',
+        }).returning();
+
+        logger.info('STEP_2A', 'Tenant created', { 
+          createdIds: { tenantId: tenant.id, slug: tenant.slug },
+          durationMs: Date.now() - step2Start 
+        });
+
+        // Create workspace with explicit tenantId
+        const step2bStart = Date.now();
+        logger.info('STEP_2B', 'Creating workspace with explicit tenantId', {
+          params: { tenantId: tenant.id, name: displayName ? `Workspace de ${displayName}` : 'Meu Workspace', ownerUid: uid }
+        });
+
+        const [insertedWorkspace] = await tx.insert(workspaces).values({
+          tenantId: tenant.id,
+          name: displayName ? `Workspace de ${displayName}` : 'Meu Workspace',
+          ownerUid: uid,
+          plan: 'free',
+          settings: {
+            onboardingCompleted: false,
+            createdAt: new Date().toISOString(),
+          },
+        }).returning();
+
+        workspace = insertedWorkspace;
+        logger.info('STEP_2B', 'Workspace created', { 
+          createdIds: { workspaceId: workspace.id, tenantId: workspace.tenantId },
+          durationMs: Date.now() - step2bStart 
+        });
+
+        // Step 3: Create company
+        const step3Start = Date.now();
+        logger.info('STEP_3', 'Creating default company', {
+          params: { workspaceId: workspace.id, tenantId: workspace.tenantId, name: `${workspace.name} Matriz` }
+        });
+
+        const [company] = await tx.insert(companies).values({
+          workspaceId: workspace.id,
+          tenantId: workspace.tenantId,
+          name: `${workspace.name} Matriz`,
+          status: 'Ativo'
+        }).returning();
+
+        logger.info('STEP_3', 'Company created', { 
+          createdIds: { companyId: company.id, tenantId: company.tenantId },
+          durationMs: Date.now() - step3Start 
+        });
+
+        // Step 4: Create workspace membership (OWNER)
+        const step4Start = Date.now();
+        logger.info('STEP_4', 'Creating workspace membership (OWNER)', {
+          params: { workspaceId: workspace.id, userUid: uid, tenantId: workspace.tenantId, role: 'OWNER' }
+        });
+
+        const [membership] = await tx.insert(workspaceMembers).values({
+          workspaceId: workspace.id,
+          userUid: uid,
+          tenantId: workspace.tenantId,
+          role: 'OWNER',
+          cargo: 'Proprietário',
+          department: 'Administração',
+          teamName: 'Owner',
+          status: 'Ativo',
+          permissions: [],
+          onboardingCompleted: false,
+          xp: 0,
+          careerLevel: 'Pleno',
+        }).returning();
+
+        logger.info('STEP_4', 'Workspace membership created', { 
+          createdIds: { membershipId: membership.id, tenantId: membership.tenantId },
+          durationMs: Date.now() - step4Start 
+        });
+
+        // Step 5: Update user active references
+        const step5Start = Date.now();
+        logger.info('STEP_5', 'Updating user active workspace and tenant references', {
+          params: { userId: user.id, activeWorkspaceId: workspace.id, activeTenantId: workspace.tenantId }
+        });
+
+        await tx.update(users).set({ 
+          activeWorkspaceId: workspace.id,
+          activeTenantId: workspace.tenantId,
+          updatedAt: new Date(),
+        }).where(eq(users.uid, uid));
+
+        logger.info('STEP_5', 'User references updated', { 
+          durationMs: Date.now() - step5Start 
+        });
+
+        logger.info('PROVISIONING_COMPLETE', 'Full provisioning completed successfully', {
+          createdIds: { 
+            userId: user.id, 
+            workspaceId: workspace.id, 
+            tenantId: workspace.tenantId,
+            companyId: company.id,
+            membershipId: membership.id 
+          },
+          durationMs: Date.now() - startTime
+        });
+      } else if (!user.activeWorkspaceId || user.activeWorkspaceId !== workspace.id) {
+        const step5Start = Date.now();
+        await tx.update(users).set({ 
+          activeWorkspaceId: workspace.id,
+          activeTenantId: workspace.tenantId,
+          updatedAt: new Date(),
+        }).where(eq(users.uid, uid));
+        
+        logger.info('STEP_5', 'User active workspace reference corrected', {
+          params: { userId: user.id, activeWorkspaceId: workspace.id },
+          durationMs: Date.now() - step5Start
+        });
+      }
+
+      return user;
+    });
+
+    endProvisioningTrace(true);
+    return result;
+
+  } catch (error) {
+    endProvisioningTrace(false);
+    const provisioningError = logger.createProvisioningError(
+      'getOrCreateUser',
+      'Provisioning transaction failed',
+      error,
+      { userUid: uid }
+    );
+    throw provisioningError;
   }
 }
+
+// --- GENERIC CRUD ---
 
 export async function getUserWorkspaces(uid: string) {
   try {
@@ -187,14 +307,11 @@ export async function getUserWorkspaces(uid: string) {
   }
 }
 
-// Alias for compatibility
 export const getWorkspacesWithMembership = getUserWorkspaces;
 
-// Export the safe insert function for use in other services
 export { safeInsertWorkspaceMember };
 
 export async function updateUserActiveWorkspace(uid: string, workspaceId: number) {
-  // verify membership
   const member = await db.select().from(workspaceMembers).where(and(eq(workspaceMembers.userUid, uid), eq(workspaceMembers.workspaceId, workspaceId)));
   if (member.length === 0) throw new Error('Not a member of this workspace');
 
@@ -213,8 +330,6 @@ export async function getUserSaaSState(uid: string) {
   }
   return { user, activeWorkspace };
 }
-
-// --- GENERIC CRUD ---
 
 export async function getCompanies(workspaceId: number) {
   return db.select().from(companies).where(eq(companies.workspaceId, workspaceId));

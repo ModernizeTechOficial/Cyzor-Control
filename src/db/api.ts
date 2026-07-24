@@ -9,6 +9,7 @@ import { TechnicalEvent } from "../types/domainEvents.ts";
 import { MissionService } from "../services/MissionService.ts";
 import { db } from "./index.ts";
 import { safeInsertWorkspaceMember } from "./queries.ts";
+import { ProvisioningError } from "../lib/provisioning/ProvisioningError.ts";
 import { companies, clients, products, projects, tasks, ideas, documents, financeEntries, sprints, milestones, aiMemories, notifications, agendaEvents, users, workspaceMembers, workspaces, workspaceTeams, workspaceDepartments, flows, notes, deploys, productLicenses, workspaceInvitations, auditLogs, entityComments, entityApprovals, roadmaps, entityTemplates, timelineActivities, professionalProfiles, professionalEvolutionEvents, professionalGoals, professionalCertifications, platformSettings } from "./schema.ts";
 import { eq, and, desc, sql, or, inArray, gte, lte, not } from "drizzle-orm";
 import { getUserSaaSState } from "./queries.ts";
@@ -172,8 +173,16 @@ apiRouter.post('/onboarding', requireAuth, tenantMiddleware as any, async (req: 
 
     res.json({ success: true, result });
   } catch (error: any) {
-    console.error('Error in /onboarding:', error);
-    res.status(500).json({ error: error.message || 'Failed to complete onboarding' });
+    if (error instanceof ProvisioningError) {
+      console.error("[ProvisioningError] /onboarding failed:", error.context);
+      res.status(422).json({ 
+        error: "Provisioning failed",
+        context: error.context 
+      });
+    } else {
+      console.error('Error in /onboarding:', error);
+      res.status(500).json({ error: error.message || 'Failed to complete onboarding' });
+    }
   }
 });
 
@@ -189,8 +198,16 @@ apiRouter.post('/auth/sync', requireAuth, tenantMiddleware as any, async (req: A
     const user = await getOrCreateUser(uid, email || '', name, picture);
     res.json({ user });
   } catch (error) {
-    console.error('Error in /auth/sync:', error);
-    res.status(500).json({ error: 'Failed to sync auth user' });
+    if (error instanceof ProvisioningError) {
+      console.error("[ProvisioningError] /auth/sync failed:", error.context);
+      res.status(422).json({ 
+        error: "Provisioning failed",
+        context: error.context 
+      });
+    } else {
+      console.error('Error in /auth/sync:', error);
+      res.status(500).json({ error: 'Failed to sync auth user' });
+    }
   }
 });
 

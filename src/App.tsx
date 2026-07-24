@@ -30,6 +30,7 @@ import { useURLSync } from './hooks/useURLSync';
 import { useNavigation } from './context/NavigationContext';
 import { useAuth } from './context/AuthContext.tsx';
 import { useWorkspacePermissions } from './hooks/usePermissions';
+import { ProvisioningState } from './lib/provisioning/StateMachine.ts';
 import { Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import HomeIntelligence from './components/home/HomeIntelligence';
@@ -43,7 +44,7 @@ import InviteView from './components/InviteView';
 import GlobalVoiceActivator from './components/GlobalVoiceActivator';
 
 export default function App() {
-  const { user, dbUser, loading, activeWorkspace, isSwitchingWorkspace, isCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen } = useAuth();
+  const { user, dbUser, loading, activeWorkspace, isSwitchingWorkspace, isCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen, provisioningStatus } = useAuth();
   const { canViewFinance, isLoading: permissionsLoading } = useWorkspacePermissions();
   const [currentView, setCurrentView] = useState<View | 'admin' | 'onboarding'>('landing');
   const { globalFilters, setGlobalFilters } = useNavigation();
@@ -66,21 +67,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    // Show welcome modal after login (once per session)
-    // Only show if onboarding is already completed AND it's not the session where they just finished it
-    const isOnboardingFinished = activeWorkspace?.settings?.onboardingCompleted === true;
-    const justFinishedOnboarding = sessionStorage.getItem('just_finished_onboarding') === 'true';
-
-    if (user && !loading && isOnboardingFinished && !justFinishedOnboarding && !sessionStorage.getItem('welcome_modal_shown')) {
-      const timer = setTimeout(() => {
-        setShowWelcome(true);
-        sessionStorage.setItem('welcome_modal_shown', 'true');
-      }, 1500); // Delay slightly for smoother experience
-      return () => clearTimeout(timer);
-    }
-  }, [user, loading, activeWorkspace]);
-
-  useEffect(() => {
     const handleRestartTour = () => setRestartTour(prev => prev + 1);
     const handleToggleChat = () => setIsChatOpen(prev => !prev);
     const handleOpenChat = () => setIsChatOpen(true);
@@ -96,28 +82,48 @@ export default function App() {
     };
   }, []);
 
-useEffect(() => {
-  if (!loading) {
-    if (user && !dbUser?.isPlatformAdmin) {
-      const needsOnboarding = activeWorkspace?.settings?.onboardingCompleted === false;
-      if (
-        currentView === 'landing' ||
-        currentView === 'login' ||
-        currentView === 'privacy' ||
-        currentView === 'terms'
-      ) {
-        setCurrentView(needsOnboarding ? 'onboarding' : 'dashboard');
-      }
-      if (currentView === 'dashboard' && needsOnboarding && globalFilters.inviteToken) {
-        setCurrentView('onboarding');
-      }
-    } else if (!user) {
-      if (currentView !== 'landing' && currentView !== 'login' && currentView !== 'privacy' && currentView !== 'terms') {
-        setCurrentView('landing');
+  const provisioningState = provisioningStatus.state;
+
+  useEffect(() => {
+    if (!loading) {
+      if (user && !dbUser?.isPlatformAdmin) {
+        const needsOnboarding = activeWorkspace?.settings?.onboardingCompleted === false;
+
+        if (provisioningState === ProvisioningState.ERROR) {
+          setCurrentView('landing');
+          return;
+        }
+
+        if (provisioningState === ProvisioningState.PROVISIONING) {
+          return;
+        }
+
+        if (provisioningState === ProvisioningState.SETUP_REQUIRED || needsOnboarding) {
+          if (currentView !== 'onboarding') {
+            setCurrentView('onboarding');
+          }
+          return;
+        }
+
+        if (
+          currentView === 'landing' ||
+          currentView === 'login' ||
+          currentView === 'privacy' ||
+          currentView === 'terms'
+        ) {
+          setCurrentView('dashboard');
+        }
+
+        if (currentView === 'dashboard' && needsOnboarding && globalFilters.inviteToken) {
+          setCurrentView('onboarding');
+        }
+      } else if (!user) {
+        if (currentView !== 'landing' && currentView !== 'login' && currentView !== 'privacy' && currentView !== 'terms') {
+          setCurrentView('landing');
+        }
       }
     }
-  }
-}, [user, dbUser, loading, currentView, globalFilters, activeWorkspace]);
+  }, [user, dbUser, loading, currentView, globalFilters, activeWorkspace, provisioningState]);
 
   useEffect(() => {
     if (!loading && !permissionsLoading && currentView === 'financeiro' && !canViewFinance) {
@@ -130,18 +136,18 @@ useEffect(() => {
       <div className="min-h-screen flex items-center justify-center bg-[#FAFAFA]">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-[#111111]/20 border-t-[#111111] rounded-full animate-spin" />
-          <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">Carregando segurança...</span>
+          <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest">Carregando seguranca...</span>
         </div>
       </div>
     );
   }
 
   if (currentView === 'landing') {
-    return <LandingView onNavigate={(view) => setCurrentView(view)} />;
+    return <LandingView onNavigate={(view: View) => setCurrentView(view)} />;
   }
 
   if (currentView === 'login') {
-    return <LoginView onLogin={() => setCurrentView('dashboard')} onNavigate={(view) => setCurrentView(view)} />;
+    return <LoginView onLogin={() => setCurrentView('dashboard')} onNavigate={(view: View) => setCurrentView(view)} />;
   }
 
   if (currentView === 'invite') {
@@ -229,7 +235,6 @@ useEffect(() => {
           className="w-14 h-14 bg-black hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-2xl border border-white/10 relative group pointer-events-auto"
           aria-label="Cyzor Intelligence Chat"
         >
-          {/* Subtle pulse ring around the button */}
           <span className="absolute inset-0 rounded-full bg-black/10 animate-ping group-hover:bg-blue-600/10 pointer-events-none" />
           {isChatOpen ? (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -241,7 +246,7 @@ useEffect(() => {
         </motion.button>
       </div>
 
-      {user && !dbUser?.isPlatformAdmin && currentView === 'dashboard' && (
+      {user && !dbUser?.isPlatformAdmin && currentView === 'dashboard' && provisioningState === ProvisioningState.READY && (
         <ProductTour key={restartTour} forceStart={restartTour > 0} />
       )}
 
