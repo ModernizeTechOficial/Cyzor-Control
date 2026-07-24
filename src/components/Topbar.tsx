@@ -405,18 +405,23 @@ export default function Topbar({ isSidebarCollapsed, toggleSidebar, setCurrentVi
 
   const sectionLabelMap: Record<string, string> = {
     dashboard: 'Dashboard',
-    roadmap: 'EstratÃ©gia',
+    roadmap: 'Estratégia',
     empresas: 'Empresas',
     clientes: 'Clientes',
+    crm: 'CRM',
     produtos: 'Produtos',
     projetos: 'Projetos',
     ideias: 'Ideias',
     financeiro: 'Financeiro',
-    documentacao: 'DocumentaÃ§Ã£o',
+    documentacao: 'Documentação',
     ia: 'IA',
     agenda: 'Agenda',
     keep: 'Keep',
-    'flow-builder': 'Flow Builder',    'career-hub': 'Carreira',    configuracoes: 'ConfiguraÃ§Ãµes',
+    'flow-builder': 'Flow Builder',
+    fluxos: 'Fluxos',
+    'automações': 'Automações',
+    'career-hub': 'Carreira',
+    configuracoes: 'Configurações',
     equipe: 'Equipe',
     admin: 'Admin'
   };

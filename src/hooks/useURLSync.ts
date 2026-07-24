@@ -52,6 +52,8 @@ export function useURLSync(
           else if (parts[3] === 'doc' && parts[4]) { view = 'documentacao'; filters.documentId = parts[4]; }
           else if (parts[3] === 'ideas') view = 'ideias';
           else if (parts[3] === 'idea' && parts[4]) { view = 'ideias'; filters.ideaId = parts[4]; }
+          else if (parts[3] === 'crm') view = 'crm';
+          else if (parts[3] === 'flow-builder' || parts[3] === 'fluxos' || parts[3] === 'automações') view = 'flow-builder';
           else view = 'empresas'; // Company 360
         } else if (parts[1]) {
           const viewMap: any = {
@@ -63,7 +65,11 @@ export function useURLSync(
             'team': 'equipe',
             'ideas': 'ideias',
             'ai': 'ia',
-            'settings': 'configuracoes'
+            'settings': 'configuracoes',
+            'crm': 'crm',
+            'flow-builder': 'flow-builder',
+            'fluxos': 'flow-builder',
+            'automações': 'flow-builder'
           };
           view = viewMap[parts[1]] || parts[1];
         }
@@ -137,7 +143,10 @@ export function useURLSync(
             'equipe': 'team',
             'ideias': 'ideas',
             'ia': 'ai',
-            'configuracoes': 'settings'
+            'configuracoes': 'settings',
+            'crm': 'crm',
+            'fluxos': 'flow-builder',
+            'automações': 'flow-builder'
           };
           if (reverseMap[currentView]) url += `/${reverseMap[currentView]}`;
           else url += `/${currentView}`;
@@ -154,7 +163,9 @@ export function useURLSync(
               'ideias': 'ideas',
               'ia': 'ai',
               'configuracoes': 'settings',
-              'empresas': 'companies'
+              'empresas': 'companies',
+              'fluxos': 'flow-builder',
+              'automações': 'flow-builder'
             };
             url += `/${reverseMap[currentView] || currentView}`;
          }

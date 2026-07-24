@@ -195,6 +195,7 @@ export default function App() {
             {currentView === 'roadmap' && <PlanejamentoEstrategicoView setCurrentView={setCurrentView} />}
             {currentView === 'empresas' && <EmpresasView />}
             {currentView === 'clientes' && <ClientesView />}
+            {currentView === 'crm' && <ClientesView />}
             {currentView === 'produtos' && <ProdutosView />}
             {currentView === 'projetos' && <ProjetosView />}
             {currentView === 'ideias' && <IdeiasView />}
@@ -204,7 +205,7 @@ export default function App() {
             {currentView === 'ia' && <IAView setCurrentView={setCurrentView} />}
             {currentView === 'agenda' && <AgendaPage />}
             {currentView === 'keep' && <GoogleKeepView />}
-            {currentView === 'flow-builder' && <VisualSystemsStudioView />}
+            {(currentView === 'flow-builder' || currentView === 'fluxos' || currentView === 'automações') && <VisualSystemsStudioView />}
             {currentView === 'configuracoes' && <ConfiguracoesView />}
             {currentView === 'equipe' && <EquipeView />}
           </motion.main>
