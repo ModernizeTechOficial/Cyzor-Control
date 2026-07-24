@@ -47,7 +47,7 @@ async function safeInsertWorkspaceMember(values: {
   onboardingCompleted?: boolean;
   xp?: number;
   careerLevel?: string;
-}) {
+}, tx?: any) {
   const availableColumns = await getWorkspaceMembersColumns();
   
   const insertValues: any = {};
@@ -70,7 +70,8 @@ async function safeInsertWorkspaceMember(values: {
   if (availableColumns.includes('xp')) insertValues.xp = values.xp ?? 0;
   if (availableColumns.includes('career_level')) insertValues.careerLevel = values.careerLevel || 'Pleno';
   
-  return await db.insert(workspaceMembers).values(insertValues).returning();
+  const insertFn = tx ? tx.insert : db.insert;
+  return await insertFn(workspaceMembers).values(insertValues).returning();
 }
 
 // --- USERS & WORKSPACES ---
@@ -210,7 +211,7 @@ export async function getOrCreateUser(
           params: { workspaceId: workspace.id, userUid: uid, tenantId: workspace.tenantId, role: 'OWNER' }
         });
 
-        const [membership] = await tx.insert(workspaceMembers).values({
+        const [membership] = await safeInsertWorkspaceMember({
           workspaceId: workspace.id,
           userUid: uid,
           tenantId: workspace.tenantId,
@@ -223,7 +224,7 @@ export async function getOrCreateUser(
           onboardingCompleted: false,
           xp: 0,
           careerLevel: 'Pleno',
-        }).returning();
+        }, tx);
 
         logger.info('STEP_4', 'Workspace membership created', { 
           createdIds: { membershipId: membership.id, tenantId: membership.tenantId },

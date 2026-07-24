@@ -2,7 +2,7 @@ import { db } from "../db/index.ts";
 import { projects, products, ideas, clients, financeEntries, tasks, notifications } from "../db/schema.ts";
 
 export class WorkspaceTemplateService {
-  static async applyTemplate(workspaceId: number, segment: string, tenantId?: number) {
+  static async applyTemplate(workspaceId: number, segment: string, tenantId?: string) {
     try {
       console.log(`[Template] Applying segment template "${segment}" to workspace ${workspaceId}`);
 
