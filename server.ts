@@ -12,9 +12,45 @@ import aiConfigRouter from "./src/ai/routes/aiConfigRouter.ts";
 
 import { stripeRouter, stripeWebhookRouter } from "./src/routes/stripe.ts";
 
+async function waitForPort(port: number, timeoutMs = 1000): Promise<boolean> {
+  return new Promise((resolve) => {
+    try {
+      const server = require("net").createServer();
+      server.once("error", () => resolve(false));
+      server.once("listening", () => {
+        server.close();
+        resolve(true);
+      });
+      server.listen(port, "0.0.0.0");
+      setTimeout(() => {
+        server.close();
+        resolve(false);
+      }, timeoutMs);
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const START_PORT = Number(process.env.PORT || 3000);
+  const MAX_PORT = 3010;
+
+  let PORT = START_PORT;
+  while (PORT <= MAX_PORT) {
+    const available = await waitForPort(PORT, 600);
+    if (available) break;
+    console.warn(`[Server] Port ${PORT} is in use, trying ${PORT + 1}...`);
+    PORT += 1;
+  }
+
+  if (PORT > MAX_PORT) {
+    console.error(`[Server] No available ports found between ${START_PORT} and ${MAX_PORT}`);
+    process.exit(1);
+  }
+
+  process.env.PORT = String(PORT);
 
   // Middleware to parse JSON bodies with raw body for Stripe webhooks
   app.use(express.json({
@@ -35,7 +71,7 @@ async function startServer() {
 
   // API Route: Healthcheck
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", service: "Cyzor Control SaaS API" });
+    res.json({ status: "ok", service: "Cyzor Control SaaS API", port: PORT });
   });
 
   // API Route: Extended Database Healthcheck
@@ -43,12 +79,14 @@ async function startServer() {
     try {
       res.json({
         status: "ok",
-        databaseUrl: process.env.DATABASE_URL
+        databaseUrl: process.env.DATABASE_URL,
+        port: PORT,
       });
     } catch (error: any) {
       res.status(500).json({
         status: "error",
-        error: error.message
+        error: error.message,
+        port: PORT,
       });
     }
   });
