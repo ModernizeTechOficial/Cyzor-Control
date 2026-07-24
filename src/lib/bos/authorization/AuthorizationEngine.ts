@@ -458,6 +458,12 @@ export class AuthorizationEngine {
       }
     }
 
+    // If BOS table exists but returned no permissions, and this is a legacy role,
+    // fallback to legacy permissions to avoid breaking existing workspaces
+    if (perms.size === 0 && isWorkspaceRole(roleSlug)) {
+      getLegacyRolePermissions(roleSlug as WorkspaceRole).forEach((permission) => perms.add(permission));
+    }
+
     try {
       const [role] = await db
         .select({ parentRoleSlug: roles.parentRoleSlug })
