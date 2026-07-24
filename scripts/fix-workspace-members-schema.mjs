@@ -4,10 +4,15 @@ const connectionString = 'postgresql://cyzor_control_user:8e8be4c12906a1c87619c3
 const pool = new pg.Pool({ connectionString, ssl: false });
 
 try {
+  await pool.query(`ALTER TABLE workspace_members ADD COLUMN IF NOT EXISTS tenant_id uuid DEFAULT gen_random_uuid() NOT NULL;`);
   await pool.query(`ALTER TABLE workspace_members ADD COLUMN IF NOT EXISTS department text;`);
   await pool.query(`ALTER TABLE workspace_members ADD COLUMN IF NOT EXISTS team_name text;`);
   await pool.query(`ALTER TABLE workspace_members ADD COLUMN IF NOT EXISTS manager_uid text REFERENCES users(uid) ON DELETE SET NULL;`);
   await pool.query(`ALTER TABLE workspace_members ADD COLUMN IF NOT EXISTS permissions jsonb DEFAULT '[]'::jsonb;`);
+  await pool.query(`ALTER TABLE workspace_members ADD COLUMN IF NOT EXISTS status text DEFAULT 'Ativo';`);
+  await pool.query(`ALTER TABLE workspace_members ADD COLUMN IF NOT EXISTS onboarding_completed boolean DEFAULT false;`);
+  await pool.query(`ALTER TABLE workspace_members ADD COLUMN IF NOT EXISTS xp integer DEFAULT 0;`);
+  await pool.query(`ALTER TABLE workspace_members ADD COLUMN IF NOT EXISTS career_level text DEFAULT 'Pleno';`);
 
   await pool.query(`ALTER TABLE workspace_members DROP CONSTRAINT IF EXISTS workspace_members_workspace_id_unique;`);
   await pool.query(`DROP INDEX IF EXISTS workspace_members_workspace_id_unique;`);

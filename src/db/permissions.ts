@@ -90,7 +90,10 @@ export function validateRolePermissionAssignment(role: WorkspaceRole, permission
 
 export async function hasPermission(userUid: string, workspaceId: number, permission: Permission): Promise<boolean> {
   try {
-    const [member] = await db.select()
+    const [member] = await db.select({
+      role: workspaceMembers.role,
+      permissions: workspaceMembers.permissions
+    })
       .from(workspaceMembers)
       .where(and(
         eq(workspaceMembers.userUid, userUid),
@@ -126,7 +129,7 @@ export async function hasPermission(userUid: string, workspaceId: number, permis
 }
 
 export async function getMemberRole(userUid: string, workspaceId: number): Promise<WorkspaceRole | null> {
-  const [member] = await db.select()
+  const [member] = await db.select({ role: workspaceMembers.role })
     .from(workspaceMembers)
     .where(and(
       eq(workspaceMembers.userUid, userUid),

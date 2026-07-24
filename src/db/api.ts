@@ -236,7 +236,7 @@ apiRouter.post('/invite/:token/accept', requireAuth, async (req: AuthRequest, re
       return res.status(404).json({ error: 'Workspace associado ao convite não encontrado' });
     }
 
-    const [existingMembership] = await db.select().from(workspaceMembers)
+    const [existingMembership] = await db.select({ id: workspaceMembers.id }).from(workspaceMembers)
       .where(and(eq(workspaceMembers.workspaceId, invitation.workspaceId), eq(workspaceMembers.userUid, req.user!.uid)))
       .limit(1);
 
@@ -294,7 +294,7 @@ apiRouter.post("/workspace/invitations/accept", async (req: AuthRequest, res) =>
       return res.status(400).json({ error: "O convite expirou" });
     }
 
-    const [existingMember] = await db.select().from(workspaceMembers)
+    const [existingMember] = await db.select({ id: workspaceMembers.id }).from(workspaceMembers)
       .where(and(eq(workspaceMembers.workspaceId, invitation.workspaceId), eq(workspaceMembers.userUid, req.user!.uid)))
       .limit(1);
 
@@ -625,8 +625,7 @@ apiRouter.put("/user/active-workspace", async (req: AuthRequest, res) => {
     if (!workspaceId) return res.status(400).json({ error: "workspaceId is required" });
 
     // Verify membership
-    const [membership] = await db.select()
-      .from(workspaceMembers)
+    const [membership] = await db.select({ id: workspaceMembers.id }).from(workspaceMembers)
       .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userUid, req.user!.uid)))
       .limit(1);
 
@@ -647,16 +646,9 @@ apiRouter.get("/workspace/members", async (req: AuthRequest, res) => {
     const data = await db.select({
       id: workspaceMembers.id,
       userUid: workspaceMembers.userUid,
+      uid: users.uid,
       role: workspaceMembers.role,
       cargo: workspaceMembers.cargo,
-      department: workspaceMembers.department,
-      teamName: workspaceMembers.teamName,
-      // managerUid may not exist on older DB schemas; omit from projection to avoid runtime errors
-      permissions: workspaceMembers.permissions,
-      status: workspaceMembers.status,
-      onboardingCompleted: workspaceMembers.onboardingCompleted,
-      xp: workspaceMembers.xp,
-      careerLevel: workspaceMembers.careerLevel,
       createdAt: workspaceMembers.createdAt,
       userName: users.displayName,
       userEmail: users.email,
@@ -706,20 +698,25 @@ apiRouter.put("/workspace/members/:id", async (req: AuthRequest, res) => {
       return res.status(403).json({ error: "Insufficient permissions" });
     }
 
-    const [oldMember] = await db.select().from(workspaceMembers).where(eq(workspaceMembers.id, memberId)).limit(1);
+    const [oldMember] = await db.select({ id: workspaceMembers.id }).from(workspaceMembers).where(eq(workspaceMembers.id, memberId)).limit(1);
     if (!oldMember) return res.status(404).json({ error: "Member not found" });
 
+    const updateValues: any = {};
+    if (role !== undefined) updateValues.role = role;
+    if (cargo !== undefined) updateValues.cargo = cargo;
+    if (department !== undefined) updateValues.department = department;
+    if (teamName !== undefined) updateValues.teamName = teamName;
+    if (managerUid !== undefined) updateValues.managerUid = managerUid;
+    if (permissions !== undefined) updateValues.permissions = permissions;
+    if (status !== undefined) updateValues.status = status;
+    if (careerLevel !== undefined) updateValues.careerLevel = careerLevel;
+
+    if (Object.keys(updateValues).length === 0) {
+      return res.status(400).json({ error: "No valid fields to update" });
+    }
+
     const [updated] = await db.update(workspaceMembers)
-      .set({ 
-        role: role !== undefined ? role : oldMember.role, 
-        cargo: cargo !== undefined ? cargo : oldMember.cargo,
-        department: department !== undefined ? department : oldMember.department,
-        teamName: teamName !== undefined ? teamName : oldMember.teamName,
-        managerUid: managerUid !== undefined ? managerUid : oldMember.managerUid,
-        permissions: permissions !== undefined ? permissions : oldMember.permissions,
-        status: status !== undefined ? status : oldMember.status,
-        careerLevel: careerLevel !== undefined ? careerLevel : oldMember.careerLevel,
-      })
+      .set(updateValues)
       .where(and(eq(workspaceMembers.id, memberId), eq(workspaceMembers.workspaceId, req.workspaceId!)))
       .returning();
 
@@ -767,7 +764,6 @@ apiRouter.get("/workspace/teams", async (req: AuthRequest, res) => {
       userUid: workspaceMembers.userUid,
       role: workspaceMembers.role,
       cargo: workspaceMembers.cargo,
-      status: workspaceMembers.status,
       createdAt: workspaceMembers.createdAt,
       userName: users.displayName,
       userEmail: users.email,
@@ -1186,10 +1182,6 @@ apiRouter.get("/workspace/organization-tree", async (req: AuthRequest, res) => {
       userUid: workspaceMembers.userUid,
       role: workspaceMembers.role,
       cargo: workspaceMembers.cargo,
-      department: workspaceMembers.department,
-      teamName: workspaceMembers.teamName,
-      managerUid: workspaceMembers.managerUid,
-      status: workspaceMembers.status,
       userName: users.displayName,
       userEmail: users.email,
       userPhoto: users.photoUrl
@@ -3245,29 +3237,6 @@ apiRouter.put("/notifications/:id/read", async (req: AuthRequest, res) => {
   }
 });
 
-// --- WORKSPACE MEMBERS ---
-apiRouter.get("/workspace/members", async (req: AuthRequest, res) => {
-  try {
-    const list = await db.select({
-      uid: users.uid,
-      email: users.email,
-      displayName: users.displayName,
-      photoUrl: users.photoUrl,
-      role: workspaceMembers.role,
-      cargo: workspaceMembers.cargo,
-      permissions: workspaceMembers.permissions,
-    })
-    .from(workspaceMembers)
-    .innerJoin(users, eq(workspaceMembers.userUid, users.uid))
-    .where(eq(workspaceMembers.workspaceId, req.workspaceId!));
-    
-    res.json(list);
-  } catch (error) {
-    console.error("Error fetching workspace members:", error);
-    res.status(500).json({ error: "Failed to fetch workspace members" });
-  }
-});
-
 // --- AGENDA / EVENTS ---
 apiRouter.get("/agenda", async (req: AuthRequest, res) => {
   try {
@@ -3902,7 +3871,7 @@ apiRouter.post("/workspaces/:id/duplicate", async (req: AuthRequest, res) => {
 apiRouter.delete("/workspaces/:id", async (req: AuthRequest, res) => {
   try {
     const wsId = Number(req.params.id);
-    const [membership] = await db.select().from(workspaceMembers).where(and(eq(workspaceMembers.workspaceId, wsId), eq(workspaceMembers.userUid, req.user!.uid)));
+    const [membership] = await db.select({ id: workspaceMembers.id, role: workspaceMembers.role }).from(workspaceMembers).where(and(eq(workspaceMembers.workspaceId, wsId), eq(workspaceMembers.userUid, req.user!.uid)));
     if (!membership || membership.role !== "OWNER") {
       return res.status(403).json({ error: "Only the owner can delete a workspace" });
     }

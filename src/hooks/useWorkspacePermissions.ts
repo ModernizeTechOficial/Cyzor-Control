@@ -52,7 +52,7 @@ export const useWorkspacePermissions = () => {
 
   const currentMember = useMemo(() => {
     if (!user || !Array.isArray(members)) return null;
-    const found = members.find((member: any) => member.uid === user.uid) || null;
+    const found = members.find((member: any) => member.uid === user.uid || member.userUid === user.uid) || null;
     if (found) return found;
     // Fallback: if the active workspace owner matches current user, treat as OWNER
     if (activeWorkspace?.ownerUid === user.uid) {
