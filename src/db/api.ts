@@ -186,30 +186,8 @@ apiRouter.post('/onboarding', requireAuth, tenantMiddleware as any, async (req: 
   }
 });
 
-// Lightweight auth sync endpoint: allows client to sync Firebase user to local DB
-// NOTE: This is intentionally permissive for local/dev environments — it upserts
-// a user record based on the payload sent by the client. If you run in production
-// consider protecting this route with proper token verification.
-apiRouter.post('/auth/sync', requireAuth, tenantMiddleware as any, async (req: AuthRequest, res) => {
-  try {
-    const { uid, email, name, picture } = req.body || {};
-    if (!uid) return res.status(400).json({ error: 'uid is required' });
-
-    const user = await getOrCreateUser(uid, email || '', name, picture);
-    res.json({ user });
-  } catch (error) {
-    if (error instanceof ProvisioningError) {
-      console.error("[ProvisioningError] /auth/sync failed:", error.context);
-      res.status(422).json({ 
-        error: "Provisioning failed",
-        context: error.context 
-      });
-    } else {
-      console.error('Error in /auth/sync:', error);
-      res.status(500).json({ error: 'Failed to sync auth user' });
-    }
-  }
-});
+// NOTE: /api/auth/sync is handled by the server-level route in server.ts.
+// The route in this router was previously duplicated and is no longer needed.
 
 apiRouter.get('/invite/:token', async (req, res) => {
   try {
