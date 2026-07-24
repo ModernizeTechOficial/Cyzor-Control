@@ -86,6 +86,28 @@ export default function App() {
 
   useEffect(() => {
     if (!loading) {
+      if (user && dbUser?.isPlatformAdmin) {
+        if (provisioningState === ProvisioningState.ERROR) {
+          setCurrentView('landing');
+          return;
+        }
+
+        if (provisioningState === ProvisioningState.PROVISIONING) {
+          return;
+        }
+
+        if (
+          currentView === 'landing' ||
+          currentView === 'login' ||
+          currentView === 'privacy' ||
+          currentView === 'terms'
+        ) {
+          setCurrentView('admin');
+        }
+
+        return;
+      }
+
       if (user && !dbUser?.isPlatformAdmin) {
         const needsOnboarding = activeWorkspace?.settings?.onboardingCompleted === false;
 
