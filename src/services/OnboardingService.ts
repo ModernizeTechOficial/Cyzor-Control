@@ -291,9 +291,26 @@ export class OnboardingService {
   // -------------------------------------------------------------------------
 
   private async ensureOwnership(tenantId: string, workspaceId: number, userId: string) {
-    const [existing] = await db.select().from(schema.workspaceMembers).where(
-      and(eq(schema.workspaceMembers.workspaceId, workspaceId), eq(schema.workspaceMembers.userUid, userId))
-    ).limit(1);
+    let existing: any = null;
+    try {
+      [existing] = await db.select().from(schema.workspaceMembers).where(
+        and(eq(schema.workspaceMembers.workspaceId, workspaceId), eq(schema.workspaceMembers.userUid, userId))
+      ).limit(1);
+    } catch (err: any) {
+      // If the DB is missing newer columns (e.g. onboarding_completed), fall back to a safer minimal select
+      if (err && (err.code === '42703' || String(err.message || '').includes('onboarding_completed'))) {
+        try {
+          [existing] = await db.select({ id: schema.workspaceMembers.id, tenantId: schema.workspaceMembers.tenantId, workspaceId: schema.workspaceMembers.workspaceId, userUid: schema.workspaceMembers.userUid, role: schema.workspaceMembers.role }).from(schema.workspaceMembers).where(
+            and(eq(schema.workspaceMembers.workspaceId, workspaceId), eq(schema.workspaceMembers.userUid, userId))
+          ).limit(1);
+        } catch (err2) {
+          console.error('[ensureOwnership] Fallback select also failed:', err2);
+          throw err2;
+        }
+      } else {
+        throw err;
+      }
+    }
 
     if (existing) return existing;
 

@@ -37,16 +37,18 @@ async function startServer() {
   const START_PORT = Number(process.env.PORT || 3000);
   const MAX_PORT = 3010;
 
+  // If user provided a START_PORT above the default MAX_PORT, expand the search
   let PORT = START_PORT;
-  while (PORT <= MAX_PORT) {
+  const effectiveMax = Math.max(MAX_PORT, START_PORT + 1000);
+  while (PORT <= effectiveMax) {
     const available = await waitForPort(PORT, 600);
     if (available) break;
     console.warn(`[Server] Port ${PORT} is in use, trying ${PORT + 1}...`);
     PORT += 1;
   }
 
-  if (PORT > MAX_PORT) {
-    console.error(`[Server] No available ports found between ${START_PORT} and ${MAX_PORT}`);
+  if (PORT > effectiveMax) {
+    console.error(`[Server] No available ports found between ${START_PORT} and ${effectiveMax}`);
     process.exit(1);
   }
 
