@@ -273,7 +273,14 @@ export class AuthorizationEngine {
       return this.buildEffectivePermissionsResponse(cached.data);
     }
 
-    const effective = await this.computeEffectivePermissions(context);
+    let effective: EffectivePermissions;
+    try {
+      effective = await this.computeEffectivePermissions(context);
+    } catch (error) {
+      console.warn('[AuthorizationEngine] BOS tables unavailable, falling back to legacy permissions:', error);
+      effective = await this.computeLegacyEffectivePermissions(context);
+    }
+
     this.permissionCache.set(cacheKey, {
       data: effective.combined,
       expires: Date.now() + this.CACHE_TTL,
@@ -603,6 +610,76 @@ export class AuthorizationEngine {
       assignmentPermissions: new Set(),
       combined: new Set(),
     };
+  }
+
+  private async computeLegacyEffectivePermissions(
+    context: AuthorizationContext
+  ): Promise<EffectivePermissions> {
+    const rolePermissions = new Set<PermissionSlug>();
+    const explicitPermissions = new Set<PermissionSlug>();
+    const assignmentPermissions = new Set<PermissionSlug>();
+
+    try {
+      const [member] = await db
+        .select({
+          role: workspaceMembers.role,
+          permissions: workspaceMembers.permissions,
+          status: workspaceMembers.status,
+        })
+        .from(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.userUid, context.userId),
+            eq(workspaceMembers.workspaceId, context.workspaceId)
+          )
+        )
+        .limit(1);
+
+      let memberRole: string | null = null;
+
+      if (member && member.status === 'Ativo') {
+        memberRole = member.role;
+      } else {
+        const { workspaces } = await import('../../../db/schema.ts');
+        const [workspace] = await db
+          .select({ ownerUid: workspaces.ownerUid })
+          .from(workspaces)
+          .where(eq(workspaces.id, context.workspaceId))
+          .limit(1);
+
+        if (workspace?.ownerUid === context.userId) {
+          memberRole = 'OWNER';
+        }
+      }
+
+      if (!memberRole) {
+        return this.buildEmptyEffectivePermissions();
+      }
+
+      if (memberRole === 'OWNER') {
+        const allLegacy = getLegacyRolePermissions(WorkspaceRole.OWNER);
+        allLegacy.forEach((p) => rolePermissions.add(p));
+      } else if (isWorkspaceRole(memberRole)) {
+        const rolePerms = getLegacyRolePermissions(memberRole as WorkspaceRole);
+        rolePerms.forEach((p) => rolePermissions.add(p));
+      }
+
+      if (member && Array.isArray(member.permissions)) {
+        member.permissions.forEach((p: any) => {
+          if (typeof p === 'string') explicitPermissions.add(p);
+        });
+      }
+    } catch (error) {
+      console.error('[AuthorizationEngine] Legacy fallback failed:', error);
+    }
+
+    const combined = new Set<PermissionSlug>([
+      ...rolePermissions,
+      ...explicitPermissions,
+      ...assignmentPermissions,
+    ]);
+
+    return { rolePermissions, explicitPermissions, assignmentPermissions, combined };
   }
 }
 
