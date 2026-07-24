@@ -5,8 +5,9 @@ import { useBusinessContext } from '../hooks/useBusinessContext';
 import { useBranding } from '../hooks/useBranding.ts';
 import { useNavigation } from '../context/NavigationContext.tsx';
 import { useCompanies, useProjects, useProducts } from '../hooks/useCyzorQueries';
-import { useWorkspacePermissions } from '../hooks/useWorkspacePermissions';
+import { useWorkspacePermissions } from '../hooks/usePermissions';
 import { getSidebarModules } from '../db/accessControl';
+import { useModules } from '../hooks/useAuthorization';
 import { 
   LayoutDashboard, Building2, Users, Package, GitBranch, Lightbulb, FileText, 
   DollarSign, BotMessageSquare, Settings, Calendar, ShieldCheck, StickyNote, 
@@ -166,7 +167,17 @@ export default function Sidebar({
 
   const rawRole = (dbUser?.role || currentMember?.role || 'MEMBER');
   const normalizedRole = String(rawRole).split(/\s|\u2022|·|•/).filter(Boolean)[0].toUpperCase();
-  const modules = getSidebarModules({ role: normalizedRole, permissions: currentMember?.permissions || [] });
+  const legacyModules = getSidebarModules({ role: normalizedRole, permissions: currentMember?.permissions || [] });
+  
+  const { data: bosModules = [], isLoading: modulesLoading } = useModules();
+  
+  // Prefer BOS Module Registry, fallback to legacy access control
+  const registryModules = useMemo(() => {
+    if (bosModules.length > 0) {
+      return bosModules.map((m: any) => ({ id: m.slug || m.id, label: m.name || m.label }));
+    }
+    return legacyModules;
+  }, [bosModules, legacyModules]);
 
   // Fallback modules for Owner (in case role resolution fails or modules list is empty)
   const defaultOwnerModules = [
@@ -181,7 +192,7 @@ export default function Sidebar({
   ];
 
   // Build effective modules and ensure unique ids (dedupe)
-  const sourceModules = modules.length > 0 ? modules : (isWorkspaceOwner ? defaultOwnerModules : modules);
+  const sourceModules = registryModules.length > 0 ? registryModules : (isWorkspaceOwner ? defaultOwnerModules : registryModules);
   const effectiveModules = Array.from(new Map(sourceModules.map((m: any) => [m.id, m])).values());
 
   // debug info to help diagnose missing icons/modules
@@ -191,12 +202,13 @@ export default function Sidebar({
         rawRole,
         normalizedRole,
         permissions: currentMember?.permissions || [],
-        modulesCount: modules.length,
+        bosModulesCount: bosModules.length,
+        legacyModulesCount: legacyModules.length,
         effectiveModulesCount: effectiveModules.length,
         isWorkspaceOwner
       });
     } catch (e) { /* ignore */ }
-  }, [rawRole, normalizedRole, currentMember?.permissions, modules.length, effectiveModules.length, isWorkspaceOwner]);
+  }, [rawRole, normalizedRole, currentMember?.permissions, bosModules.length, legacyModules.length, effectiveModules.length, isWorkspaceOwner]);
 
   const iconMap: Record<string, any> = {
     dashboard: LayoutDashboard,

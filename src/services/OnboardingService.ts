@@ -5,6 +5,7 @@ import { authorizationEngine } from '../lib/bos/authorization/AuthorizationEngin
 import { roleEngine } from '../lib/bos/authorization/RoleEngine';
 import { moduleRegistry } from '../lib/bos/module-registry/ModuleRegistry';
 import { featureFlagService } from '../lib/bos/feature-flags/FeatureFlagService';
+import { auditService } from '../lib/bos/audit/AuditService';
 
 // ============================================================================
 // TYPES
@@ -81,6 +82,16 @@ export class OnboardingService {
       await this.applySegmentTemplate(workspace.id, tenant.id, companyData.segment);
     }
 
+    await auditService.logEntityChange({
+      tenantId: tenant.id,
+      workspaceId: workspace.id,
+      userId,
+      action: 'ONBOARDING_COMPLETED',
+      tableName: 'workspaces',
+      recordId: String(workspace.id),
+      newValues: { tenantId: tenant.id, workspaceId: workspace.id, companyId: company.id, segment: companyData?.segment },
+    });
+
     return {
       tenantId: tenant.id,
       workspaceId: workspace.id,
@@ -119,6 +130,18 @@ export class OnboardingService {
         }).returning();
         
         await db.update(schema.workspaces).set({ tenantId: newTenant.id }).where(eq(schema.workspaces.id, workspaceId));
+        
+        try {
+          await auditService.logEntityChange({
+            tenantId: newTenant.id,
+            workspaceId: workspaceId,
+            userId,
+            action: 'TENANT_HEALED',
+            tableName: 'tenants',
+            recordId: newTenant.id,
+          });
+        } catch {}
+        
         return await this.ensureAccount({ uid: userId, email: userRecord.email || '', displayName: userRecord.displayName || 'User' });
       }
 
@@ -130,6 +153,18 @@ export class OnboardingService {
           name: `${workspace.name} Matriz`,
           status: 'Ativo',
         }).returning();
+        
+        try {
+          await auditService.logEntityChange({
+            tenantId: tenant.id,
+            workspaceId: workspaceId,
+            userId,
+            action: 'COMPANY_HEALED',
+            tableName: 'companies',
+            recordId: String(newCompany[0].id),
+          });
+        } catch {}
+
         return await this.ensureAccount({ uid: userId, email: userRecord.email || '', displayName: userRecord.displayName || 'User' });
       }
 
@@ -148,6 +183,18 @@ export class OnboardingService {
           teamName: 'Owner',
           status: 'Ativo',
         }).returning();
+        
+        try {
+          await auditService.logEntityChange({
+            tenantId: tenant.id,
+            workspaceId: workspaceId,
+            userId,
+            action: 'MEMBERSHIP_HEALED',
+            tableName: 'workspace_members',
+            recordId: String(newMembership[0].id),
+          });
+        } catch {}
+
         return {
           tenantId: tenant.id,
           workspaceId,
@@ -160,6 +207,18 @@ export class OnboardingService {
           isNewUser: false,
         };
       }
+
+      try {
+        await auditService.logEntityChange({
+          tenantId: tenant.id,
+          workspaceId: workspaceId,
+          userId,
+          action: 'ACCOUNT_HEALED',
+          tableName: 'workspaces',
+          recordId: String(workspaceId),
+          newValues: { tenantId: tenant.id, workspaceId: workspaceId, companyId: company.id },
+        });
+      } catch {}
 
       return {
         tenantId: tenant.id,

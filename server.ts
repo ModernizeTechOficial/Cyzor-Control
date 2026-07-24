@@ -9,6 +9,7 @@ import apiRouter from "./src/db/api.ts";
 import { adminRouter } from "./src/db/admin.ts";
 import { AIController } from "./src/ai/controllers/AIController.ts";
 import aiConfigRouter from "./src/ai/routes/aiConfigRouter.ts";
+import { runAllMigrations } from "./src/db/migrations";
 
 import { stripeRouter, stripeWebhookRouter } from "./src/routes/stripe.ts";
 
@@ -37,11 +38,8 @@ async function startServer() {
   const START_PORT = Number(process.env.PORT || 3000);
   const MAX_PORT = 3010;
 
-  // Allow skipping the port scan for environments where scanning misreports availability.
-  // Set `SKIP_PORT_SCAN=1` to bind directly to the provided PORT.
   const SKIP_SCAN = process.env.SKIP_PORT_SCAN === '1';
 
-  // If user provided a START_PORT above the default MAX_PORT, expand the search
   let PORT = START_PORT;
   if (!SKIP_SCAN) {
     const effectiveMax = START_PORT + 10;
@@ -61,6 +59,15 @@ async function startServer() {
   }
 
   process.env.PORT = String(PORT);
+
+  // Run database migrations before starting the server
+  try {
+    console.log('[Server] Running database migrations...');
+    await runAllMigrations();
+    console.log('[Server] Migrations completed');
+  } catch (error) {
+    console.error('[Server] Migration failed:', error);
+  }
 
   // Middleware to parse JSON bodies with raw body for Stripe webhooks
   app.use(express.json({

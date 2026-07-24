@@ -137,26 +137,56 @@ apiRouter.get("/branding", async (req, res) => {
   }
 });
 
+// Onboarding endpoint: ensures complete account structure and marks setup complete
+apiRouter.post('/onboarding', requireAuth, tenantMiddleware as any, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user!.uid;
+    const { name, cnpj, country, language, segment, logoUrl } = req.body || {};
+
+    if (!name || !country || !language || !segment) {
+      return res.status(400).json({ error: 'Missing required onboarding fields' });
+    }
+
+    const result = await onboardingService.ensureAccount(
+      {
+        uid: userId,
+        email: req.user!.email || '',
+        displayName: req.user!.displayName || name,
+        photoUrl: req.user!.photoURL,
+      },
+      {
+        name,
+        cnpj,
+        country,
+        language,
+        segment: segment || 'general',
+        logoUrl,
+      }
+    );
+
+    await onboardingService.completeSetup(result.workspaceId, result.userId, {
+      businessType: segment,
+      stage: 'growth',
+    });
+
+    res.json({ success: true, result });
+  } catch (error: any) {
+    console.error('Error in /onboarding:', error);
+    res.status(500).json({ error: error.message || 'Failed to complete onboarding' });
+  }
+});
+
 // Lightweight auth sync endpoint: allows client to sync Firebase user to local DB
 // NOTE: This is intentionally permissive for local/dev environments — it upserts
 // a user record based on the payload sent by the client. If you run in production
 // consider protecting this route with proper token verification.
-apiRouter.post('/auth/sync', async (req: any, res) => {
+apiRouter.post('/auth/sync', requireAuth, tenantMiddleware as any, async (req: AuthRequest, res) => {
   try {
     const { uid, email, name, picture } = req.body || {};
     if (!uid) return res.status(400).json({ error: 'uid is required' });
 
-    const [existing] = await db.select().from(users).where(eq(users.uid, uid)).limit(1);
-    if (existing) {
-      const [updated] = await db.update(users)
-        .set({ displayName: name || existing.displayName, email: email || existing.email, photoUrl: picture || existing.photoUrl })
-        .where(eq(users.uid, uid))
-        .returning();
-      return res.json({ user: (updated && updated[0]) || updated });
-    }
-
-    const [inserted] = await db.insert(users).values({ uid, email: email || '', displayName: name || '', photoUrl: picture || '' }).returning();
-    res.json({ user: (inserted && inserted[0]) || inserted });
+    const user = await getOrCreateUser(uid, email || '', name, picture);
+    res.json({ user });
   } catch (error) {
     console.error('Error in /auth/sync:', error);
     res.status(500).json({ error: 'Failed to sync auth user' });
@@ -284,6 +314,21 @@ apiRouter.get('/auth/features/:featureKey', requireAuth, tenantMiddleware as any
   } catch (error: any) {
     console.error('Error checking feature flag:', error);
     return res.status(500).json({ error: error.message || 'Failed to check feature flag' });
+  }
+});
+
+apiRouter.get('/auth/modules', requireAuth, tenantMiddleware as any, async (req: AuthRequest, res) => {
+  try {
+    const context = {
+      userId: req.user!.uid,
+      tenantId: req.tenantId as string,
+      workspaceId: req.workspaceId as number,
+    };
+    const modules = await moduleRegistry.getAllModules(context.tenantId, context.workspaceId);
+    return res.json({ modules: modules.map(m => ({ id: m.slug, name: m.name, icon: m.icon, category: m.category })) });
+  } catch (error: any) {
+    console.error('Error fetching modules:', error);
+    return res.status(500).json({ error: error.message || 'Failed to fetch modules' });
   }
 });
 

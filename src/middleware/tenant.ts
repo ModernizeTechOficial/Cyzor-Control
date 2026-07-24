@@ -95,6 +95,21 @@ export const tenantMiddleware = async (
       return;
     }
 
+    // Startup Validation: ensure complete account structure
+    const startupValid = await validateAccountStructure(userId, activeWorkspaceId, tenantId);
+    if (!startupValid.valid) {
+      console.warn(`[Tenant Middleware] Startup validation failed: ${startupValid.reason}. Healing...`);
+      const healed = await onboardingService.healAccount(userId);
+      if (healed) {
+        const [healedWorkspace] = await db.select().from(schema.workspaces).where(eq(schema.workspaces.id, healed.workspaceId)).limit(1);
+        const [healedTenant] = await db.select().from(schema.tenants).where(eq(schema.tenants.id, healed.tenantId)).limit(1);
+        req.workspaceId = healed.workspaceId;
+        req.tenantId = healed.tenantId;
+        req.tenant = healedTenant;
+        req.companyId = healed.companyId;
+      }
+    }
+
     const [membership] = await db.select()
       .from(schema.userTenants)
       .where(
@@ -155,3 +170,45 @@ export const tenantMiddleware = async (
     res.status(500).json({ error: 'Internal server error resolving tenant isolation scope' });
   }
 };
+
+// ============================================================================
+// STARTUP VALIDATOR - Ensures complete account structure
+// ============================================================================
+
+async function validateAccountStructure(
+  userId: string,
+  workspaceId: number,
+  tenantId: string
+): Promise<{ valid: boolean; reason?: string }> {
+  try {
+    const [workspace] = await db.select().from(schema.workspaces).where(eq(schema.workspaces.id, workspaceId)).limit(1);
+    if (!workspace) return { valid: false, reason: 'missing_workspace' };
+
+    const [tenant] = await db.select().from(schema.tenants).where(eq(schema.tenants.id, tenantId)).limit(1);
+    if (!tenant) return { valid: false, reason: 'missing_tenant' };
+
+    const [company] = await db.select().from(schema.companies).where(eq(schema.companies.workspaceId, workspaceId)).limit(1);
+    if (!company) return { valid: false, reason: 'missing_company' };
+
+    const [membership] = await db.select().from(schema.workspaceMembers)
+      .where(and(eq(schema.workspaceMembers.workspaceId, workspaceId), eq(schema.workspaceMembers.userUid, userId)))
+      .limit(1);
+    if (!membership) return { valid: false, reason: 'missing_membership' };
+
+    const [user] = await db.select().from(schema.users).where(eq(schema.users.uid, userId)).limit(1);
+    if (!user) return { valid: false, reason: 'missing_user' };
+
+    if (!user.activeWorkspaceId || user.activeWorkspaceId !== workspaceId) {
+      return { valid: false, reason: 'invalid_active_workspace' };
+    }
+
+    if (!user.activeTenantId || user.activeTenantId !== tenantId) {
+      return { valid: false, reason: 'invalid_active_tenant' };
+    }
+
+    return { valid: true };
+  } catch (error) {
+    console.error('[Startup Validator] Error validating account structure:', error);
+    return { valid: false, reason: 'validation_error' };
+  }
+}
