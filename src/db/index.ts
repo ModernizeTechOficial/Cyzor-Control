@@ -27,6 +27,7 @@ try {
 }
 
 export const db = drizzle(pool, { schema });
+export { schema };
 
 // Graceful shutdown
 function closeDatabase() {

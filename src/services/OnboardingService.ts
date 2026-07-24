@@ -1,5 +1,5 @@
-import { db } from '../db/index.ts';
-import * as schema from '../db/schema.ts';
+import { db, schema } from '../db/index.ts';
+import { safeInsertWorkspaceMember } from '../db/queries.ts';
 import { eq, and } from 'drizzle-orm';
 import { authorizationEngine } from '../lib/bos/authorization/AuthorizationEngine';
 import { roleEngine } from '../lib/bos/authorization/RoleEngine';
@@ -173,16 +173,16 @@ export class OnboardingService {
       ).limit(1);
 
       if (!membership) {
-        const newMembership = await db.insert(schema.workspaceMembers).values({
-          tenantId: tenant.id,
-          workspaceId,
+        const [newMembership] = await safeInsertWorkspaceMember({
+          workspaceId: workspace.id,
           userUid: userId,
           role: 'OWNER',
           cargo: 'Proprietário',
           department: 'Administração',
           teamName: 'Owner',
           status: 'Ativo',
-        }).returning();
+          tenantId: tenant.id,
+        });
         
         try {
           await auditService.logEntityChange({

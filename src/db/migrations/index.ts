@@ -206,3 +206,17 @@ export async function runAllMigrations() {
   await runMigrations();
   console.log('[Migrations] Migration runner completed.');
 }
+
+const runMigrationsDirectly = process.argv[1]?.endsWith('src/db/migrations/index.ts') || process.argv[1]?.endsWith('src\\db\\migrations\\index.ts');
+
+if (runMigrationsDirectly) {
+  runAllMigrations()
+    .then(() => {
+      console.log('[Migrations] Completed successfully.');
+      process.exit(0);
+    })
+    .catch((error) => {
+      console.error('[Migrations] Failed:', error);
+      process.exit(1);
+    });
+}

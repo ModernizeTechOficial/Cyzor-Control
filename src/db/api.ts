@@ -8,6 +8,7 @@ import { BusinessEventTranslator } from "../services/BusinessEventTranslator.ts"
 import { TechnicalEvent } from "../types/domainEvents.ts";
 import { MissionService } from "../services/MissionService.ts";
 import { db } from "./index.ts";
+import { safeInsertWorkspaceMember } from "./queries.ts";
 import { companies, clients, products, projects, tasks, ideas, documents, financeEntries, sprints, milestones, aiMemories, notifications, agendaEvents, users, workspaceMembers, workspaces, workspaceTeams, workspaceDepartments, flows, notes, deploys, productLicenses, workspaceInvitations, auditLogs, entityComments, entityApprovals, roadmaps, entityTemplates, timelineActivities, professionalProfiles, professionalEvolutionEvents, professionalGoals, professionalCertifications, platformSettings } from "./schema.ts";
 import { eq, and, desc, sql, or, inArray, gte, lte, not } from "drizzle-orm";
 import { getUserSaaSState } from "./queries.ts";
@@ -408,18 +409,18 @@ apiRouter.post('/invite/:token/accept', requireAuth, async (req: AuthRequest, re
       .where(and(eq(workspaceMembers.workspaceId, invitation.workspaceId), eq(workspaceMembers.userUid, req.user!.uid)))
       .limit(1);
 
-    if (!existingMembership) {
-      await db.insert(workspaceMembers).values({
-        tenantId: invitation.tenantId,
-        workspaceId: invitation.workspaceId,
-        userUid: req.user!.uid,
-        role: invitation.role,
-        cargo: invitation.cargo || 'Convidado',
-        department: invitation.department || 'Geral',
-        teamName: invitation.teamName || 'Equipe convidada',
-        status: 'Ativo'
-      });
-    }
+     if (!existingMembership) {
+       await safeInsertWorkspaceMember({
+         tenantId: invitation.tenantId,
+         workspaceId: invitation.workspaceId,
+         userUid: req.user!.uid,
+         role: invitation.role,
+         cargo: invitation.cargo || 'Convidado',
+         department: invitation.department || 'Geral',
+         teamName: invitation.teamName || 'Equipe convidada',
+         status: 'Ativo'
+       });
+     }
 
     const [updatedInvitation] = await db.update(workspaceInvitations)
       .set({ status: 'ACCEPTED' })
@@ -467,21 +468,21 @@ apiRouter.post("/workspace/invitations/accept", async (req: AuthRequest, res) =>
       .where(and(eq(workspaceMembers.workspaceId, invitation.workspaceId), eq(workspaceMembers.userUid, req.user!.uid)))
       .limit(1);
 
-    if (!existingMember) {
-      const acceptedRole = isWorkspaceRole(invitation.role) ? invitation.role as WorkspaceRole : WorkspaceRole.MEMBER;
-      const entryPermissions = sanitizePermissionsForRole(acceptedRole, invitation.permissions || []);
-      await db.insert(workspaceMembers).values({
-        tenantId: invitation.tenantId,
-        workspaceId: invitation.workspaceId,
-        userUid: req.user!.uid,
-        role: acceptedRole,
-        cargo: invitation.cargo || 'Convidado',
-        department: invitation.department || 'Geral',
-        teamName: invitation.teamName || 'Equipe convidada',
-        permissions: entryPermissions,
-        status: 'Ativo'
-      });
-    }
+     if (!existingMember) {
+       const acceptedRole = isWorkspaceRole(invitation.role) ? invitation.role as WorkspaceRole : WorkspaceRole.MEMBER;
+       const entryPermissions = sanitizePermissionsForRole(acceptedRole, invitation.permissions || []);
+       await safeInsertWorkspaceMember({
+         tenantId: invitation.tenantId,
+         workspaceId: invitation.workspaceId,
+         userUid: req.user!.uid,
+         role: acceptedRole,
+         cargo: invitation.cargo || 'Convidado',
+         department: invitation.department || 'Geral',
+         teamName: invitation.teamName || 'Equipe convidada',
+         permissions: entryPermissions,
+         status: 'Ativo'
+       });
+     }
 
     const [updatedInvitation] = await db.update(workspaceInvitations)
       .set({ status: 'ACCEPTED' })
@@ -709,14 +710,14 @@ apiRouter.post("/workspaces", async (req: AuthRequest, res) => {
       settings: { description, segment: segment || 'General', stage: segment === 'SaaS' ? 'Produto' : (segment === 'Serviços' ? 'Clientes' : 'Ideia'), besScore: 120, besMaturity: 1.2, professionalEvolution: { xpTotal: 120 } }
     }).returning();
 
-    // Add owner as member
-    await db.insert(workspaceMembers).values({
-      workspaceId: newWs.id,
-      userUid: req.user!.uid,
-      tenantId: req.tenantId as any,
-      role: 'OWNER',
-      cargo: 'Proprietário'
-    });
+     // Add owner as member
+     await safeInsertWorkspaceMember({
+       workspaceId: newWs.id,
+       userUid: req.user!.uid,
+       tenantId: req.tenantId as any,
+       role: 'OWNER',
+       cargo: 'Proprietário'
+     });
 
     // Ensure a Company exists for this Workspace (one-to-one)
     try {
@@ -3628,13 +3629,13 @@ apiRouter.post("/workspace/members", async (req: AuthRequest, res) => {
       return res.status(400).json({ error: "O usuário já é colaborador neste workspace." });
     }
 
-    // Add member to workspace
-    await db.insert(workspaceMembers).values({
-      workspaceId: req.workspaceId!,
-      userUid: usr.uid,
-      role: role || "MEMBER",
-      cargo: cargo || "Colaborador"
-    });
+     // Add member to workspace
+     await safeInsertWorkspaceMember({
+       workspaceId: req.workspaceId!,
+       userUid: usr.uid,
+       role: role || "MEMBER",
+       cargo: cargo || "Colaborador"
+     });
 
     // Get Workspace Name
     const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, req.workspaceId!));
@@ -3894,57 +3895,57 @@ apiRouter.get("/workspaces-detailed", async (req: AuthRequest, res) => {
 });
 
 apiRouter.post("/workspaces", async (req: AuthRequest, res) => {
-  try {
-    const { name } = req.body;
-    if (!name) {
-      return res.status(400).json({ error: "Workspace name is required" });
-    }
-    const [newWorkspace] = await db.insert(workspaces).values({
-      name,
-      ownerUid: req.user!.uid,
-      plan: "Pro",
-      settings: {}
-    }).returning();
+   try {
+     const { name } = req.body;
+     if (!name) {
+       return res.status(400).json({ error: "Workspace name is required" });
+     }
+     const [newWorkspace] = await db.insert(workspaces).values({
+       name,
+       ownerUid: req.user!.uid,
+       plan: "Pro",
+       settings: {}
+     }).returning();
 
-    await db.insert(workspaceMembers).values({
-      workspaceId: newWorkspace.id,
-      userUid: req.user!.uid,
-      role: "OWNER"
-    });
+     await safeInsertWorkspaceMember({
+       workspaceId: newWorkspace.id,
+       userUid: req.user!.uid,
+       role: "OWNER"
+     });
 
-    res.json(newWorkspace);
-  } catch (error) {
-    console.error("Error creating workspace:", error);
-    res.status(500).json({ error: "Failed to create workspace" });
-  }
+     res.json(newWorkspace);
+   } catch (error) {
+     console.error("Error creating workspace:", error);
+     res.status(500).json({ error: "Failed to create workspace" });
+   }
 });
 
-apiRouter.post("/workspaces/:id/duplicate", async (req: AuthRequest, res) => {
-  try {
-    const wsId = Number(req.params.id);
-    const [source] = await db.select().from(workspaces).where(eq(workspaces.id, wsId));
-    if (!source) {
-      return res.status(404).json({ error: "Workspace not found" });
-    }
-    const [newWorkspace] = await db.insert(workspaces).values({
-      name: `${source.name} (Cópia)`,
-      ownerUid: req.user!.uid,
-      plan: source.plan,
-      settings: source.settings || {}
-    }).returning();
+   apiRouter.post("/workspaces/:id/duplicate", async (req: AuthRequest, res) => {
+     try {
+       const wsId = Number(req.params.id);
+       const [source] = await db.select().from(workspaces).where(eq(workspaces.id, wsId));
+       if (!source) {
+         return res.status(404).json({ error: "Workspace not found" });
+       }
+       const [newWorkspace] = await db.insert(workspaces).values({
+         name: `${source.name} (Cópia)`,
+         ownerUid: req.user!.uid,
+         plan: source.plan,
+         settings: source.settings || {}
+       }).returning();
 
-    await db.insert(workspaceMembers).values({
-      workspaceId: newWorkspace.id,
-      userUid: req.user!.uid,
-      role: "OWNER"
-    });
+       await safeInsertWorkspaceMember({
+         workspaceId: newWorkspace.id,
+         userUid: req.user!.uid,
+         role: "OWNER"
+       });
 
-    res.json(newWorkspace);
-  } catch (error) {
-    console.error("Error duplicating workspace:", error);
-    res.status(500).json({ error: "Failed to duplicate workspace" });
-  }
-});
+       res.json(newWorkspace);
+     } catch (error) {
+       console.error("Error duplicating workspace:", error);
+       res.status(500).json({ error: "Failed to duplicate workspace" });
+     }
+   });
 
 apiRouter.delete("/workspaces/:id", async (req: AuthRequest, res) => {
   try {
