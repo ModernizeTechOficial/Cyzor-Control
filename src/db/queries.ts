@@ -7,6 +7,48 @@ import { ProvisioningError } from '../lib/provisioning/ProvisioningError.ts';
 // --- SCHEMA INTROSPECTION CACHE ---
 let workspaceMembersColumnsCache: string[] | null = null;
 
+/**
+ * Builds insert values for workspace_members based on actual DB columns.
+ * Does NOT execute the query — caller must use tx.insert(...) or db.insert(...).
+ */
+function buildWorkspaceMemberInsertValues(values: {
+  workspaceId: number;
+  userUid: string;
+  tenantId?: string;
+  role?: string;
+  cargo?: string;
+  department?: string;
+  teamName?: string;
+  managerUid?: string;
+  permissions?: any;
+  status?: string;
+  onboardingCompleted?: boolean;
+  xp?: number;
+  careerLevel?: string;
+}, availableColumns: string[]) {
+  const insertValues: any = {};
+  
+  if (availableColumns.includes('workspace_id')) insertValues.workspaceId = values.workspaceId;
+  if (availableColumns.includes('user_uid')) insertValues.userUid = values.userUid;
+  if (availableColumns.includes('role')) insertValues.role = values.role || 'MEMBER';
+  if (availableColumns.includes('cargo')) insertValues.cargo = values.cargo || 'Colaborador';
+  if (availableColumns.includes('department')) insertValues.department = values.department || null;
+  if (availableColumns.includes('team_name')) insertValues.teamName = values.teamName || null;
+  if (availableColumns.includes('manager_uid')) insertValues.managerUid = values.managerUid || null;
+  if (availableColumns.includes('permissions')) insertValues.permissions = values.permissions || [];
+  if (availableColumns.includes('status')) insertValues.status = values.status || 'Ativo';
+  
+  if (availableColumns.includes('tenant_id') && values.tenantId) {
+    insertValues.tenantId = values.tenantId;
+  }
+  
+  if (availableColumns.includes('onboarding_completed')) insertValues.onboardingCompleted = values.onboardingCompleted ?? false;
+  if (availableColumns.includes('xp')) insertValues.xp = values.xp ?? 0;
+  if (availableColumns.includes('career_level')) insertValues.careerLevel = values.careerLevel || 'Pleno';
+  
+  return insertValues;
+}
+
 async function getWorkspaceMembersColumns(): Promise<string[]> {
   if (workspaceMembersColumnsCache !== null) {
     return workspaceMembersColumnsCache;
@@ -33,6 +75,10 @@ async function getWorkspaceMembersColumns(): Promise<string[]> {
   }
 }
 
+/**
+ * Inserts into workspace_members using only columns that exist in the actual database.
+ * WARNING: Do NOT use inside db.transaction() — use buildWorkspaceMemberInsertValues + tx.execute instead.
+ */
 async function safeInsertWorkspaceMember(values: {
   workspaceId: number;
   userUid: string;
@@ -47,31 +93,10 @@ async function safeInsertWorkspaceMember(values: {
   onboardingCompleted?: boolean;
   xp?: number;
   careerLevel?: string;
-}, tx?: any) {
+}) {
   const availableColumns = await getWorkspaceMembersColumns();
-  
-  const insertValues: any = {};
-  
-  if (availableColumns.includes('workspace_id')) insertValues.workspaceId = values.workspaceId;
-  if (availableColumns.includes('user_uid')) insertValues.userUid = values.userUid;
-  if (availableColumns.includes('role')) insertValues.role = values.role || 'MEMBER';
-  if (availableColumns.includes('cargo')) insertValues.cargo = values.cargo || 'Colaborador';
-  if (availableColumns.includes('department')) insertValues.department = values.department || null;
-  if (availableColumns.includes('team_name')) insertValues.teamName = values.teamName || null;
-  if (availableColumns.includes('manager_uid')) insertValues.managerUid = values.managerUid || null;
-  if (availableColumns.includes('permissions')) insertValues.permissions = values.permissions || [];
-  if (availableColumns.includes('status')) insertValues.status = values.status || 'Ativo';
-  
-  if (availableColumns.includes('tenant_id') && values.tenantId) {
-    insertValues.tenantId = values.tenantId;
-  }
-  
-  if (availableColumns.includes('onboarding_completed')) insertValues.onboardingCompleted = values.onboardingCompleted ?? false;
-  if (availableColumns.includes('xp')) insertValues.xp = values.xp ?? 0;
-  if (availableColumns.includes('career_level')) insertValues.careerLevel = values.careerLevel || 'Pleno';
-  
-  const insertFn = tx ? tx.insert : db.insert;
-  return await insertFn(workspaceMembers).values(insertValues).returning();
+  const insertValues = buildWorkspaceMemberInsertValues(values, availableColumns);
+  return await db.insert(workspaceMembers).values(insertValues).returning();
 }
 
 // --- USERS & WORKSPACES ---
@@ -211,7 +236,8 @@ export async function getOrCreateUser(
           params: { workspaceId: workspace.id, userUid: uid, tenantId: workspace.tenantId, role: 'OWNER' }
         });
 
-        const [membership] = await safeInsertWorkspaceMember({
+        const availableColumns = await getWorkspaceMembersColumns();
+        const memberValues = buildWorkspaceMemberInsertValues({
           workspaceId: workspace.id,
           userUid: uid,
           tenantId: workspace.tenantId,
@@ -224,10 +250,21 @@ export async function getOrCreateUser(
           onboardingCompleted: false,
           xp: 0,
           careerLevel: 'Pleno',
-        }, tx);
+        }, availableColumns);
+
+        const memberColumns = Object.keys(memberValues);
+        const memberValuesArray = Object.values(memberValues);
+        const placeholders = memberValuesArray.map((val) => {
+          if (val === null || val === undefined) return 'NULL';
+          if (typeof val === 'number') return String(val);
+          return `'${String(val).replace(/'/g, "''")}'`;
+        }).join(', ');
+        const memberSql = `INSERT INTO workspace_members (${memberColumns.join(', ')}) VALUES (${placeholders}) RETURNING id, tenant_id, workspace_id, user_uid, role`;
+        const memberResult = await tx.execute(sql.raw(memberSql));
+        const [membership] = memberResult.rows;
 
         logger.info('STEP_4', 'Workspace membership created', { 
-          createdIds: { membershipId: membership.id, tenantId: membership.tenantId },
+          createdIds: { membershipId: membership.id, tenantId: membership.tenant_id },
           durationMs: Date.now() - step4Start 
         });
 
