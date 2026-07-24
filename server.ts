@@ -37,19 +37,27 @@ async function startServer() {
   const START_PORT = Number(process.env.PORT || 3000);
   const MAX_PORT = 3010;
 
+  // Allow skipping the port scan for environments where scanning misreports availability.
+  // Set `SKIP_PORT_SCAN=1` to bind directly to the provided PORT.
+  const SKIP_SCAN = process.env.SKIP_PORT_SCAN === '1';
+
   // If user provided a START_PORT above the default MAX_PORT, expand the search
   let PORT = START_PORT;
-  const effectiveMax = Math.max(MAX_PORT, START_PORT + 1000);
-  while (PORT <= effectiveMax) {
-    const available = await waitForPort(PORT, 600);
-    if (available) break;
-    console.warn(`[Server] Port ${PORT} is in use, trying ${PORT + 1}...`);
-    PORT += 1;
-  }
+  if (!SKIP_SCAN) {
+    const effectiveMax = START_PORT + 10;
+    while (PORT <= effectiveMax) {
+      const available = await waitForPort(PORT, 200);
+      if (available) break;
+      console.warn(`[Server] Port ${PORT} is in use, trying ${PORT + 1}...`);
+      PORT += 1;
+    }
 
-  if (PORT > effectiveMax) {
-    console.error(`[Server] No available ports found between ${START_PORT} and ${effectiveMax}`);
-    process.exit(1);
+    if (PORT > effectiveMax) {
+      console.error(`[Server] No available ports found between ${START_PORT} and ${effectiveMax}`);
+      process.exit(1);
+    }
+  } else {
+    console.log(`[Server] SKIP_PORT_SCAN set, binding directly to port ${PORT}`);
   }
 
   process.env.PORT = String(PORT);
