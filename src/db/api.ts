@@ -20,6 +20,7 @@ const ai = new GoogleGenAI({
   httpOptions: { headers: { "User-Agent": "aistudio-build" } }
 });
 import { sendProjectNotificationEmail, sendWorkspaceInvitationEmail, testSmtpConnection } from "./mail.ts";
+import { onboardingService } from '../services/OnboardingService.ts';
 import { generateNodeDefinition, executeOperationalAgent } from "../lib/gemini.ts";
 import { randomUUID } from 'crypto';
 
@@ -239,6 +240,39 @@ apiRouter.get('/auth/accessible-modules', requireAuth, tenantMiddleware as any, 
   } catch (error: any) {
     console.error('Error fetching accessible modules:', error);
     return res.status(500).json({ error: error.message || 'Failed to fetch accessible modules' });
+  }
+});
+
+// --- ONBOARDING API (client-safe)
+apiRouter.post('/onboarding', requireAuth, tenantMiddleware as any, async (req: AuthRequest, res) => {
+  try {
+    const { name, cnpj, country, language, segment, logoUrl } = req.body || {};
+    const firebaseUser = {
+      uid: req.user!.uid,
+      email: req.user!.email || '',
+      displayName: req.user!.name || req.user!.displayName || (req.user!.email || '').split('@')[0],
+      photoUrl: (req.user as any)?.picture || (req.user as any)?.photoURL || null,
+    };
+
+    const result = await onboardingService.ensureAccount(firebaseUser, {
+      name: name || `${firebaseUser.displayName}'s Company`,
+      cnpj: cnpj || undefined,
+      country: country || 'BR',
+      language: language || 'pt-BR',
+      segment: segment || 'general',
+      logoUrl: logoUrl || undefined,
+    });
+
+    // Complete setup (mark onboarding finished)
+    await onboardingService.completeSetup(result.workspaceId, result.userId, {
+      businessType: segment || 'general',
+      stage: 'growth',
+    });
+
+    return res.json(result);
+  } catch (error: any) {
+    console.error('[api onboarding] Error:', error);
+    return res.status(500).json({ error: error?.message || 'Onboarding failed' });
   }
 });
 

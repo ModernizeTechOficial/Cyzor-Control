@@ -6,7 +6,7 @@ import {
   CheckCircle2, Target, Building, Rocket
 } from 'lucide-react';
 import { showSuccess, showError } from '../lib/alerts';
-import { onboardingService, BusinessSegment } from '../services/OnboardingService';
+type BusinessSegment = 'saas' | 'services' | 'ecommerce' | 'general';
 
 const SEGMENTS = [
   { id: 'saas', label: 'SaaS', desc: 'Software as a Service' },
@@ -59,29 +59,25 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
     setIsSubmitting(true);
 
     try {
-      const result = await onboardingService.ensureAccount(
-        {
-          uid: '',
-          email: '',
-          displayName: companyName,
-        },
-        {
+      const res = await fetchWithAuth('/api/onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           name: companyName,
           cnpj: cnpj || undefined,
           country,
           language,
           segment,
           logoUrl: logoUrl || undefined,
-        }
-      );
-
-      await onboardingService.completeSetup(result.workspaceId, result.userId, {
-        businessType: segment,
-        stage: 'growth',
+        }),
       });
 
-      await updateSaaSBackend();
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || 'Falha ao concluir onboarding');
+      }
 
+      await updateSaaSBackend();
       showSuccess('Empresa configurada com sucesso!');
       onComplete();
     } catch (error: any) {

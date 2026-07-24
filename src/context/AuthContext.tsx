@@ -10,7 +10,7 @@ import {
   GoogleAuthProvider
 } from 'firebase/auth';
 import { auth, googleAuthProvider } from '../lib/firebase.ts';
-import { onboardingService } from '../services/OnboardingService';
+// onboardingService is server-only; do not import in client bundle
 
 interface AuthContextType {
   user: User | null;
@@ -96,15 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setDbUser(syncData.user);
       }
 
-      // Self-healing: ensure account structure is complete
-      try {
-        const healed = await onboardingService.healAccount(currentUser.uid);
-        if (healed) {
-          console.log('[AuthContext] Account self-healing completed', healed);
-        }
-      } catch (healError) {
-        console.warn('[AuthContext] Self-healing failed:', healError);
-      }
+      // Account self-healing is performed server-side during /api/auth/sync
 
       // Fetch user SaaS profile state from SQLite
       const stateRes = await fetch('/api/auth/state', {
