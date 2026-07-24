@@ -2,7 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from './auth.ts';
 import { db } from '../db/index.ts';
 import * as schema from '../db/schema.ts';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { tenantContextStorage, TenantContextType } from '../db/context.ts';
 import { getUserSaaSState } from '../db/queries.ts';
 import { onboardingService } from '../services/OnboardingService';
