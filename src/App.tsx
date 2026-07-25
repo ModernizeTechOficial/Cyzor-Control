@@ -217,6 +217,7 @@ export default function App() {
             className="pt-24 lg:pt-28 px-4 sm:px-6 md:px-8 pb-28 lg:pb-12 flex flex-col gap-6 md:gap-10 w-full xl:max-w-none min-h-screen"
           >
             <ContextBanner currentView={currentView} />
+            {currentView === 'onboarding' && <OnboardingWizard onComplete={() => setCurrentView('dashboard')} />}
             {currentView === 'dashboard' && <AdaptiveWorkspaceView setCurrentView={setCurrentView} />}
             {currentView === 'roadmap' && <PlanejamentoEstrategicoView setCurrentView={setCurrentView} />}
             {currentView === 'empresas' && <EmpresasView />}
