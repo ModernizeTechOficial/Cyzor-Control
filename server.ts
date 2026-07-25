@@ -14,7 +14,33 @@ import { ProvisioningError } from "./src/lib/provisioning/ProvisioningError.ts";
 
 import { stripeRouter, stripeWebhookRouter } from "./src/routes/stripe.ts";
 
-async function waitForPort(port: number, timeoutMs = 1000): Promise<boolean> {
+function parseCliOptions(argv: string[]) {
+  const options: { port?: number; host?: string; skipPortScan?: boolean } = {};
+
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+
+    if (arg === '--port') {
+      const value = Number(argv[i + 1]);
+      if (Number.isFinite(value) && value > 0) {
+        options.port = value;
+      }
+      i += 1;
+    } else if (arg === '--host') {
+      const value = argv[i + 1];
+      if (value) {
+        options.host = value;
+      }
+      i += 1;
+    } else if (arg === '--skip-port-scan') {
+      options.skipPortScan = true;
+    }
+  }
+
+  return options;
+}
+
+async function waitForPort(port: number, host: string, timeoutMs = 1000): Promise<boolean> {
   return new Promise((resolve) => {
     try {
       const server = require("net").createServer();
@@ -23,7 +49,7 @@ async function waitForPort(port: number, timeoutMs = 1000): Promise<boolean> {
         server.close();
         resolve(true);
       });
-      server.listen(port, "0.0.0.0");
+      server.listen(port, host);
       setTimeout(() => {
         server.close();
         resolve(false);
@@ -36,16 +62,19 @@ async function waitForPort(port: number, timeoutMs = 1000): Promise<boolean> {
 
 async function startServer() {
   const app = express();
-  const START_PORT = Number(process.env.PORT || 3000);
-  const MAX_PORT = 3010;
+  const cliOptions = parseCliOptions(process.argv.slice(2));
+  const requestedPort = cliOptions.port ?? Number(process.env.PORT || 3000);
+  const START_PORT = Number.isFinite(requestedPort) && requestedPort > 0 ? requestedPort : 3000;
+  const HOST = cliOptions.host ?? process.env.HOST ?? "0.0.0.0";
+  const MAX_PORT = Number(process.env.MAX_PORT || 3010);
 
-  const SKIP_SCAN = process.env.SKIP_PORT_SCAN === '1';
+  const SKIP_SCAN = cliOptions.skipPortScan || process.env.SKIP_PORT_SCAN === '1';
 
   let PORT = START_PORT;
   if (!SKIP_SCAN) {
-    const effectiveMax = START_PORT + 10;
+    const effectiveMax = Math.max(START_PORT + 10, MAX_PORT);
     while (PORT <= effectiveMax) {
-      const available = await waitForPort(PORT, 200);
+      const available = await waitForPort(PORT, HOST, 200);
       if (available) break;
       console.warn(`[Server] Port ${PORT} is in use, trying ${PORT + 1}...`);
       PORT += 1;
@@ -211,8 +240,8 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`[SaaS Server] Running on http://0.0.0.0:${PORT}`);
+  app.listen(PORT, HOST, () => {
+    console.log(`[SaaS Server] Running on http://${HOST}:${PORT}`);
   });
 }
 
