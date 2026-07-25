@@ -14,7 +14,6 @@ import StandardHeader from './layout/StandardHeader';
 import MetricCard from './MetricCard';
 import { showError, showSuccess } from '../lib/alerts';
 import Swal from 'sweetalert2';
-import ProjectDetailsModal from './ProjectDetailsModal';
 import NewProjectModal from './NewProjectModal';
 import ProjectList from './ProjectList';
 import BoardKanban from './common/management/BoardKanban';
@@ -55,14 +54,6 @@ export default function ProjetosView() {
   // Modal controllers
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedColumnId, setSelectedColumnId] = useState<string | undefined>(undefined);
-  const [selectedProject, setSelectedProject] = useState<any>(null);
-
-  useEffect(() => {
-    if (globalFilters.projectId && projectsData && projectsData.length > 0) {
-      const p = projectsData.find((proj: any) => proj.id.toString() === globalFilters.projectId.toString());
-      if (p) setSelectedProject(p);
-    }
-  }, [globalFilters.projectId, projectsData]);
 
   const [currentView, setCurrentView] = useState<'kanban' | 'list' | 'timeline' | 'gantt'>('kanban');
   
@@ -489,10 +480,14 @@ export default function ProjetosView() {
                   getSmartSearchResults().map((res, i) => (
                     <button
                       key={i}
-                      onClick={() => {
-                        if (res.type === 'projeto') setSelectedProject(res.data);
-                        setSearchQuery('');
-                      }}
+                        onClick={() => {
+                          if (res.type === 'projeto') {
+                            window.history.pushState({}, '', `/projects/${res.data.id}`);
+                            window.dispatchEvent(new Event('popstate'));
+                            setGlobalFilters({ projectId: res.data.id });
+                          }
+                          setSearchQuery('');
+                        }}
                       className="w-full p-2.5 hover:bg-neutral-50 rounded-lg text-xs font-bold text-left flex items-center justify-between cursor-pointer transition-colors"
                     >
                       <span className="truncate">{res.label}</span>
@@ -573,7 +568,8 @@ export default function ProjetosView() {
               items={kanbanItems}
               onDrop={(e, colId) => handleDrop(e, colId)}
               onItemClick={(p) => {
-                setSelectedProject(p);
+                window.history.pushState({}, '', `/projects/${p.id}`);
+                window.dispatchEvent(new Event('popstate'));
                 setGlobalFilters({ ...globalFilters, projectId: p.id });
               }}
               onToggleFavorite={toggleFavorite}
@@ -609,12 +605,14 @@ export default function ProjetosView() {
                 syncPlatformData();
               }}
               onItemClick={(p) => {
-                setSelectedProject(p);
+                window.history.pushState({}, '', `/projects/${p.id}`);
+                window.dispatchEvent(new Event('popstate'));
                 setGlobalFilters({ ...globalFilters, projectId: p.id });
               }}
             />
           )}
-          {currentView === 'gantt' && (
+          {currentView === 'list' && <ProjectList projects={filteredProjects} />}
+          {currentView === 'timeline' && (
             <TimelineView
               items={filteredProjects.map(p => ({
                 id: p.id,
@@ -637,7 +635,8 @@ export default function ProjetosView() {
                 syncPlatformData();
               }}
               onItemClick={(p) => {
-                setSelectedProject(p);
+                window.history.pushState({}, '', `/projects/${p.id}`);
+                window.dispatchEvent(new Event('popstate'));
                 setGlobalFilters({ ...globalFilters, projectId: p.id });
               }}
               title="Gantt do Projeto"
@@ -928,23 +927,6 @@ export default function ProjetosView() {
           </div>
         )}
       </AnimatePresence>
-
-      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━
-          EDIT & DETAILS MODAL
-          ━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      {selectedProject && (
-        <ProjectDetailsModal 
-          project={selectedProject} 
-          isOpen={!!selectedProject} 
-          onClose={() => {
-            setSelectedProject(null);
-            if (globalFilters.projectId) {
-              setGlobalFilters({ ...globalFilters, projectId: undefined });
-            }
-          }} 
-          onSave={handleProjectSave} 
-        />
-      )}
 
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━
           NEW PROJECT CREATION MODAL

@@ -134,13 +134,15 @@ export default function EmpresasView() {
 
   const handleEditClick = (company: any, e: React.MouseEvent) => {
     e.stopPropagation();
-    setEditingCompany(company);
-    setIsModalOpen(true);
+    setGlobalFilters({ companyId: company.id });
+    window.history.pushState({}, '', `/companies/${company.id}`);
+    window.dispatchEvent(new Event('popstate'));
   };
 
   const handleRowClick = (company: any) => {
-    setEditingCompany(company);
-    setIsModalOpen(true);
+    setGlobalFilters({ companyId: company.id });
+    window.history.pushState({}, '', `/companies/${company.id}`);
+    window.dispatchEvent(new Event('popstate'));
   };
 
   const toggleSelection = (id: string, e: React.MouseEvent) => {

@@ -5,9 +5,13 @@ import BottomBar from './components/BottomBar';
 import DashboardView from './components/DashboardView';
 import AdaptiveWorkspaceView from './components/AdaptiveWorkspaceView';
 import EmpresasView from './components/EmpresasView';
+import CompanyPage from './components/CompanyPage';
 import ClientesView from './components/ClientesView';
+import ClientPage from './components/ClientPage';
 import ProdutosView from './components/ProdutosView';
+import ProductPage from './components/ProductPage';
 import ProjetosView from './components/ProjetosView';
+import ProjectPage from './components/ProjectPage';
 import IdeiasView from './components/IdeiasView';
 import FinanceiroView from './components/FinanceiroView';
 import DocumentacaoView from './components/DocumentacaoView';
@@ -216,10 +220,14 @@ export default function App() {
             {currentView === 'dashboard' && <AdaptiveWorkspaceView setCurrentView={setCurrentView} />}
             {currentView === 'roadmap' && <PlanejamentoEstrategicoView setCurrentView={setCurrentView} />}
             {currentView === 'empresas' && <EmpresasView />}
+            {currentView === 'company-detail' && <CompanyPage />}
             {currentView === 'clientes' && <ClientesView />}
+            {currentView === 'client-detail' && <ClientPage />}
             {currentView === 'crm' && <ClientesView />}
             {currentView === 'produtos' && <ProdutosView />}
+            {currentView === 'product-detail' && <ProductPage />}
             {currentView === 'projetos' && <ProjetosView />}
+            {currentView === 'project-detail' && <ProjectPage />}
             {currentView === 'ideias' && <IdeiasView />}
             {currentView === 'financeiro' && <FinanceiroView />}
             {currentView === 'documentacao' && <DocumentacaoView />}

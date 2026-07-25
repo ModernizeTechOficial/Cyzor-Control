@@ -475,9 +475,9 @@ export async function getUserWorkspaces(uid: string) {
     .innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
     .where(eq(workspaceMembers.userUid, uid));
 
-    if (user?.invitedOnly && user.activeWorkspaceId) {
-      query = query.where(eq(workspaceMembers.workspaceId, user.activeWorkspaceId));
-    }
+if (user?.invitedOnly && user.activeWorkspaceId) {
+    (query as any) = (query as any).where(eq(workspaceMembers.workspaceId, user.activeWorkspaceId));
+  }
 
     return await query;
   } catch (error: any) {

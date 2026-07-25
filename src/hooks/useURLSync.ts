@@ -73,9 +73,26 @@ export function useURLSync(
           };
           view = viewMap[parts[1]] || parts[1];
         }
-      } else {
-        view = parts[0];
-      }
+      } else if (parts[0] === 'settings') {
+         view = 'configuracoes';
+       } else if (parts[0] === 'companies' && parts[1]) {
+         view = 'company-detail';
+         filters.companyId = parts[1];
+       } else if (parts[0] === 'projects' && parts[1]) {
+         view = 'project-detail';
+         filters.projectId = parts[1];
+       } else if (parts[0] === 'products' && parts[1]) {
+         view = 'product-detail';
+         filters.productId = parts[1];
+       } else if (parts[0] === 'clients' && parts[1]) {
+         view = 'client-detail';
+         filters.clientId = parts[1];
+       } else if (parts[0] === 'users' && parts[1]) {
+         view = 'user-detail';
+         filters.userId = parts[1];
+       } else {
+         view = parts[0];
+       }
 
       setCurrentView(view);
       setGlobalFilters(filters);
@@ -113,6 +130,16 @@ export function useURLSync(
       url = `/${currentView}`;
     } else if (currentView === 'invite' && globalFilters.inviteToken) {
       url = `/invite/${encodeURIComponent(globalFilters.inviteToken)}`;
+    } else if (currentView === 'company-detail' && globalFilters.companyId) {
+      url = `/companies/${globalFilters.companyId}`;
+    } else if (currentView === 'project-detail' && globalFilters.projectId) {
+      url = `/projects/${globalFilters.projectId}`;
+    } else if (currentView === 'product-detail' && globalFilters.productId) {
+      url = `/products/${globalFilters.productId}`;
+    } else if (currentView === 'client-detail' && globalFilters.clientId) {
+      url = `/clients/${globalFilters.clientId}`;
+    } else if (currentView === 'user-detail' && globalFilters.userId) {
+      url = `/users/${globalFilters.userId}`;
     } else {
       url = '/workspace';
       

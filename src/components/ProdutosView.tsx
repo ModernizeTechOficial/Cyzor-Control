@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import ProductDetailsModal from './ProductDetailsModal';
 import NewProductModal from './NewProductModal';
 import { useAuth } from '../context/AuthContext';
 import { useProducts, useCompanies, useProjects } from '../hooks/useCyzorQueries';
@@ -53,15 +52,6 @@ export default function ProdutosView() {
     }
   }, [globalFilters.companyId, companies]);
   
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
-
-  useEffect(() => {
-    if (globalFilters.productId && productsData && productsData.length > 0) {
-      const p = productsData.find((proj: any) => proj.id.toString() === globalFilters.productId.toString());
-      if (p) setSelectedProduct(p);
-    }
-  }, [globalFilters.productId, productsData]);
-
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   
@@ -275,12 +265,11 @@ export default function ProdutosView() {
            coverUrl: updated.coverUrl
          })
        });
-       if(res.ok) fetchData();
-    } catch(e) { console.error(e) }
-    setSelectedProduct(null);
-  };
+    if(res.ok) fetchData();
+  } catch(e) { console.error(e) }
+};
 
-  const handleAddProduct = async (newProd: any) => {
+const handleAddProduct = async (newProd: any) => {
     try {
       const res = await fetchWithAuth(`/api/products`, {
          method: 'POST',
@@ -353,7 +342,8 @@ export default function ProdutosView() {
               items={kanbanItems}
               onDrop={handleDropKanban}
               onItemClick={(p) => {
-                setSelectedProduct(p);
+                window.history.pushState({}, '', `/products/${p.id}`);
+                window.dispatchEvent(new Event('popstate'));
                 setGlobalFilters({ ...globalFilters, productId: p.id });
               }}
               onAddClick={() => setIsNewModalOpen(true)}
@@ -372,7 +362,8 @@ export default function ProdutosView() {
               ]}
               items={filteredProducts}
               onItemClick={(p) => {
-                setSelectedProduct(p);
+                window.history.pushState({}, '', `/products/${p.id}`);
+                window.dispatchEvent(new Event('popstate'));
                 setGlobalFilters({ ...globalFilters, productId: p.id });
               }}
               renderCell={(item, colKey) => {
@@ -398,7 +389,8 @@ export default function ProdutosView() {
                 items={timelineItems}
                 onUpdateItemDates={handleUpdateProductDates}
                 onItemClick={(rawItem) => {
-                  setSelectedProduct(rawItem);
+                  window.history.pushState({}, '', `/products/${rawItem.id}`);
+                  window.dispatchEvent(new Event('popstate'));
                   setGlobalFilters({ ...globalFilters, productId: rawItem.id });
                 }}
                 onDeleteItem={(productId) => {
@@ -414,20 +406,6 @@ export default function ProdutosView() {
 
       <ProductActionBar selectedCount={selectedIds.length} onClear={() => setSelectedIds([])} />
 
-      <ProductDetailsModal 
-        product={selectedProduct} 
-        isOpen={!!selectedProduct} 
-        onClose={() => {
-            setSelectedProduct(null);
-            if (globalFilters.productId) {
-              setGlobalFilters({ ...globalFilters, productId: undefined });
-            }
-          }} 
-        onSave={handleUpdateProduct}
-        onDelete={() => setSelectedProduct(null)}
-        companies={companies}
-      />
-      
       <NewProductModal
         isOpen={isNewModalOpen}
         onClose={() => setIsNewModalOpen(false)}

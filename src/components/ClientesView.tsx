@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import StandardHeader from './layout/StandardHeader';
 import MetricCard from './MetricCard';
 import { Vision360 } from './common/Vision360';
+import ClientContent from './ClientContent';
 
 import { useNavigation } from "../context/NavigationContext";
 
@@ -46,29 +47,6 @@ export default function ClientesView() {
   const [activeModalTab, setActiveModalTab] = useState<'cadastro' | 'visao_360'>('cadastro');
   const [editingClient, setEditingClient] = useState<any>(null);
 
-  useEffect(() => {
-    if (globalFilters.clientId && clients && clients.length > 0) {
-      const clientId = globalFilters.clientId!.toString();
-      const p = clients.find((proj: any) => proj.id.toString() === clientId);
-      if (p) {
-        setEditingClient(p);
-        setIsModalOpen(true);
-        setActiveModalTab('visao_360');
-      }
-    }
-  }, [globalFilters.clientId, clients]);
-
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    companyId: '',
-    status: 'Ativo',
-    role: '',
-    notes: '',
-    tagsInput: ''
-  });
-  
   // Notification states
   const [toast, setToast] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
@@ -107,40 +85,18 @@ export default function ClientesView() {
     fetchData();
   }, [activeWorkspace]);
 
-  // Open modal for Create
-  const handleNewClient = () => {
-    setEditingClient(null);
-    if (globalFilters.clientId) setGlobalFilters({ ...globalFilters, clientId: undefined });
-    setActiveModalTab('cadastro');
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      companyId: '',
-      status: 'Ativo',
-      role: '',
-      notes: '',
-      tagsInput: ''
-    });
-    setIsModalOpen(true);
+  // Open client page for Edit
+  const handleEditClient = (client: any) => {
+    setGlobalFilters({ ...globalFilters, clientId: client.id });
+    window.history.pushState({}, '', `/clients/${client.id}`);
+    window.dispatchEvent(new Event('popstate'));
   };
 
-  // Open modal for Edit
-  const handleEditClient = (client: any) => {
-    setEditingClient(client);
-    setGlobalFilters({ ...globalFilters, clientId: client.id });
-    setActiveModalTab('cadastro');
-    setFormData({
-      name: client.name || '',
-      email: client.email || '',
-      phone: client.phone || '',
-      companyId: client.companyId ? String(client.companyId) : '',
-      status: client.status || 'Ativo',
-      role: client.role || '',
-      notes: client.notes || '',
-      tagsInput: Array.isArray(client.tags) ? client.tags.join(', ') : ''
-    });
-    setIsModalOpen(true);
+  // Open client page for Create
+  const handleNewClient = () => {
+    if (globalFilters.clientId) setGlobalFilters({ ...globalFilters, clientId: undefined });
+    window.history.pushState({}, '', '/clients/new');
+    window.dispatchEvent(new Event('popstate'));
   };
 
   // Delete Client
@@ -159,53 +115,6 @@ export default function ClientesView() {
     } catch (error) {
       console.error(error);
       triggerToast('error', 'Erro ao processar exclusão.');
-    }
-  };
-
-  // Submit Handler
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name.trim()) {
-      triggerToast('error', 'O nome do cliente é obrigatório.');
-      return;
-    }
-
-    // Process tags
-    const tags = formData.tagsInput
-      ? formData.tagsInput.split(',').map(t => t.trim()).filter(t => t.length > 0)
-      : [];
-
-    const payload = {
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      companyId: formData.companyId ? Number(formData.companyId) : null,
-      status: formData.status,
-      role: formData.role,
-      notes: formData.notes,
-      tags
-    };
-
-    try {
-      const url = editingClient ? `/api/clients/${editingClient.id}` : '/api/clients';
-      const method = editingClient ? 'PUT' : 'POST';
-
-      const res = await fetchWithAuth(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (res.ok) {
-        triggerToast('success', editingClient ? 'Cliente atualizado com sucesso!' : 'Novo cliente cadastrado com sucesso!');
-        setIsModalOpen(false);
-        fetchData();
-      } else {
-        triggerToast('error', 'Ocorreu um erro ao salvar o cliente.');
-      }
-    } catch (error) {
-      console.error(error);
-      triggerToast('error', 'Erro interno de servidor.');
     }
   };
 
@@ -506,213 +415,6 @@ export default function ClientesView() {
           </div>
         )}
       </div>
-
-      {/* Creation/Editing Modal */}
-      <AnimatePresence>
-        {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            
-            {/* Backdrop */}
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsModalOpen(false)}
-              className="fixed inset-0 bg-[#111111]/30 backdrop-blur-xs"
-            />
-
-            {/* Modal Box */}
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0, y: 15 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 15 }}
-              className={`bg-white border border-[#0F172A0F] rounded-[24px] shadow-2xl z-10 overflow-hidden flex flex-col max-h-[90vh] transition-all duration-300 ${
-                editingClient && activeModalTab === 'visao_360' ? 'max-w-4xl w-full' : 'max-w-xl w-full'
-              }`}
-            >
-              
-              {/* Modal Header */}
-              <div className="px-6 py-4.5 border-b border-[#0F172A05] flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                    {editingClient ? <Edit3 size={14} strokeWidth={2.5} /> : <UserPlus size={14} strokeWidth={2.5} />}
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-[#111111]">
-                      {editingClient ? 'Cadastro de Cliente' : 'Novo Cadastro de Cliente'}
-                    </h3>
-                    <p className="text-[10px] font-medium text-[#64748B] mt-0.5">
-                      {editingClient ? 'Gerencie as informações e visualize o módulo 360' : 'Registre um novo tomador de decisão no sistema'}
-                    </p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setIsModalOpen(false)}
-                  className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-                >
-                  <X size={15} strokeWidth={2.5} />
-                </button>
-              </div>
-
-              {/* Modal Level Tab Selector */}
-              {editingClient && (
-                <div className="flex px-6 border-b border-[#0F172A0F] bg-[#FAFAFA]/50 gap-6">
-                  <button 
-                    onClick={() => setActiveModalTab('cadastro')}
-                    className={`py-3 px-1 border-b-2 text-xs font-bold transition-all ${
-                      activeModalTab === 'cadastro' ? 'border-[#111111] text-[#111111]' : 'border-transparent text-[#64748B] hover:text-[#111111]'
-                    }`}
-                  >
-                    Cadastro do Cliente
-                  </button>
-                  <button 
-                    onClick={() => setActiveModalTab('visao_360')}
-                    className={`py-3 px-1 border-b-2 text-xs font-bold transition-all ${
-                      activeModalTab === 'visao_360' ? 'border-[#111111] text-[#111111]' : 'border-transparent text-[#64748B] hover:text-[#111111]'
-                    }`}
-                  >
-                    Visão 360°
-                  </button>
-                </div>
-              )}
-
-              {editingClient && activeModalTab === 'visao_360' ? (
-                <div className="h-[60vh] overflow-y-auto">
-                  <Vision360 entityType="client" entityId={editingClient.id} entityName={editingClient.name} entityData={editingClient} />
-                </div>
-              ) : (
-                /* Form Scrollable Section */
-                <form onSubmit={handleSubmit} className="p-6 flex-1 overflow-y-auto flex flex-col gap-5 text-left">
-                {/* Name */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Nome Completo *</label>
-                  <input 
-                    type="text" 
-                    required
-                    placeholder="Ex: João da Silva"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 transition-colors bg-slate-50/40"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Email */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">E-mail Corporativo</label>
-                    <input 
-                      type="email" 
-                      placeholder="joao@empresa.com"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 transition-colors bg-slate-50/40"
-                    />
-                  </div>
-
-                  {/* Phone */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Telefone / WhatsApp</label>
-                    <input 
-                      type="text" 
-                      placeholder="(11) 99999-9999"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 transition-colors bg-slate-50/40"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Role */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Cargo / Função</label>
-                    <input 
-                      type="text" 
-                      placeholder="Ex: Diretor de Tecnologia, CTO, Comprador"
-                      value={formData.role}
-                      onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                      className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 transition-colors bg-slate-50/40"
-                    />
-                  </div>
-
-                  {/* Status */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Status Comercial</label>
-                    <select 
-                      value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 transition-colors bg-slate-50/40 font-bold"
-                    >
-                      <option value="Ativo">Ativo</option>
-                      <option value="Lead">Lead / Prospect</option>
-                      <option value="Inativo">Inativo</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Company Link */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Empresa Relacionada</label>
-                  <select 
-                    value={formData.companyId}
-                    onChange={(e) => setFormData({ ...formData, companyId: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 transition-colors bg-slate-50/40"
-                  >
-                    <option value="">Nenhuma empresa (Cliente Individual / Avulso)</option>
-                    {companies.map(comp => (
-                      <option key={comp.id} value={String(comp.id)}>{comp.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Tags */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Tags (separadas por vírgula)</label>
-                  <input 
-                    type="text" 
-                    placeholder="Ex: tomador-decisao, vip, tech-startup"
-                    value={formData.tagsInput}
-                    onChange={(e) => setFormData({ ...formData, tagsInput: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 transition-colors bg-slate-50/40"
-                  />
-                </div>
-
-                {/* Notes */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Anotações Internas</label>
-                  <textarea 
-                    rows={3}
-                    placeholder="Adicione notas sobre o cliente, preferências, histórico de reuniões ou observações comerciais..."
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 transition-colors bg-slate-50/40 resize-none"
-                  />
-                </div>
-
-                {/* Action buttons */}
-                <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#0F172A05]">
-                  <button 
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
-                  >
-                    Cancelar
-                  </button>
-                  <button 
-                    type="submit"
-                    className="px-5 py-2 text-xs font-bold text-white bg-[#111111] hover:bg-[#222222] rounded-xl shadow-sm hover:scale-[1.01] transition-all cursor-pointer flex items-center gap-1.5"
-                  >
-                    <Check size={14} strokeWidth={2.5} />
-                    <span>Salvar Cliente</span>
-                  </button>
-                </div>
-              </form>
-              )}
-
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
     </div>
   );
