@@ -1,6 +1,11 @@
 import { registerMigration, runMigrations } from './runner';
 import { sql } from 'drizzle-orm';
 import './004-create-assignments-tables.ts';
+import './005-create-workspace-teams-and-departments.ts';
+import './006-add-project-scoped-invitations.ts';
+import './007-add-missing-invitation-columns.ts';
+import './008-add-remaining-invitation-columns.ts';
+import './009-add-invited-only-to-users.ts';
 
 // ============================================================================
 // MIGRATION: 001-add-onboarding-fields

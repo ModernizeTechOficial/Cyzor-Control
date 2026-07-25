@@ -3,6 +3,7 @@ import multer from "multer";
 import { GoogleGenAI } from "@google/genai";
 import { requireAuth, AuthRequest } from "../middleware/auth.ts";
 import { tenantMiddleware, TenantRequest } from "../middleware/tenant.ts";
+import { projectAccessMiddleware } from "../middleware/projectAccess.ts";
 import { BESIntegrationService } from "../services/BESIntegrationService.ts";
 import { BusinessEventTranslator } from "../services/BusinessEventTranslator.ts";
 import { TechnicalEvent } from "../types/domainEvents.ts";
@@ -10,9 +11,9 @@ import { MissionService } from "../services/MissionService.ts";
 import { db } from "./index.ts";
 import { safeInsertWorkspaceMember } from "./queries.ts";
 import { ProvisioningError } from "../lib/provisioning/ProvisioningError.ts";
-import { companies, clients, products, projects, tasks, ideas, documents, financeEntries, sprints, milestones, aiMemories, notifications, agendaEvents, users, workspaceMembers, workspaces, workspaceTeams, workspaceDepartments, flows, notes, deploys, productLicenses, workspaceInvitations, auditLogs, entityComments, entityApprovals, roadmaps, entityTemplates, timelineActivities, professionalProfiles, professionalEvolutionEvents, professionalGoals, professionalCertifications, platformSettings } from "./schema.ts";
+import { companies, clients, products, projects, tasks, ideas, documents, financeEntries, sprints, milestones, aiMemories, notifications, agendaEvents, users, workspaceMembers, workspaces, workspaceTeams, workspaceDepartments, flows, notes, deploys, productLicenses, workspaceInvitations, userProjectRestrictions, auditLogs, entityComments, entityApprovals, roadmaps, entityTemplates, timelineActivities, professionalProfiles, professionalEvolutionEvents, professionalGoals, professionalCertifications, platformSettings } from "./schema.ts";
 import { eq, and, desc, sql, or, inArray, gte, lte, not } from "drizzle-orm";
-import { getUserSaaSState } from "./queries.ts";
+import { getUserSaaSState, getProjects, getProjectById } from "./queries.ts";
 import { hasPermission, getMemberRole, sanitizePermissionsForRole, validateRolePermissionAssignment, isWorkspaceRole, WorkspaceRole } from "./permissions.ts";
 import { enforcePermission } from '../middleware/permission.ts';
 import { authorizationEngine, policyEngine, moduleRegistry, featureFlagService } from '../lib/bos/index.ts';
@@ -60,6 +61,89 @@ async function logAction(req: AuthRequest, action: string, tableName: string, re
   } catch (err) {
     console.error("Error creating audit log:", err);
   }
+}
+
+async function acceptInvitationLogic(invitation: any, userId: string, userEmail?: string) {
+  if (invitation.email && invitation.email.trim()) {
+    const normalizedInvitationEmail = invitation.email.trim().toLowerCase();
+    const normalizedUserEmail = userEmail?.trim().toLowerCase();
+    if (!normalizedUserEmail || normalizedUserEmail !== normalizedInvitationEmail) {
+      throw new Error('Faça login com o mesmo e-mail do convite para aceitar.');
+    }
+  }
+
+  if (new Date(invitation.expiresAt) < new Date()) {
+    throw new Error('O convite expirou');
+  }
+
+  const [workspace] = await db.select({ id: workspaces.id, name: workspaces.name }).from(workspaces).where(eq(workspaces.id, invitation.workspaceId)).limit(1);
+  if (!workspace) {
+    throw new Error('Workspace associado ao convite não encontrado');
+  }
+
+  const [existingMembership] = await db.select({ id: workspaceMembers.id }).from(workspaceMembers)
+    .where(and(eq(workspaceMembers.workspaceId, invitation.workspaceId), eq(workspaceMembers.userUid, userId)))
+    .limit(1);
+
+  if (!existingMembership) {
+    await safeInsertWorkspaceMember({
+      tenantId: invitation.tenantId,
+      workspaceId: invitation.workspaceId,
+      userUid: userId,
+      role: invitation.role,
+      cargo: invitation.cargo || 'Convidado',
+      department: invitation.department || 'Geral',
+      teamName: invitation.teamName || 'Equipe convidada',
+      status: 'Ativo'
+    });
+  }
+
+  if (invitation.projectId) {
+    const [existingRestriction] = await db.select().from(userProjectRestrictions)
+      .where(and(
+        eq(userProjectRestrictions.userId, userId),
+        eq(userProjectRestrictions.projectId, invitation.projectId)
+      ))
+      .limit(1);
+
+    if (!existingRestriction) {
+      await db.insert(userProjectRestrictions).values({
+        userId,
+        workspaceId: invitation.workspaceId,
+        tenantId: invitation.tenantId,
+        projectId: invitation.projectId,
+        invitationId: invitation.id,
+      });
+    }
+  }
+
+  const [userRecord] = await db.select().from(users).where(eq(users.uid, userId)).limit(1);
+  const isNewUser = userRecord && (Date.now() - new Date(userRecord.createdAt).getTime()) < 10 * 60 * 1000;
+  const hadPersonalWorkspace = userRecord?.activeWorkspaceId && userRecord.activeWorkspaceId !== invitation.workspaceId;
+
+  if (isNewUser && hadPersonalWorkspace) {
+    await db.delete(workspaces).where(eq(workspaces.id, userRecord!.activeWorkspaceId!));
+  }
+
+  await db.update(users).set({
+    activeWorkspaceId: invitation.workspaceId,
+    activeTenantId: invitation.tenantId,
+    invitedOnly: isNewUser || false,
+    updatedAt: new Date()
+  }).where(eq(users.uid, userId));
+
+  const [updatedInvitation] = await db.update(workspaceInvitations)
+    .set({ status: 'ACCEPTED' })
+    .where(eq(workspaceInvitations.id, invitation.id))
+    .returning();
+
+  return {
+    success: true,
+    workspaceId: invitation.workspaceId,
+    accepted: true,
+    invitation: updatedInvitation[0] || updatedInvitation,
+    isNewUser
+  };
 }
 
 apiRouter.use((req, res, next) => {
@@ -380,56 +464,14 @@ apiRouter.post('/invite/:token/accept', requireAuth, async (req: AuthRequest, re
       return res.status(404).json({ error: 'Convite inválido ou já utilizado' });
     }
 
-    if (invitation.email && invitation.email.trim()) {
-      const normalizedInvitationEmail = invitation.email.trim().toLowerCase();
-      const userEmail = req.user?.email?.trim().toLowerCase();
-      if (!userEmail || userEmail !== normalizedInvitationEmail) {
-        return res.status(403).json({ error: 'Faça login com o mesmo e-mail do convite para aceitar.' });
-      }
+    try {
+      const result = await acceptInvitationLogic(invitation, req.user!.uid, req.user!.email || undefined);
+      await logAction(req, 'ACCEPT_INVITE', 'workspace_invitations', invitation.id.toString(), invitation, result.invitation);
+      res.json(result);
+    } catch (err: any) {
+      console.error('Error accepting invitation token:', err);
+      res.status(400).json({ error: err.message || 'Failed to accept invitation token' });
     }
-
-    if (new Date(invitation.expiresAt) < new Date()) {
-      await db.update(workspaceInvitations)
-        .set({ status: 'EXPIRED' })
-        .where(eq(workspaceInvitations.id, invitation.id));
-      return res.status(410).json({ error: 'O convite expirou' });
-    }
-
-    const [workspace] = await db.select({ id: workspaces.id, name: workspaces.name }).from(workspaces).where(eq(workspaces.id, invitation.workspaceId)).limit(1);
-    if (!workspace) {
-      return res.status(404).json({ error: 'Workspace associado ao convite não encontrado' });
-    }
-
-    const [existingMembership] = await db.select({ id: workspaceMembers.id }).from(workspaceMembers)
-      .where(and(eq(workspaceMembers.workspaceId, invitation.workspaceId), eq(workspaceMembers.userUid, req.user!.uid)))
-      .limit(1);
-
-     if (!existingMembership) {
-       await safeInsertWorkspaceMember({
-         tenantId: invitation.tenantId,
-         workspaceId: invitation.workspaceId,
-         userUid: req.user!.uid,
-         role: invitation.role,
-         cargo: invitation.cargo || 'Convidado',
-         department: invitation.department || 'Geral',
-         teamName: invitation.teamName || 'Equipe convidada',
-         status: 'Ativo'
-       });
-     }
-
-    const [updatedInvitation] = await db.update(workspaceInvitations)
-      .set({ status: 'ACCEPTED' })
-      .where(eq(workspaceInvitations.id, invitation.id))
-      .returning();
-
-    await logAction(req, 'ACCEPT_INVITE', 'workspace_invitations', invitation.id.toString(), invitation, updatedInvitation[0] || updatedInvitation);
-
-    const [userRecord] = await db.select().from(users).where(eq(users.uid, req.user!.uid)).limit(1);
-    if (userRecord) {
-      await db.update(users).set({ activeWorkspaceId: invitation.workspaceId }).where(eq(users.uid, req.user!.uid));
-    }
-
-    res.json({ success: true, workspaceId: invitation.workspaceId, accepted: true });
   } catch (error) {
     console.error('Error accepting invitation token:', error);
     res.status(500).json({ error: 'Failed to accept invitation token' });
@@ -452,46 +494,14 @@ apiRouter.post("/workspace/invitations/accept", async (req: AuthRequest, res) =>
       return res.status(404).json({ error: "Convite inválido ou já utilizado" });
     }
 
-    if (new Date(invitation.expiresAt) < new Date()) {
-      await db.update(workspaceInvitations)
-        .set({ status: 'EXPIRED' })
-        .where(eq(workspaceInvitations.id, invitation.id));
-      return res.status(400).json({ error: "O convite expirou" });
+    try {
+      const result = await acceptInvitationLogic(invitation, req.user!.uid, req.user!.email || undefined);
+      await logAction(req, 'ACCEPT_INVITE', 'workspace_invitations', invitation.id.toString(), invitation, result.invitation);
+      res.json(result);
+    } catch (err: any) {
+      console.error("Error accepting invitation:", err);
+      res.status(400).json({ error: err.message || "Failed to accept invitation" });
     }
-
-    const [existingMember] = await db.select({ id: workspaceMembers.id }).from(workspaceMembers)
-      .where(and(eq(workspaceMembers.workspaceId, invitation.workspaceId), eq(workspaceMembers.userUid, req.user!.uid)))
-      .limit(1);
-
-     if (!existingMember) {
-       const acceptedRole = isWorkspaceRole(invitation.role) ? invitation.role as WorkspaceRole : WorkspaceRole.MEMBER;
-       const entryPermissions = sanitizePermissionsForRole(acceptedRole, invitation.permissions || []);
-       await safeInsertWorkspaceMember({
-         tenantId: invitation.tenantId,
-         workspaceId: invitation.workspaceId,
-         userUid: req.user!.uid,
-         role: acceptedRole,
-         cargo: invitation.cargo || 'Convidado',
-         department: invitation.department || 'Geral',
-         teamName: invitation.teamName || 'Equipe convidada',
-         permissions: entryPermissions,
-         status: 'Ativo'
-       });
-     }
-
-    const [updatedInvitation] = await db.update(workspaceInvitations)
-      .set({ status: 'ACCEPTED' })
-      .where(eq(workspaceInvitations.id, invitation.id))
-      .returning();
-
-    await logAction(req, 'ACCEPT_INVITE', 'workspace_invitations', invitation.id.toString(), invitation, updatedInvitation[0] || updatedInvitation);
-
-    const [userRecord] = await db.select().from(users).where(eq(users.uid, req.user!.uid)).limit(1);
-    if (userRecord && !userRecord.activeWorkspaceId) {
-      await db.update(users).set({ activeWorkspaceId: invitation.workspaceId }).where(eq(users.uid, req.user!.uid));
-    }
-
-    res.json({ success: true, workspaceId: invitation.workspaceId, accepted: true });
   } catch (error) {
     console.error("Error accepting invitation:", error);
     res.status(500).json({ error: "Failed to accept invitation" });
@@ -1098,7 +1108,7 @@ apiRouter.get("/workspace/invitations", async (req: AuthRequest, res) => {
 
 apiRouter.post("/workspace/invitations", async (req: AuthRequest, res) => {
   try {
-    const { email, role, teamName, department, cargo, permissions } = req.body;
+    const { email, role, teamName, department, cargo, permissions, projectId } = req.body;
 
     if (!email || typeof email !== 'string') {
       return res.status(400).json({ error: "Email do convidado é obrigatório" });
@@ -1120,9 +1130,12 @@ apiRouter.post("/workspace/invitations", async (req: AuthRequest, res) => {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiration
 
+    const normalizedProjectId = projectId ? Number(projectId) : null;
+
     const [invitation] = await db.insert(workspaceInvitations).values({
       workspaceId: req.workspaceId!,
       tenantId: req.tenantId as any,
+      projectId: normalizedProjectId,
       email,
       role: role || 'MEMBER',
       teamName: teamName || null,
@@ -1594,37 +1607,9 @@ apiRouter.delete("/clients/:id", async (req: AuthRequest, res) => {
 });
 
 // --- PROJECTS ---
-apiRouter.get("/projects", async (req: AuthRequest, res) => {
+apiRouter.get("/projects", projectAccessMiddleware, async (req: AuthRequest, res) => {
   try {
-    const data = await db
-      .select({
-        id: projects.id,
-        workspaceId: projects.workspaceId,
-        name: projects.name,
-        description: projects.description,
-        status: projects.status,
-        priority: projects.priority,
-        owner: projects.owner,
-        budget: projects.budget,
-        dueDate: projects.dueDate,
-        team: projects.team,
-        history: projects.history,
-        comments: projects.comments,
-        criteria: projects.criteria,
-        velocity: projects.velocity,
-        progress: projects.progress,
-        companyId: projects.companyId,
-        productId: projects.productId,
-        logoUrl: projects.logoUrl,
-        coverUrl: projects.coverUrl,
-        createdAt: projects.createdAt,
-        updatedAt: projects.updatedAt,
-        companyName: companies.name,
-        companyLogoUrl: companies.logoUrl
-      })
-      .from(projects)
-      .leftJoin(companies, eq(projects.companyId, companies.id))
-      .where(eq(projects.workspaceId, req.workspaceId!));
+    const data = await getProjects(req.workspaceId!, req.user?.uid);
     res.json(data);
   } catch (error) {
     console.error("Error fetching projects:", error);
@@ -1685,8 +1670,14 @@ apiRouter.post("/projects", async (req: AuthRequest, res) => {
   }
 });
 // --- PROJECTS ---
-apiRouter.put("/projects/:id", async (req: AuthRequest, res) => {
+apiRouter.put("/projects/:id", projectAccessMiddleware, async (req: AuthRequest, res) => {
   try {
+    const projectId = Number(req.params.id);
+    const existingProject = await getProjectById(req.workspaceId!, projectId, req.user?.uid);
+    if (!existingProject) {
+      return res.status(404).json({ error: "Project not found or access denied" });
+    }
+
     const { name, description, status, priority, dueDate, team, history, comments, criteria, velocity, progress, budget, companyId, productId, owner, logoUrl, coverUrl } = req.body;
     const updateValues: any = {};
     if (name !== undefined) updateValues.name = name;
@@ -1707,7 +1698,7 @@ apiRouter.put("/projects/:id", async (req: AuthRequest, res) => {
     if (logoUrl !== undefined) updateValues.logoUrl = logoUrl;
     if (coverUrl !== undefined) updateValues.coverUrl = coverUrl;
 
-    const data = await db.update(projects).set(updateValues).where(and(eq(projects.id, Number(req.params.id)), eq(projects.workspaceId, req.workspaceId!))).returning();
+    const data = await db.update(projects).set(updateValues).where(and(eq(projects.id, projectId), eq(projects.workspaceId, req.workspaceId!))).returning();
     
     try {
       if (status !== undefined) {

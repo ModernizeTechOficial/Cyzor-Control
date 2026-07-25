@@ -1,6 +1,6 @@
 import { db } from './index.ts';
-import { users, workspaces, workspaceMembers, companies, tenants, products, projects, tasks, ideas, documents, financeEntries, aiHistory, flows } from './schema.ts';
-import { eq, and, sql } from 'drizzle-orm';
+import { users, workspaces, workspaceMembers, companies, tenants, products, projects, tasks, ideas, documents, financeEntries, aiHistory, flows, userProjectRestrictions } from './schema.ts';
+import { eq, and, sql, inArray } from 'drizzle-orm';
 import { startProvisioningTrace, getProvisioningLogger, endProvisioningTrace } from '../lib/provisioning/ProvisioningLogger.ts';
 import { ProvisioningError } from '../lib/provisioning/ProvisioningError.ts';
 
@@ -463,7 +463,9 @@ export async function getOrCreateUser(
 
 export async function getUserWorkspaces(uid: string) {
   try {
-    return await db.select({
+    const [user] = await db.select({ invitedOnly: users.invitedOnly, activeWorkspaceId: users.activeWorkspaceId }).from(users).where(eq(users.uid, uid)).limit(1);
+    
+    let query = db.select({
       id: workspaces.id,
       name: workspaces.name,
       plan: workspaces.plan,
@@ -472,6 +474,12 @@ export async function getUserWorkspaces(uid: string) {
     .from(workspaceMembers)
     .innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
     .where(eq(workspaceMembers.userUid, uid));
+
+    if (user?.invitedOnly && user.activeWorkspaceId) {
+      query = query.where(eq(workspaceMembers.workspaceId, user.activeWorkspaceId));
+    }
+
+    return await query;
   } catch (error: any) {
     console.error('Error fetching workspaces:', error);
     throw new Error('Failed to fetch workspaces: ' + (error.message || String(error)));
@@ -504,8 +512,85 @@ export async function getCompanies(workspaceId: number) {
   return db.select().from(companies).where(eq(companies.workspaceId, workspaceId));
 }
 
-export async function getProjects(workspaceId: number) {
-  return db.select().from(projects).where(eq(projects.workspaceId, workspaceId));
+export async function getProjects(workspaceId: number, userId?: string) {
+  const restrictions = userId ? await getUserProjectRestrictions(userId, workspaceId) : [];
+  const hasRestrictions = restrictions.length > 0;
+  const allowedProjectIds = hasRestrictions ? restrictions.map(r => r.projectId) : [];
+
+  const conditions = [eq(projects.workspaceId, workspaceId)];
+  if (hasRestrictions) {
+    conditions.push(inArray(projects.id, allowedProjectIds));
+  }
+
+  return db.select({
+    id: projects.id,
+    workspaceId: projects.workspaceId,
+    name: projects.name,
+    description: projects.description,
+    status: projects.status,
+    priority: projects.priority,
+    owner: projects.owner,
+    budget: projects.budget,
+    dueDate: projects.dueDate,
+    team: projects.team,
+    history: projects.history,
+    comments: projects.comments,
+    criteria: projects.criteria,
+    velocity: projects.velocity,
+    progress: projects.progress,
+    companyId: projects.companyId,
+    productId: projects.productId,
+    logoUrl: projects.logoUrl,
+    coverUrl: projects.coverUrl,
+    createdAt: projects.createdAt,
+    updatedAt: projects.updatedAt,
+    companyName: companies.name,
+    companyLogoUrl: companies.logoUrl
+  })
+    .from(projects)
+    .leftJoin(companies, eq(projects.companyId, companies.id))
+    .where(and(...conditions));
+}
+
+export async function getProjectById(workspaceId: number, projectId: number, userId?: string) {
+  if (userId) {
+    const restrictions = await getUserProjectRestrictions(userId, workspaceId);
+    if (restrictions.length > 0 && !restrictions.some(r => r.projectId === projectId)) {
+      return null;
+    }
+  }
+
+  const result = await db.select({
+    id: projects.id,
+    workspaceId: projects.workspaceId,
+    name: projects.name,
+    description: projects.description,
+    status: projects.status,
+    priority: projects.priority,
+    owner: projects.owner,
+    budget: projects.budget,
+    dueDate: projects.dueDate,
+    team: projects.team,
+    history: projects.history,
+    comments: projects.comments,
+    criteria: projects.criteria,
+    velocity: projects.velocity,
+    progress: projects.progress,
+    companyId: projects.companyId,
+    productId: projects.productId,
+    logoUrl: projects.logoUrl,
+    coverUrl: projects.coverUrl,
+    createdAt: projects.createdAt,
+    updatedAt: projects.updatedAt,
+    companyName: companies.name,
+    companyLogoUrl: companies.logoUrl
+  })
+    .from(projects)
+    .leftJoin(companies, eq(projects.companyId, companies.id))
+    .where(and(eq(projects.workspaceId, workspaceId), eq(projects.id, projectId)))
+    .limit(1);
+
+  return result[0] || null;
 }
 
 export async function getIdeas(workspaceId: number) {
@@ -527,4 +612,21 @@ export async function getFlows(workspaceId: number) {
 export async function getFlowById(workspaceId: number, flowId: number) {
   const result = await db.select().from(flows).where(and(eq(flows.workspaceId, workspaceId), eq(flows.id, flowId)));
   return result[0];
+}
+
+export async function getUserProjectRestrictions(userId: string, workspaceId: number) {
+  return db.select().from(userProjectRestrictions)
+    .where(and(eq(userProjectRestrictions.userId, userId), eq(userProjectRestrictions.workspaceId, workspaceId)));
+}
+
+export async function isUserRestrictedToProject(userId: string, workspaceId: number, projectId: number): Promise<boolean> {
+  const restrictions = await getUserProjectRestrictions(userId, workspaceId);
+  if (restrictions.length === 0) return false;
+  
+  return restrictions.some(r => r.projectId === projectId);
+}
+
+export async function getAllowedProjectIdsForUser(userId: string, workspaceId: number): Promise<number[]> {
+  const restrictions = await getUserProjectRestrictions(userId, workspaceId);
+  return restrictions.map(r => r.projectId);
 }

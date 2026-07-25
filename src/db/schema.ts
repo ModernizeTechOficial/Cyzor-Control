@@ -28,6 +28,7 @@ export const users = pgTable('users', {
   phone: text('phone'),
   role: text('role'),
   isPlatformAdmin: boolean('is_platform_admin').default(false),
+  invitedOnly: boolean('invited_only').default(false),
   tourCompleted: boolean('tour_completed').default(false),
   trialEndsAt: timestamp('trial_ends_at'),
   settings: jsonb('settings').default({}),
@@ -151,6 +152,7 @@ export const workspaceInvitations = pgTable('workspace_invitations', {
   id: serial('id').primaryKey(),
   tenantId: uuid('tenant_id').defaultRandom().notNull(),
   workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  projectId: integer('project_id').references(() => projects.id, { onDelete: 'set null' }),
   email: text('email').notNull(),
   role: text('role').notNull().default('MEMBER'),
   teamName: text('team_name'),
@@ -171,6 +173,25 @@ export const workspaceInvitations = pgTable('workspace_invitations', {
   wsEmailIdx: index('ws_inv_ws_email_idx').on(t.workspaceId, t.email),
   tokenIdx: index('ws_inv_token_idx').on(t.token),
   tenantIdx: index('ws_inv_tenant_idx').on(t.tenantId),
+  projectIdx: index('ws_inv_project_idx').on(t.projectId),
+}));
+
+// USER PROJECT RESTRICTIONS
+// Tracks invited users who should only have access to specific projects
+export const userProjectRestrictions = pgTable('user_project_restrictions', {
+  id: serial('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.uid, { onDelete: 'cascade' }),
+  workspaceId: integer('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  invitationId: integer('invitation_id').references(() => workspaceInvitations.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (t) => ({
+  userIdx: index('upr_user_idx').on(t.userId),
+  workspaceIdx: index('upr_workspace_idx').on(t.workspaceId),
+  projectIdx: index('upr_project_idx').on(t.projectId),
+  userProjectIdx: index('upr_user_project_idx').on(t.userId, t.projectId),
 }));
 
 // COMPANIES (Empresas)
